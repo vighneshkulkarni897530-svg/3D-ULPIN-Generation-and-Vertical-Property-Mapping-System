@@ -1,0 +1,224 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary-navy: #0F172A;
+  --accent-cyan: #06B6D4;
+  --secondary-blue: #3B82F6;
+  --bg-light: #F8FAFC;
+  --card-surface: #FFFFFF;
+}
+
+body {
+  background-color: #F8FAFC;
+  color: #0F172A;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Custom Sleek Scrollbars */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0b1120;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #06b6d4;
+}
+
+/* Tech Grid Utility */
+.tech-grid-dark {
+  background-image: radial-gradient(rgba(6, 182, 212, 0.15) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+.tech-grid-light {
+  background-image: radial-gradient(rgba(15, 23, 42, 0.08) 1px, transparent 0);
+  background-size: 20px 20px;
+}
+
+/* Custom glow animations */
+@keyframes pulse-cyan {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 35px rgba(6, 182, 212, 0.6);
+  }
+}
+
+.glow-cyan {
+  animation: pulse-cyan 3s infinite ease-in-out;
+}
+
+/* Radix overlay / content animation fallbacks */
+.radix-overlay {
+  background-color: rgba(2, 6, 23, 0.75);
+  backdrop-filter: blur(4px);
+}
+
+/* Thin input focus ring used across dashboard forms */
+.input-tech:focus-visible {
+  outline: none;
+  border-color: #06b6d4;
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.18);
+}
+
+/* Range slider accent for 3D controls */
+input[type="range"] {
+  accent-color: #06b6d4;
+}
+
+/* Leaflet popup fallback styles (map is canvas based) */
+.map-info-window {
+  box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.25);
+}
+
+/* =====================================================================
+   BUILDING DIGITAL TWIN — page-scoped effects.
+   These classes are ONLY used inside the digital-twin route components.
+   ===================================================================== */
+
+.digital-twin {
+  background:
+    radial-gradient(1200px 620px at 50% -12%, rgba(0, 140, 255, 0.14), transparent 60%),
+    radial-gradient(900px 500px at 100% 100%, rgba(139, 92, 246, 0.07), transparent 55%),
+    radial-gradient(700px 420px at 0% 60%, rgba(0, 217, 255, 0.06), transparent 60%),
+    #020b18;
+}
+
+/* Subtle grid overlay behind the 3D viewer */
+.dt-grid-overlay {
+  background-image:
+    linear-gradient(rgba(0, 217, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 217, 255, 0.05) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+/* Holographic scanline overlay */
+.dt-scanlines {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 3px,
+    rgba(0, 217, 255, 0.016) 3px 4px
+  );
+  animation: dt-scanmove 14s linear infinite;
+}
+
+@keyframes dt-scanmove {
+  from { background-position-y: 0; }
+  to { background-position-y: 480px; }
+}
+
+/* Glassy HUD card surface */
+.dt-hud {
+  background: linear-gradient(165deg, rgba(10, 27, 49, 0.88), rgba(6, 20, 38, 0.92));
+  border: 1px solid rgba(22, 78, 115, 0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 18px 40px -22px rgba(0, 0, 0, 0.8);
+}
+
+.dt-hud-hover {
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+}
+.dt-hud-hover:hover {
+  border-color: rgba(0, 217, 255, 0.45);
+  box-shadow: 0 0 26px -6px rgba(0, 217, 255, 0.35), inset 0 0 20px -10px rgba(0, 217, 255, 0.25);
+}
+
+/* Neon glow pulse (live indicator / selected elements) */
+@keyframes dt-pulse-glow {
+  0%, 100% { box-shadow: 0 0 10px -2px rgba(0, 217, 255, 0.35); }
+  50% { box-shadow: 0 0 26px -2px rgba(0, 217, 255, 0.75); }
+}
+.dt-pulse-glow {
+  animation: dt-pulse-glow 2.6s ease-in-out infinite;
+}
+
+/* Blinking live dot */
+@keyframes dt-blink {
+  0%, 100% { opacity: 1; box-shadow: 0 0 10px rgba(34, 197, 94, 0.9); }
+  50% { opacity: 0.45; box-shadow: 0 0 4px rgba(34, 197, 94, 0.5); }
+}
+.dt-blink {
+  animation: dt-blink 1.8s ease-in-out infinite;
+}
+
+/* Thin top accent line for HUD cards */
+.dt-card-accent {
+  position: relative;
+  overflow: hidden;
+}
+.dt-card-accent::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 217, 255, 0.55), rgba(0, 140, 255, 0.4), transparent);
+}
+
+/* Soft corner brackets */
+.dt-corners::before,
+.dt-corners::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: rgba(0, 217, 255, 0.45);
+  border-style: solid;
+  pointer-events: none;
+}
+.dt-corners::before {
+  top: 8px;
+  left: 8px;
+  border-width: 1px 0 0 1px;
+}
+.dt-corners::after {
+  bottom: 8px;
+  right: 8px;
+  border-width: 0 1px 1px 0;
+}
+
+/* Horizontal shimmer line for scanning decoration */
+@keyframes dt-shimmer-x {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+.dt-shimmer-line {
+  background: linear-gradient(90deg, transparent, rgba(0, 217, 255, 0.5), transparent);
+  animation: dt-shimmer-x 3.4s ease-in-out infinite;
+}
+
+@keyframes drawer-slide-in {
+  from { transform: translateX(-24px); opacity: 0.6; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.animate-drawer-in {
+  animation: drawer-slide-in 0.28s ease-out both;
+}
+
+/* Thin scrollbar for dark sidebar panels */
+.sidebar-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 4px;
+}

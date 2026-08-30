@@ -1,0 +1,40 @@
+import { User } from '@/types';
+
+export const MOCK_USERS: Record<string, User> = {
+  citizen: {
+    id: 'usr-cit-101',
+    name: 'Rajesh V. Sharma',
+    email: 'rajesh.sharma@example.com',
+    role: 'CITIZEN',
+    phone: '+91 98450 12345',
+    aadhaarOrGovId: 'XXXX-XXXX-8921',
+    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    jurisdictionDistrict: 'Bengaluru Urban',
+  },
+  officer: {
+    id: 'usr-off-202',
+    name: 'Dr. Ananya Iyer, IAS',
+    email: 'ananya.iyer@rev.gov.in',
+    role: 'OFFICER',
+    phone: '+91 98200 98765',
+    aadhaarOrGovId: 'GOV-KA-REV-4491',
+    avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
+    department: 'Department of Land Records & Cadastre (Bhoomika)',
+    designation: 'Senior Cadastral Revenue Officer & Joint Registrar',
+    jurisdictionDistrict: 'Bengaluru Urban & South Division',
+    badgeNumber: 'KA-REV-7782',
+  },
+  admin: {
+    id: 'usr-adm-303',
+    name: 'K. S. Narayana Swamy',
+    email: 'admin.cadastre@gov.in',
+    role: 'ADMIN',
+    phone: '+91 94480 55667',
+    aadhaarOrGovId: 'DIR-LAND-GOV-001',
+    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    department: 'Ministry of Housing & Urban Cadastre Affairs',
+    designation: 'State Cadastral Data Director & Systems Chief',
+    jurisdictionDistrict: 'Karnataka State Apex Jurisdiction',
+    badgeNumber: 'ADMIN-DIR-009',
+  },
+};
