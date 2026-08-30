@@ -8,7 +8,8 @@ import {
   PlatformNotification, 
   ActivityLogItem, 
   VerificationStatus,
-  DisputeStatus
+  DisputeStatus,
+  CreateNotificationInput
 } from '@/types';
 import { 
   MOCK_PROPERTIES, 
@@ -29,6 +30,8 @@ interface PropertyContextType {
   updateDisputeStatus: (disputeId: string, status: DisputeStatus, notes?: string) => void;
   addFieldRequest: (request: Omit<FieldVerificationRequest, 'id' | 'requestNumber' | 'createdAt' | 'status'>) => FieldVerificationRequest;
   updatePropertyVerificationStatus: (propertyId: string, status: VerificationStatus, note?: string, officerName?: string) => void;
+  /** Centralized notification creation (Phase 9 workflows, tasks, alerts). */
+  addNotification: (input: CreateNotificationInput) => PlatformNotification;
   markNotificationAsRead: (id: string) => void;
   markAllNotificationsAsRead: () => void;
   unreadNotificationsCount: number;
@@ -290,6 +293,20 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     saveToStorage('spv_notifications', updated);
   };
 
+  /** Creates a notification through the single notification store. */
+  const addNotification = (input: CreateNotificationInput): PlatformNotification => {
+    const newNotif: PlatformNotification = {
+      ...input,
+      id: `notif-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    };
+    const updated = [newNotif, ...notifications];
+    setNotifications(updated);
+    saveToStorage('spv_notifications', updated);
+    return newNotif;
+  };
+
   const unreadNotificationsCount = notifications.filter((n) => !n.isRead).length;
 
   return (
@@ -305,6 +322,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         updateDisputeStatus,
         addFieldRequest,
         updatePropertyVerificationStatus,
+        addNotification,
         markNotificationAsRead,
         markAllNotificationsAsRead,
         unreadNotificationsCount,

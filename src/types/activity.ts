@@ -15,7 +15,8 @@ export type ActivityType =
   | 'DATA_UPDATE'
   | 'BUILDING_UPDATE'
   | 'AI_EXTRACTION'
-  | '3D_RECONSTRUCTION';
+  | '3D_RECONSTRUCTION'
+  | 'WORKFLOW_TASK';
 
 /** The type of entity an activity record refers to. */
 export type ActivityEntityType =
@@ -25,6 +26,7 @@ export type ActivityEntityType =
   | 'FLOOR'
   | 'CONFLICT'
   | 'VERIFICATION'
+  | 'TASK'
   | 'SYSTEM';
 
 /** Status of the activity. */

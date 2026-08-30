@@ -235,12 +235,15 @@ export interface PlatformNotification {
   recipientUserId?: string;
   title: string;
   message: string;
-  type: 'VERIFICATION' | 'DISPUTE' | 'FIELD_INSPECTION' | 'SYSTEM' | 'SECURITY';
+  type: 'VERIFICATION' | 'DISPUTE' | 'FIELD_INSPECTION' | 'SYSTEM' | 'SECURITY' | 'TASK';
   priority: 'LOW' | 'MEDIUM' | 'HIGH';
   isRead: boolean;
   linkUrl?: string;
   createdAt: string;
 }
+
+/** Payload for the centralized notification creation helper (Phase 9). */
+export type CreateNotificationInput = Omit<PlatformNotification, 'id' | 'isRead' | 'createdAt'>;
 
 export interface ActivityLogItem {
   id: string;

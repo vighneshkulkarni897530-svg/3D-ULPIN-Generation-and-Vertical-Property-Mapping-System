@@ -3,6 +3,7 @@ import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 import { PropertyProvider } from '@/context/PropertyContext';
 import { GISProvider } from '@/context/GISContext';
+import { WorkflowProvider } from '@/context/WorkflowContext';
 import { AppShell } from '@/components/layout/AppShell';
 import { Toaster } from '@/components/ui/toaster';
 
@@ -22,8 +23,10 @@ export default function RootLayout({
         <AuthProvider>
           <PropertyProvider>
             <GISProvider>
-              <AppShell>{children}</AppShell>
-              <Toaster />
+              <WorkflowProvider>
+                <AppShell>{children}</AppShell>
+                <Toaster />
+              </WorkflowProvider>
             </GISProvider>
           </PropertyProvider>
         </AuthProvider>

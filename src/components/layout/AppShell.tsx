@@ -49,25 +49,33 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
-      {/* Top bar */}
-      <Navbar
-        variant="shell"
-        onToggleMobileNav={() => setDrawerOpen((o) => !o)}
-        mobileNavOpen={drawerOpen}
-      />
+      {/* Top bar (hidden in print so /reports prints as a clean document) */}
+      <div className="contents print:hidden">
+        <Navbar
+          variant="shell"
+          onToggleMobileNav={() => setDrawerOpen((o) => !o)}
+          mobileNavOpen={drawerOpen}
+        />
+      </div>
 
       {/* Sidebar + content */}
       <div className="flex flex-1 items-stretch">
-        <AppSidebar collapsed={collapsed} onToggleCollapsed={() => setCollapsed((c) => !c)} />
+        <div className="contents print:hidden">
+          <AppSidebar collapsed={collapsed} onToggleCollapsed={() => setCollapsed((c) => !c)} />
+        </div>
         <main className={cn("min-w-0 flex-1")}>{children}</main>
       </div>
 
-      <Footer />
-      <MobileNavigation />
+      <div className="contents print:hidden">
+        <Footer />
+      </div>
+      <div className="contents print:hidden">
+        <MobileNavigation />
+      </div>
 
       {/* Mobile / tablet drawer */}
       {drawerOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div className="fixed inset-0 z-50 print:hidden lg:hidden">
           <div
             className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm"
             onClick={() => setDrawerOpen(false)}
