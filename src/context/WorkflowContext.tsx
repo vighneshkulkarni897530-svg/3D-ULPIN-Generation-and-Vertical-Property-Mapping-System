@@ -18,6 +18,7 @@ import { MOCK_COLLABORATORS, MOCK_WORKFLOW_TASKS } from '@/data/workflowTasks';
 import { useGIS } from '@/context/GISContext';
 import { useProperty } from '@/context/PropertyContext';
 import { canTransitionTo, isTaskOpen, isTaskOverdue } from '@/lib/workflow';
+import { reportAudit } from '@/lib/auth/client';
 
 /**
  * Centralized Workflow & Task store (Phase 9).
@@ -203,6 +204,14 @@ export const WorkflowProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         `${task.id} "${task.title}" created by ${input.createdByName} (${TASK_ENTITY_LABELS[task.entityType]} · ${task.entityId}).`,
         'PENDING',
       );
+      // Phase 10: mirror the action into the server-side audit trail.
+      reportAudit({
+        action: 'WORKFLOW_ACTION',
+        entityType: 'WORKFLOW_TASK',
+        entityId: task.id,
+        newValue: `status:${task.status}`,
+        details: `Task "${task.title}" created by ${input.createdByName}.`,
+      });
       emitNotification({
         recipientRole: hasAssignee ? 'OFFICER' : 'ALL',
         ...(hasAssignee ? { recipientUserId: input.assignedOfficerId } : {}),
@@ -280,6 +289,15 @@ export const WorkflowProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       );
       targets.forEach((t) => {
         emitAudit(t, 'Task completed', actorName, actorRole, `${t.id} "${t.title}" completed by ${actorName}${note ? ` — ${note}` : ''}.`, 'COMPLETED');
+        // Phase 10: mirror the action into the server-side audit trail.
+        reportAudit({
+          action: 'WORKFLOW_ACTION',
+          entityType: 'WORKFLOW_TASK',
+          entityId: t.id,
+          previousValue: `status:${t.status}`,
+          newValue: 'status:COMPLETED',
+          details: `Task completed by ${actorName}.`,
+        });
         emitNotification({
           recipientRole: t.assignedOfficerName ? 'OFFICER' : 'ALL',
           ...(t.assignedOfficerId ? { recipientUserId: t.assignedOfficerId } : {}),
@@ -314,6 +332,15 @@ export const WorkflowProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         ),
       );
       emitAudit(task, isReassign ? 'Task reassigned' : 'Task assigned', actorName, actorRole, `${task.id} "${task.title}" ${isReassign ? 're' : ''}assigned to ${officerName} by ${actorName}.`);
+      // Phase 10: mirror the action into the server-side audit trail.
+      reportAudit({
+        action: 'WORKFLOW_ACTION',
+        entityType: 'WORKFLOW_TASK',
+        entityId: task.id,
+        previousValue: task.assignedOfficerName ? `assignedTo:${task.assignedOfficerName}` : 'unassigned',
+        newValue: `assignedTo:${officerName}`,
+        details: `${isReassign ? 'Reassigned' : 'Assigned'} by ${actorName}.`,
+      });
       emitNotification({
         recipientRole: 'OFFICER',
         recipientUserId: officerId,
@@ -349,6 +376,15 @@ export const WorkflowProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }),
       );
       emitAudit(task, 'Task status updated', actorName, actorRole, `${task.id} "${task.title}" moved ${task.status} → ${nextStatus} by ${actorName}${note ? ` — ${note}` : ''}.`, terminal ? 'COMPLETED' : 'IN_PROGRESS');
+      // Phase 10: mirror the action into the server-side audit trail.
+      reportAudit({
+        action: 'WORKFLOW_ACTION',
+        entityType: 'WORKFLOW_TASK',
+        entityId: task.id,
+        previousValue: `status:${task.status}`,
+        newValue: `status:${nextStatus}`,
+        details: `Status updated by ${actorName}.`,
+      });
       emitNotification({
         recipientRole: task.assignedOfficerName ? 'OFFICER' : 'ALL',
         ...(task.assignedOfficerId ? { recipientUserId: task.assignedOfficerId } : {}),
@@ -375,6 +411,14 @@ export const WorkflowProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             : t,
         ),
       );
+      // Phase 10: mirror the action into the server-side audit trail.
+      reportAudit({
+        action: 'WORKFLOW_ACTION',
+        entityType: 'WORKFLOW_TASK',
+        entityId: taskId,
+        newValue: 'note-added',
+        details: `Note added by ${actorName}.`,
+      });
       return true;
     },
     [tasks],

@@ -18,6 +18,7 @@ import {
   Rocket, Crosshair, ClipboardList, ShieldCheck,
 } from "lucide-react";
 import { generateTicketNumber } from "@/utils/format";
+import { reportAudit } from "@/lib/auth/client";
 
 const SURVEY_TYPES = [
   { value: "CORNER_DEMARCATION", label: "Corner Demarcation (Total Station)" },
@@ -137,6 +138,14 @@ function FieldVerificationRequestPageInner() {
         })),
       });
       setSubmitted(created.requestNumber);
+      // Phase 10: record the real request in the server-side audit trail.
+      reportAudit({
+        action: "FIELD_VERIFICATION_REQUESTED",
+        entityType: "FIELD_VERIFICATION",
+        entityId: created.requestNumber,
+        newValue: "REQUESTED",
+        details: `${surveyType} survey requested on ${selectedProperty.ulpin} (${selectedProperty.title}).`,
+      });
       toast({
         variant: "success",
         title: "Field verification requested",

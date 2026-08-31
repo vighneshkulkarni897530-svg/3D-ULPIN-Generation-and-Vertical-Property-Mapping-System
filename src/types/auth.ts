@@ -65,6 +65,7 @@ export const PERMISSIONS = {
   BROWSE_REGISTRY: 'browse_registry',
 
   // ── Citizen ──
+  ACCESS_DASHBOARD_CITIZEN: 'access_dashboard_citizen',
   VIEW_OWN_NOTIFICATIONS: 'view_own_notifications',
   SUBMIT_DISPUTE: 'submit_dispute',
   REQUEST_FIELD_VERIFICATION: 'request_field_verification',
@@ -118,6 +119,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   view_reports: 'View Reports',
   view_activity_log: 'View Activity Log',
   access_dashboard_admin: 'Access Admin Dashboard',
+  access_dashboard_citizen: 'Access Citizen Dashboard',
 };
 
 /** Permission sets granted to each role. CITIZEN is the baseline. */

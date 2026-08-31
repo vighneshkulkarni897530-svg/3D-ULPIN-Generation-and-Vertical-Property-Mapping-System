@@ -7,7 +7,7 @@
  * browser-supplied role. This endpoint must be REMOVED in production.
  */
 import { NextResponse, type NextRequest } from 'next/server';
-import { findUserByEmail } from '@/lib/auth/server/userStore';
+import { findUserByEmail, toPublicUser } from '@/lib/auth/server/userStore';
 import { createSession, setSessionCookie } from '@/lib/auth/server/sessionStore';
 import { appendAudit } from '@/lib/auth/server/auditStore';
 import { clientIp, jsonError, readJsonBody, requireString } from '@/lib/auth/server/apiAuth';
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     ipAddress: clientIp(req),
   });
 
-  const res = NextResponse.json({ user: { ...user, sessionExpiresAt: expiresAt } });
+  const res = NextResponse.json({ user: { ...toPublicUser(user), sessionExpiresAt: expiresAt } });
   setSessionCookie(res, token, expiresAt);
   return res;
 }

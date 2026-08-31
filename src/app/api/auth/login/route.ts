@@ -8,6 +8,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import {
   checkCredentials,
   DEMO_PASSWORD,
+  toPublicUser,
 } from '@/lib/auth/server/userStore';
 import { createSession, setSessionCookie } from '@/lib/auth/server/sessionStore';
 import { appendAudit } from '@/lib/auth/server/auditStore';
@@ -68,7 +69,7 @@ export async function POST(req: NextRequest) {
   });
 
   const res = NextResponse.json({
-    user: { ...result.user, sessionExpiresAt: expiresAt },
+    user: { ...toPublicUser(result.user), sessionExpiresAt: expiresAt },
     demoPasswordHint: DEMO_PASSWORD === passwordCheck.value ? 'demo' : undefined,
   });
   setSessionCookie(res, token, expiresAt);

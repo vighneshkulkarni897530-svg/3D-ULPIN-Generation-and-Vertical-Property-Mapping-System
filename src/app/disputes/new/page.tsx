@@ -16,6 +16,7 @@ import {
   CheckCircle2, Ticket, ArrowLeft, FileText, Camera, ClipboardCheck, Search, ShieldCheck,
 } from "lucide-react";
 import { generateTicketNumber } from "@/utils/format";
+import { reportAudit } from "@/lib/auth/client";
 
 const CATEGORIES: { value: DisputeCategory; label: string; icon: string }[] = [
   { value: "BOUNDARY_MISMATCH", label: "Boundary Mismatch / Encroachment", icon: "📍" },
@@ -152,6 +153,14 @@ const handleLookup = () => {
         })),
       });
       setSubmitted({ ticket: created.disputeTicketNumber });
+      // Phase 10: record the real submission in the server-side audit trail.
+      reportAudit({
+        action: "DISPUTE_SUBMITTED",
+        entityType: "DISPUTE",
+        entityId: created.disputeTicketNumber,
+        newValue: "SUBMITTED",
+        details: `${category} dispute filed on ${selectedProperty.ulpin} (${selectedProperty.title}).`,
+      });
       toast({
         variant: "success",
         title: "Dispute report submitted",
