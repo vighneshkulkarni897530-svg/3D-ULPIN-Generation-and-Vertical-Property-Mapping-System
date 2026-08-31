@@ -32,7 +32,17 @@ const GisViewer3D = dynamic(
 const PUNE_CENTRE: [number, number] = [18.56, 73.78];
 const RESET_ZOOM = 15;
 
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+
 export default function MapWorkspacePage() {
+  return (
+    <ProtectedRoute>
+      <MapWorkspaceContent />
+    </ProtectedRoute>
+  );
+}
+
+function MapWorkspaceContent() {
   return (
     <React.Suspense fallback={<PageLoader label="Preparing GIS workspace…" />}>
       <MapWorkspace />

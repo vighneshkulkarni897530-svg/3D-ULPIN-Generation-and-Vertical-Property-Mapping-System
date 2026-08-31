@@ -29,7 +29,17 @@ import { GisStatusBadge } from '@/components/common/GisStatusBadge';
 import { formatRelativeTime } from '@/lib/gisUtils';
 import type { PropertyUnit } from '@/types/gis';
 
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+
 export default function PropertiesDirectoryPage() {
+  return (
+    <ProtectedRoute>
+      <PropertiesDirectoryPageContent />
+    </ProtectedRoute>
+  );
+}
+
+function PropertiesDirectoryPageContent() {
   return (
     <Suspense
       fallback={

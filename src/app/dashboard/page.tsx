@@ -54,7 +54,17 @@ function activityToItem(a: ActivityRecord): ActivityItem {
   }
 }
 
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+
 export default function GisDashboardPage() {
+  return (
+    <ProtectedRoute>
+      <GisDashboardPageContent />
+    </ProtectedRoute>
+  );
+}
+
+function GisDashboardPageContent() {
   const { parcels, buildings, floors, properties, verifications, conflicts, activities } = useGIS();
 
   const stats = React.useMemo(

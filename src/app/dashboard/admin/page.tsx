@@ -23,7 +23,18 @@ type AdminTab = "dashboard" | "citizens" | "officers" | "properties" | "disputes
 const allOfficers = [MOCK_USERS.officer, { ...MOCK_USERS.officer, id: "usr-off-204", name: "Sanjay Verma, IAS", designation: "District Revenue Officer", jurisdictionDistrict: "Gurugram District" }];
 const allCitizens = [MOCK_USERS.citizen, { ...MOCK_USERS.citizen, id: "usr-cit-102", name: "Sunita V. Deshpande" }, { ...MOCK_USERS.citizen, id: "usr-cit-103", name: "Venkat Rao Deshmukh" }];
 
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { PERMISSIONS } from "@/types/auth";
+
 export default function AdminDashboardPage() {
+  return (
+    <ProtectedRoute permission={PERMISSIONS.ACCESS_DASHBOARD_ADMIN}>
+      <AdminDashboardPageContent />
+    </ProtectedRoute>
+  );
+}
+
+function AdminDashboardPageContent() {
   const { properties, disputes, fieldRequests, activityLogs } = useProperty();
   const [tab, setTab] = useState<AdminTab>("dashboard");
 

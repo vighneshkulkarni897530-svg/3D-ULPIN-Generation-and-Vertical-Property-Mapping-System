@@ -20,6 +20,7 @@ import { MOCK_VERIFICATIONS } from '@/data/verifications';
 import { MOCK_CONFLICTS } from '@/data/conflicts';
 import { MOCK_ACTIVITIES } from '@/data/activities';
 import { MOCK_DEMO_SPATIAL_IDS } from '@/data/demoSpatialIds';
+import { reportAudit } from '@/lib/auth/client';
 
 // ── Context shape ───────────────────────────────────────────────────────────
 
@@ -232,6 +233,15 @@ export const GISProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         status: 'COMPLETED',
         metadata: { method: record.method, confidence: record.confidenceScore },
       });
+      // Phase 10: audit trail — actor/timestamp are stamped server-side; never blocks the action.
+      reportAudit({
+        action: 'VERIFICATION_UPDATED',
+        entityType: 'VERIFICATION',
+        entityId: propertyId,
+        previousValue: record.previousStatus,
+        newValue: record.newStatus,
+        details: `Verified by ${verifiedBy}`,
+      });
     },
     [properties, appendVerification, updatePropertyStatus, addActivity],
   );
@@ -268,6 +278,15 @@ export const GISProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         userRole: 'OFFICER',
         status: 'COMPLETED',
         metadata: { method: 'VISUAL_INSPECTION', confidence: 40 },
+      });
+      // Phase 10: audit trail (server-stamped actor; fire-and-forget).
+      reportAudit({
+        action: 'VERIFICATION_UPDATED',
+        entityType: 'VERIFICATION',
+        entityId: propertyId,
+        previousValue: record.previousStatus,
+        newValue: record.newStatus,
+        details: `Rejected by ${verifiedBy}`,
       });
     },
     [properties, appendVerification, updatePropertyStatus, addActivity],
@@ -306,6 +325,15 @@ export const GISProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         status: 'PENDING',
         metadata: { method: 'VISUAL_INSPECTION', confidence: 55 },
       });
+      // Phase 10: audit trail (server-stamped actor; fire-and-forget).
+      reportAudit({
+        action: 'VERIFICATION_UPDATED',
+        entityType: 'VERIFICATION',
+        entityId: propertyId,
+        previousValue: record.previousStatus,
+        newValue: record.newStatus,
+        details: `Reinspection requested by ${verifiedBy}`,
+      });
     },
     [properties, appendVerification, updatePropertyStatus, addActivity],
   );
@@ -343,6 +371,15 @@ export const GISProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         status: 'PENDING',
         metadata: { method: 'VISUAL_INSPECTION', fieldQueue: true },
       });
+      // Phase 10: audit trail (server-stamped actor; fire-and-forget).
+      reportAudit({
+        action: 'FIELD_VERIFICATION_REQUESTED',
+        entityType: 'FIELD_VERIFICATION',
+        entityId: propertyId,
+        previousValue: record.previousStatus,
+        newValue: record.newStatus,
+        details: `Field verification requested by ${requestedBy}`,
+      });
     },
     [properties, appendVerification, updatePropertyStatus, addActivity],
   );
@@ -375,6 +412,14 @@ export const GISProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         status: 'COMPLETED',
         metadata: { resolvedBy, notes },
       });
+      // Phase 10: audit trail (server-stamped actor; fire-and-forget).
+      reportAudit({
+        action: 'CONFLICT_UPDATED',
+        entityType: 'CONFLICT',
+        entityId: conflictId,
+        newValue: 'Resolved',
+        details: `Resolved by ${resolvedBy}`,
+      });
     },
     [addActivity],
   );
@@ -406,6 +451,14 @@ export const GISProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         status: 'PENDING',
         metadata: { requestedBy, notes },
       });
+      // Phase 10: audit trail (server-stamped actor; fire-and-forget).
+      reportAudit({
+        action: 'CONFLICT_UPDATED',
+        entityType: 'CONFLICT',
+        entityId: conflictId,
+        newValue: 'Under Investigation (field review)',
+        details: `Field review requested by ${requestedBy}`,
+      });
     },
     [addActivity],
   );
@@ -436,6 +489,14 @@ export const GISProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         userRole: 'OFFICER',
         status: 'PENDING',
         metadata: { category, notes },
+      });
+      // Phase 10: audit trail (server-stamped actor; fire-and-forget).
+      reportAudit({
+        action: 'CONFLICT_UPDATED',
+        entityType: 'CONFLICT',
+        entityId: conflictId,
+        newValue: 'Under Investigation (correction requested)',
+        details: `${category} correction requested by ${requestedBy}`,
       });
     },
     [addActivity],

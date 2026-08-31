@@ -33,7 +33,17 @@ const URGENCY = [
   { value: "HIGH_PRIORITY", label: "High Priority (24–48 hrs)" },
 ];
 
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+
 export default function FieldVerificationRequestPage() {
+  return (
+    <ProtectedRoute>
+      <FieldVerificationRequestPageContent />
+    </ProtectedRoute>
+  );
+}
+
+function FieldVerificationRequestPageContent() {
   return (
     <Suspense
       fallback={

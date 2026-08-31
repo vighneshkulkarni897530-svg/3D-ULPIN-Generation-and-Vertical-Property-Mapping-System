@@ -45,7 +45,18 @@ const QUEUE_FILTERS: Array<{ key: "All" | PropertyVerificationStatus; label: str
 /** Officer-capable roles may mutate verification state. */
 const isOfficerRole = (role: string) => role === "OFFICER" || role === "ADMIN";
 
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { PERMISSIONS } from "@/types/auth";
+
 export default function VerificationCentrePage() {
+  return (
+    <ProtectedRoute permission={PERMISSIONS.VIEW_VERIFICATION_QUEUE}>
+      <VerificationCentrePageContent />
+    </ProtectedRoute>
+  );
+}
+
+function VerificationCentrePageContent() {
   return (
     <React.Suspense fallback={null}>
       <VerificationCentre />

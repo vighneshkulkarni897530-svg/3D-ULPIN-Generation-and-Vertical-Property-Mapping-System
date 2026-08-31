@@ -38,7 +38,17 @@ const INCORRECT_FIELDS = [
   "Building Sanction Plan",
 ];
 
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+
 export default function RaiseDisputePage() {
+  return (
+    <ProtectedRoute>
+      <RaiseDisputePageContent />
+    </ProtectedRoute>
+  );
+}
+
+function RaiseDisputePageContent() {
   return (
     <Suspense
       fallback={

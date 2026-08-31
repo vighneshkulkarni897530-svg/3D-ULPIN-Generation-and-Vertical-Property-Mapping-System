@@ -28,7 +28,18 @@ import {
   type ExtractionProcessingPhase,
 } from "@/lib/aiExtraction";
 
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { PERMISSIONS } from "@/types/auth";
+
 export default function AiExtractionPage() {
+  return (
+    <ProtectedRoute permission={PERMISSIONS.RUN_SPATIAL_VALIDATION}>
+      <AiExtractionPageContent />
+    </ProtectedRoute>
+  );
+}
+
+function AiExtractionPageContent() {
   return (
     <React.Suspense fallback={<PageLoader label="Preparing AI workspace…" />}>
       <AiExtractionWorkspace />

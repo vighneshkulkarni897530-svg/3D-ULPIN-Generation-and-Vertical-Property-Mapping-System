@@ -18,7 +18,18 @@ import { useGIS } from "@/context/GISContext";
 import { computeDashboardStats } from "@/lib/gisSelectors";
 import { GisStatusBadge } from "@/components/common/GisStatusBadge";
 
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { PERMISSIONS } from "@/types/auth";
+
 export default function SettingsPage() {
+  return (
+    <ProtectedRoute permission={PERMISSIONS.SYSTEM_ADMIN}>
+      <SettingsPageContent />
+    </ProtectedRoute>
+  );
+}
+
+function SettingsPageContent() {
   const { currentUser, role } = useAuth();
   const { parcels, buildings, floors, properties, conflicts, demoSpatialIds } = useGIS();
 

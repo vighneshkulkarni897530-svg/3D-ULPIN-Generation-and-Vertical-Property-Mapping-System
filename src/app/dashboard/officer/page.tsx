@@ -24,7 +24,18 @@ import {
 
 type ActionTone = "approve" | "reject" | "correction" | "status";
 
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { PERMISSIONS } from "@/types/auth";
+
 export default function OfficerDashboardPage() {
+  return (
+    <ProtectedRoute permission={PERMISSIONS.VIEW_VERIFICATION_QUEUE}>
+      <OfficerDashboardPageContent />
+    </ProtectedRoute>
+  );
+}
+
+function OfficerDashboardPageContent() {
   const {
     fieldRequests, disputes, properties, updatePropertyVerificationStatus, updateDisputeStatus,
   } = useProperty();

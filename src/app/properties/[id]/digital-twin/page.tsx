@@ -22,7 +22,21 @@ import { DigitalTwinMiniMap } from "@/components/digital-twin/MiniMap";
 import { TWIN_BUILDING, TWIN_FLOORS, TwinUnit } from "@/data/mockDigitalTwin";
 import { fadeIn, slideInLeft, slideInRight } from "@/components/digital-twin/motion";
 
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+
+/**
+ * Digital Twin route (Phase 10): the rendering/isolation implementation is
+ * untouched — this wrapper only enforces authentication at the route boundary.
+ */
 export default function BuildingDigitalTwinPage() {
+  return (
+    <ProtectedRoute>
+      <BuildingDigitalTwinPageContent />
+    </ProtectedRoute>
+  );
+}
+
+function BuildingDigitalTwinPageContent() {
   const [selectedFloorLevel, setSelectedFloorLevel] = useState(6);
   const [selectedUnit, setSelectedUnit] = useState<TwinUnit | null>(null);
   const [tool, setTool] = useState<ViewerTool>("select");

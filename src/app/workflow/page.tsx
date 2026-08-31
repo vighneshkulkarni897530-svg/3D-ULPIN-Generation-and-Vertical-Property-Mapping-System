@@ -16,7 +16,17 @@ import { useAuth } from "@/context/AuthContext";
 import { canCreateTask } from "@/lib/workflow";
 import type { TaskStatus } from "@/types/workflow";
 
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+
 export default function WorkflowPage() {
+  return (
+    <ProtectedRoute>
+      <WorkflowPageContent />
+    </ProtectedRoute>
+  );
+}
+
+function WorkflowPageContent() {
   return (
     <React.Suspense
       fallback={

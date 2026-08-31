@@ -11,7 +11,18 @@ import {
   Bell, CheckCheck, ShieldCheck, AlertTriangle, FileCheck2, Lock, Sparkles, ArrowRight,
 } from "lucide-react";
 
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { PERMISSIONS } from "@/types/auth";
+
 export default function NotificationsPage() {
+  return (
+    <ProtectedRoute permission={PERMISSIONS.VIEW_OWN_NOTIFICATIONS}>
+      <NotificationsPageContent />
+    </ProtectedRoute>
+  );
+}
+
+function NotificationsPageContent() {
   const { notifications, markAllNotificationsAsRead, markNotificationAsRead } = useProperty();
   const unread = notifications.filter((n) => !n.isRead).length;
 

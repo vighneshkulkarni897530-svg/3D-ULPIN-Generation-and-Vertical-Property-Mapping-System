@@ -4,39 +4,82 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { Building, ShieldCheck, Lock, Mail, ArrowRight, Sparkles, User, Shield, Building2 } from 'lucide-react';
+import { Building, ShieldCheck, Lock, Mail, ArrowRight, Sparkles, User, Shield, Building2, AlertCircle } from 'lucide-react';
+
+/**
+ * Login page (Phase 10).
+ * Performs REAL authentication against /api/auth/login (scrypt-verified
+ * credentials + httpOnly session cookie). The three demo personas share the
+ * published prototype password below — this is clearly-labelled demo access,
+ * not a production credential.
+ */
+const DEMO_PASSWORD = 'Bhu-Verify#2024';
+
+const DEMO_ACCOUNTS: Record<'citizen' | 'officer' | 'admin', { email: string; dashboard: string }> = {
+  citizen: { email: 'rajesh.sharma@example.com', dashboard: '/dashboard/citizen' },
+  officer: { email: 'ananya.iyer@rev.gov.in', dashboard: '/dashboard/officer' },
+  admin: { email: 'admin.cadastre@gov.in', dashboard: '/dashboard/admin' },
+};
+
+/** Honours the ?next= redirect target (same-origin paths only). */
+function destinationAfterLogin(roleKey: 'citizen' | 'officer' | 'admin'): string {
+  if (typeof window !== 'undefined') {
+    const next = new URLSearchParams(window.location.search).get('next');
+    if (next && next.startsWith('/') && !next.startsWith('//')) return next;
+  }
+  return DEMO_ACCOUNTS[roleKey].dashboard;
+}
 
 export default function LoginPage() {
   const router = useRouter();
-  const { loginAs } = useAuth();
-  
+  const { login, demoLoginAs, authStatus } = useAuth();
+
   const [selectedRole, setSelectedRole] = useState<'citizen' | 'officer' | 'admin'>('citizen');
-  const [email, setEmail] = useState('rajesh.sharma@example.com');
-  const [password, setPassword] = useState('••••••••••••');
+  const [email, setEmail] = useState(DEMO_ACCOUNTS.citizen.email);
+  const [password, setPassword] = useState(DEMO_PASSWORD);
   const [loading, setLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState<'citizen' | 'officer' | 'admin' | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (authStatus === 'authenticated') {
+      router.replace('/dashboard');
+    }
+  }, [authStatus, router]);
 
   const handleRoleSelect = (roleKey: 'citizen' | 'officer' | 'admin') => {
     setSelectedRole(roleKey);
-    if (roleKey === 'citizen') {
-      setEmail('rajesh.sharma@example.com');
-    } else if (roleKey === 'officer') {
-      setEmail('ananya.iyer@rev.gov.in');
-    } else {
-      setEmail('admin.cadastre@gov.in');
-    }
+    setEmail(DEMO_ACCOUNTS[roleKey].email);
+    setPassword(DEMO_PASSWORD);
+    setError(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
+    const result = await login(email, password);
+    setLoading(false);
+    if (!result.ok) {
+      setError(result.error ?? 'Sign-in failed.');
+      return;
+    }
+    const matchedRole = (Object.keys(DEMO_ACCOUNTS) as (keyof typeof DEMO_ACCOUNTS)[]).find(
+      (k) => DEMO_ACCOUNTS[k].email.toLowerCase() === email.trim().toLowerCase(),
+    );
+    router.push(destinationAfterLogin(matchedRole ?? 'citizen'));
+  };
 
-    setTimeout(() => {
-      loginAs(selectedRole);
-      setLoading(false);
-      if (selectedRole === 'officer') router.push('/dashboard/officer');
-      else if (selectedRole === 'admin') router.push('/dashboard/admin');
-      else router.push('/dashboard/citizen');
-    }, 600);
+  const handleDemoAccess = async (roleKey: 'citizen' | 'officer' | 'admin') => {
+    setDemoLoading(roleKey);
+    setError(null);
+    const result = await demoLoginAs(roleKey);
+    setDemoLoading(null);
+    if (!result.ok) {
+      setError(result.error ?? 'Demo sign-in failed.');
+      return;
+    }
+    router.push(destinationAfterLogin(roleKey));
   };
 
   return (
@@ -105,6 +148,15 @@ export default function LoginPage() {
         {/* Login Form Card */}
         <div className="bg-slate-900/90 border border-slate-800 p-7 rounded-3xl shadow-2xl backdrop-blur-xl space-y-5">
           <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="flex items-start gap-2 rounded-xl border border-red-500/40 bg-red-500/10 px-3.5 py-2.5" role="alert">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
+                <div>
+                  <p className="text-xs font-bold text-red-300">Sign-in failed</p>
+                  <p className="text-[11px] text-red-300/80">{error}</p>
+                </div>
+              </div>
+            )}
             <div>
               <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
                 Official Email / Aadhaar ID
@@ -172,53 +224,64 @@ export default function LoginPage() {
                 <span>Authenticating...</span>
               ) : (
                 <>
-                  <span>Sign In as {selectedRole.toUpperCase()}</span>
+                  <span>Sign In</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
             </button>
           </form>
 
-          {/* Quick Demo Pre-fill Pill */}
-          <div className="p-3 bg-slate-950 rounded-xl border border-slate-800/80 text-[11px] flex items-center justify-between text-slate-400">
-            <div className="flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Demo Mode Active</span>
+          {/* Demo credentials + instant demo access */}
+          <div className="p-3 bg-slate-950 rounded-xl border border-slate-800/80 text-[11px] space-y-1.5 text-slate-400">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="font-bold text-slate-300">Prototype demo access</span>
+              </div>
+              <span className="font-mono text-cyan-400">{DEMO_PASSWORD}</span>
             </div>
-            <span className="text-cyan-400 font-mono">Instant Access Enabled</span>
+            <p className="text-[10px] leading-relaxed text-slate-500">
+              The three demo personas share the published password above. Accounts reset when the server restarts — this is clearly-labelled prototype authentication, not production security.
+            </p>
           </div>
 
-          {/* Mock Social Login */}
+          {/* Instant demo access */}
           <div className="space-y-2">
             <div className="flex items-center gap-3">
               <span className="h-px flex-1 bg-slate-800" />
-              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Mock social login</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Instant demo access</span>
               <span className="h-px flex-1 bg-slate-800" />
             </div>
             <div className="grid grid-cols-3 gap-2">
               <button
-                onClick={() => handleRoleSelect('citizen')}
-                className="flex items-center justify-center gap-2 rounded-xl border border-slate-800 bg-slate-950 py-2.5 text-xs font-bold text-slate-300 transition-all hover:border-cyan-500/50 hover:text-white"
-                title="Continue with Google (mock)"
+                type="button"
+                disabled={demoLoading !== null || loading}
+                onClick={() => handleDemoAccess('citizen')}
+                className="flex items-center justify-center gap-2 rounded-xl border border-slate-800 bg-slate-950 py-2.5 text-xs font-bold text-slate-300 transition-all hover:border-cyan-500/50 hover:text-white disabled:opacity-50"
+                title="Sign in instantly as the demo Citizen"
               >
-                <span className="text-sm font-black text-amber-400">G</span>
-                <span className="hidden sm:inline">Google</span>
+                <User className="w-4 h-4 text-cyan-400" />
+                <span>{demoLoading === 'citizen' ? '…' : 'Citizen'}</span>
               </button>
               <button
-                onClick={() => handleRoleSelect('citizen')}
-                className="flex items-center justify-center gap-2 rounded-xl border border-slate-800 bg-slate-950 py-2.5 text-xs font-bold text-slate-300 transition-all hover:border-cyan-500/50 hover:text-white"
-                title="Continue with GitHub (mock)"
+                type="button"
+                disabled={demoLoading !== null || loading}
+                onClick={() => handleDemoAccess('officer')}
+                className="flex items-center justify-center gap-2 rounded-xl border border-slate-800 bg-slate-950 py-2.5 text-xs font-bold text-slate-300 transition-all hover:border-emerald-500/50 hover:text-white disabled:opacity-50"
+                title="Sign in instantly as the demo Government Officer"
               >
-                <span className="text-sm font-black text-slate-100">⌥</span>
-                <span className="hidden sm:inline">GitHub</span>
+                <Shield className="w-4 h-4 text-emerald-400" />
+                <span>{demoLoading === 'officer' ? '…' : 'Officer'}</span>
               </button>
               <button
-                onClick={() => handleRoleSelect('citizen')}
-                className="flex items-center justify-center gap-2 rounded-xl border border-slate-800 bg-slate-950 py-2.5 text-xs font-bold text-slate-300 transition-all hover:border-cyan-500/50 hover:text-white"
-                title="Continue with DigiLocker (mock)"
+                type="button"
+                disabled={demoLoading !== null || loading}
+                onClick={() => handleDemoAccess('admin')}
+                className="flex items-center justify-center gap-2 rounded-xl border border-slate-800 bg-slate-950 py-2.5 text-xs font-bold text-slate-300 transition-all hover:border-indigo-500/50 hover:text-white disabled:opacity-50"
+                title="Sign in instantly as the demo Cadastre Admin"
               >
-                <span className="text-sm font-black text-orange-400">D</span>
-                <span className="hidden sm:inline">DigiLocker</span>
+                <Building2 className="w-4 h-4 text-indigo-400" />
+                <span>{demoLoading === 'admin' ? '…' : 'Admin'}</span>
               </button>
             </div>
           </div>

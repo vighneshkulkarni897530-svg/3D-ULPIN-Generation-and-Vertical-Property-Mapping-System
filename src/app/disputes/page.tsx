@@ -13,7 +13,17 @@ import { DisputeRecord } from "@/types";
 import { humanize } from "@/utils/format";
 import { AlertTriangle, Plus, Scale } from "lucide-react";
 
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+
 export default function DisputesRegistryPage() {
+  return (
+    <ProtectedRoute>
+      <DisputesRegistryPageContent />
+    </ProtectedRoute>
+  );
+}
+
+function DisputesRegistryPageContent() {
   const { disputes } = useProperty();
   const { role } = useAuth();
 

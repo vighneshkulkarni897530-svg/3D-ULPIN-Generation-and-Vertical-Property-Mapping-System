@@ -19,7 +19,18 @@ import {
   Bell, ArrowRight, Radio, TrendingUp,
 } from "lucide-react";
 
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { PERMISSIONS } from "@/types/auth";
+
 export default function CitizenDashboardPage() {
+  return (
+    <ProtectedRoute permission={PERMISSIONS.ACCESS_DASHBOARD_CITIZEN}>
+      <CitizenDashboardPageContent />
+    </ProtectedRoute>
+  );
+}
+
+function CitizenDashboardPageContent() {
   const { properties, disputes, fieldRequests, notifications, activityLogs } = useProperty();
   const { currentUser } = useAuth();
   const [showAllProperties, setShowAllProperties] = useState(false);

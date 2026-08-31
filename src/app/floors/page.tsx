@@ -10,7 +10,17 @@ import { GisStatusBadge } from "@/components/common/GisStatusBadge";
 import { useGIS } from "@/context/GISContext";
 import { cn } from "@/lib/utils";
 
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+
 export default function FloorsExplorerPage() {
+  return (
+    <ProtectedRoute>
+      <FloorsExplorerPageContent />
+    </ProtectedRoute>
+  );
+}
+
+function FloorsExplorerPageContent() {
   const { buildings, floors, properties } = useGIS();
   const [buildingId, setBuildingId] = React.useState<string | null>(null);
   const [highlightUnitId, setHighlightUnitId] = React.useState<string | null>(null);

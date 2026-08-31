@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useProperty } from '@/context/PropertyContext';
 import { RoleSwitcher } from './RoleSwitcher';
+import { UserMenu } from '@/components/auth/UserMenu';
 import { GlobalSearch } from '@/components/layout/GlobalSearch';
 import { SystemStatus } from '@/components/layout/SystemStatus';
 import {
@@ -25,7 +26,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   mobileNavOpen = false,
 }) => {
   const pathname = usePathname();
-  const { role, currentUser } = useAuth();
+  const { role, isAuthenticated } = useAuth();
   const { notifications, unreadNotificationsCount, markAllNotificationsAsRead, markNotificationAsRead } =
     useProperty();
 
@@ -112,7 +113,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {isShell && <SystemStatus />}
 
             <div className="hidden md:flex items-center gap-2.5">
-              <RoleSwitcher />
+              {isAuthenticated && <RoleSwitcher />}
             </div>
 
             {/* Notifications */}
@@ -179,19 +180,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </div>
 
-            {/* User Profile Pill */}
+            {/* User menu (Phase 10): profile, admin links, sign out — or sign-in/register when signed out */}
             <div className="flex items-center gap-2.5 pl-2 border-l border-slate-800">
-              <img
-                src={currentUser.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
-                alt={currentUser.name}
-                className="w-8 h-8 rounded-full ring-2 ring-cyan-500/50 object-cover"
-              />
-              <div className="hidden xl:block text-left">
-                <p className="text-xs font-bold text-white truncate max-w-[120px]">{currentUser.name}</p>
-                <p className="text-[10px] text-cyan-400 font-medium">
-                  {role === 'OFFICER' ? 'Revenue Officer' : role === 'ADMIN' ? 'Cadastre Admin' : 'Verified Citizen'}
-                </p>
-              </div>
+              <UserMenu />
             </div>
 
             {/* Hamburger (opens shell drawer on mobile/tablet) */}

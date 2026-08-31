@@ -21,7 +21,17 @@ interface BuildingStats {
 
 const PENDING_STATUSES = ["Pending", "Under Review", "Field Verification", "Reinspection Required"];
 
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+
 export default function BuildingsDirectoryPage() {
+  return (
+    <ProtectedRoute>
+      <BuildingsDirectoryPageContent />
+    </ProtectedRoute>
+  );
+}
+
+function BuildingsDirectoryPageContent() {
   const { buildings, floors, properties, parcels, conflicts } = useGIS();
 
   const [query, setQuery] = React.useState("");

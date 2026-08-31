@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { BarChart3, Download, Printer } from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { PERMISSIONS } from "@/types/auth";
 import { ReportFilters as ReportFiltersPanel } from "@/components/reports/ReportFilters";
 import { AnalyticsOverview } from "@/components/reports/AnalyticsOverview";
 import { VerificationAnalytics } from "@/components/reports/VerificationAnalytics";
@@ -27,15 +29,17 @@ import type { ConflictSeverity } from "@/types/conflict";
 
 export default function ReportsPage() {
   return (
-    <React.Suspense
-      fallback={
-        <div className="flex min-h-[50vh] items-center justify-center">
-          <p className="text-xs font-semibold text-slate-400">Loading analytics workspace…</p>
-        </div>
-      }
-    >
-      <ReportsPageInner />
-    </React.Suspense>
+    <ProtectedRoute>
+      <React.Suspense
+        fallback={
+          <div className="flex min-h-[50vh] items-center justify-center">
+            <p className="text-xs font-semibold text-slate-400">Loading analytics workspace…</p>
+          </div>
+        }
+      >
+        <ReportsPageInner />
+      </React.Suspense>
+    </ProtectedRoute>
   );
 }
 

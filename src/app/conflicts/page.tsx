@@ -33,7 +33,17 @@ import { cn } from "@/lib/utils";
 import type { SpatialConflict } from "@/types/conflict";
 import type { ValidationReport } from "@/lib/spatialValidation";
 
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+
 export default function ConflictsPage() {
+  return (
+    <ProtectedRoute>
+      <ConflictsPageContent />
+    </ProtectedRoute>
+  );
+}
+
+function ConflictsPageContent() {
   return (
     <React.Suspense fallback={<PageLoader label="Preparing Spatial Conflict Center…" />}>
       <ConflictsCenter />

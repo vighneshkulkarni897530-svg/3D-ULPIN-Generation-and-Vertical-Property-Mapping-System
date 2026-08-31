@@ -3,31 +3,55 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Building, ShieldCheck, Lock, Mail, User, Phone, ArrowRight, Sparkles } from 'lucide-react';
+import { Building, ShieldCheck, Lock, Mail, User, Phone, ArrowRight, Sparkles, AlertCircle, Info } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
+/**
+ * Registration page (Phase 10).
+ * Creates a real CITIZEN account via /api/auth/register (server-side
+ * validation + scrypt password hashing) and signs the user in. Officer and
+ * administrator accounts are provisioned administratively, NOT via
+ * self-registration — the server rejects any other role.
+ */
 export default function RegisterPage() {
   const router = useRouter();
-  const { loginAs } = useAuth();
+  const { register, authStatus } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [aadhaar, setAadhaar] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState<'citizen' | 'officer'>('citizen');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  React.useEffect(() => {
+    if (authStatus === 'authenticated') {
+      router.replace('/dashboard');
+    }
+  }, [authStatus, router]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
     setLoading(true);
-
-    setTimeout(() => {
-      loginAs(role);
-      setLoading(false);
-      if (role === 'officer') router.push('/dashboard/officer');
-      else router.push('/dashboard/citizen');
-    }, 600);
+    const result = await register({ name, email, phone, password });
+    setLoading(false);
+    if (!result.ok) {
+      setError(result.error ?? 'Registration failed.');
+      return;
+    }
+    if (typeof window !== 'undefined') {
+      const next = new URLSearchParams(window.location.search).get('next');
+      if (next && next.startsWith('/') && !next.startsWith('//')) {
+        router.push(next);
+        return;
+      }
+    }
+    router.push('/dashboard/citizen');
   };
 
   return (
@@ -49,6 +73,15 @@ export default function RegisterPage() {
 
         <div className="bg-slate-900/90 border border-slate-800 p-7 rounded-3xl shadow-2xl backdrop-blur-xl space-y-5">
           <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="flex items-start gap-2 rounded-xl border border-red-500/40 bg-red-500/10 px-3.5 py-2.5" role="alert">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
+                <div>
+                  <p className="text-xs font-bold text-red-300">Registration failed</p>
+                  <p className="text-[11px] text-red-300/80">{error}</p>
+                </div>
+              </div>
+            )}
             <div>
               <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
                 Full Name
@@ -107,10 +140,11 @@ export default function RegisterPage() {
                 </label>
                 <input
                   type="text"
-                  value={aadhaar}
-                  onChange={(e) => setAadhaar(e.target.value)}
+                  value="PENDING-KYC"
+                  disabled
+                  readOnly
                   placeholder="XXXX-XXXX-8921"
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-400 text-white rounded-xl px-3.5 py-2.5 text-xs font-medium focus:ring-2 focus:ring-cyan-500/20 outline-none font-mono"
+                  className="w-full bg-slate-950 border border-slate-800 text-slate-500 rounded-xl px-3.5 py-2.5 text-xs font-medium font-mono outline-none cursor-not-allowed"
                 />
               </div>
             </div>
@@ -166,18 +200,11 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                Registering As
-              </label>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value as any)}
-                className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-400 text-white rounded-xl px-3.5 py-2.5 text-xs font-medium focus:ring-2 focus:ring-cyan-500/20 outline-none"
-              >
-                <option value="citizen">Citizen / Landowner</option>
-                <option value="officer">Government Revenue Surveyor</option>
-              </select>
+            <div className="flex items-start gap-2 rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5">
+              <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-cyan-400" />
+              <p className="text-[10px] leading-relaxed text-slate-400">
+                Self-registration creates a <span className="font-bold text-cyan-300">Citizen</span> account. Government Officer and Administrator accounts are provisioned by the cadastre administration.
+              </p>
             </div>
 
             <button
@@ -193,8 +220,8 @@ export default function RegisterPage() {
             </button>
           </form>
           <div className="flex items-center gap-2 text-[10px] text-slate-500">
-            <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Your identity is verified via Aadhaar OTP & masked before public display (mock simulation).</span>
+            <ShieldCheck className="w-3.5 h-3.5 shrink-0 text-cyan-400" />
+            <span>Passwords are salted &amp; hashed (scrypt) on the server. Aadhaar linking happens after KYC in a production deployment (prototype).</span>
           </div>
 
           <div className="text-center pt-2 text-xs text-slate-400">

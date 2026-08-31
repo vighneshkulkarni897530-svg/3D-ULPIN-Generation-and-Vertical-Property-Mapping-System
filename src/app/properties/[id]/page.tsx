@@ -29,7 +29,17 @@ const TABS = [
   { id: "history", label: "Verification History", icon: History },
 ];
 
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+
 export default function PropertyDetailsPage() {
+  return (
+    <ProtectedRoute>
+      <PropertyDetailsPageContent />
+    </ProtectedRoute>
+  );
+}
+
+function PropertyDetailsPageContent() {
   const params = useParams<{ id: string }>();
   const id = params?.id ?? "";
   const { properties } = useProperty();

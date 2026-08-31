@@ -33,7 +33,18 @@ import { cn } from "@/lib/utils";
 import type { SpatialConflict } from "@/types/conflict";
 import type { PropertyUnit } from "@/types/gis";
 
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { PERMISSIONS } from "@/types/auth";
+
 export default function FieldVerificationPage() {
+  return (
+    <ProtectedRoute permission={PERMISSIONS.VIEW_FIELDSHEET}>
+      <FieldVerificationPageContent />
+    </ProtectedRoute>
+  );
+}
+
+function FieldVerificationPageContent() {
   return (
     <React.Suspense fallback={<PageLoader label="Preparing field verification…" />}>
       <FieldVerification />
