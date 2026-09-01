@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "ulpin-3d",
     "source": ".",
     "ignore": [
       "firebase.json",

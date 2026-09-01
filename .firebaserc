@@ -1,15 +1,5 @@
 {
   "projects": {
-    "default": "d-ulpin-de274",
-    "uplin": "uplin-3d"
-  },
-  "targets": {
-    "d-ulpin-de274": {
-      "hosting": {
-        "app": [
-          "uplin-3d"
-        ]
-      }
-    }
+    "default": "d-ulpin-de274"
   }
 }
