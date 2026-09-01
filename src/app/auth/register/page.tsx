@@ -44,14 +44,7 @@ export default function RegisterPage() {
       setError(result.error ?? 'Registration failed.');
       return;
     }
-    if (typeof window !== 'undefined') {
-      const next = new URLSearchParams(window.location.search).get('next');
-      if (next && next.startsWith('/') && !next.startsWith('//')) {
-        router.push(next);
-        return;
-      }
-    }
-    router.push('/dashboard/citizen');
+    router.push('/auth/login');
   };
 
   return (

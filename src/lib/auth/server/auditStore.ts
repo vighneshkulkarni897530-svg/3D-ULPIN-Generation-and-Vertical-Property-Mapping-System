@@ -175,14 +175,25 @@ export function appendAudit(input: {
 
   // Best-effort durable persistence (never blocks or breaks the caller).
   void (async () => {
-    const row = recordToDbRow(record);
     try {
       if (isSupabaseConfigured()) {
-        await auditLogRepo.create({ ...row, ipAddressMasked: record.ipAddressMasked });
+        await auditLogRepo.create({
+          actorId: record.actorId,
+          actorName: record.actorName,
+          actorRole: record.actorRole,
+          action: record.action,
+          entityType: record.entityType,
+          entityId: record.entityId,
+          previousValue: record.previousValue ?? null,
+          newValue: record.newValue ?? null,
+          details: record.details ?? null,
+          ipAddressMasked: record.ipAddressMasked,
+        });
         return;
       }
       if (input.accessToken) {
         const supabase = createUserSupabaseClient(input.accessToken);
+        const row = recordToDbRow(record);
         await supabase.from('audit_logs').insert(row);
       }
     } catch {

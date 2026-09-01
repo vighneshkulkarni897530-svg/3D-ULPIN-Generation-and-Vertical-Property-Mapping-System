@@ -6,6 +6,7 @@ import { GISProvider } from '@/context/GISContext';
 import { WorkflowProvider } from '@/context/WorkflowContext';
 import { AppShell } from '@/components/layout/AppShell';
 import { Toaster } from '@/components/ui/toaster';
+import { FirebaseClient } from '@/components/common/FirebaseClient';
 
 export const metadata: Metadata = {
   title: 'Smart Property Verification Platform | 3D Cadastre & ULPIN Verification',
@@ -24,6 +25,7 @@ export default function RootLayout({
           <PropertyProvider>
             <GISProvider>
               <WorkflowProvider>
+                <FirebaseClient />
                 <AppShell>{children}</AppShell>
                 <Toaster />
               </WorkflowProvider>

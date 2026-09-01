@@ -14,8 +14,15 @@
  *   - USER_CREATED (+ REGISTER) audit records for real signups only.
  */
 import { NextResponse, type NextRequest } from 'next/server';
-import type { User as SupabaseAuthUser } from '@supabase/supabase-js';
 import { createAnonSupabaseClient } from '@/lib/supabase/server';
+import { registerUser } from '@/lib/auth/server/userStore';
+
+type SupabaseAuthUser = {
+  id: string;
+  email?: string | null;
+  phone?: string | null;
+  identities?: Array<{ id?: string }>;
+};
 import { isSupabaseAuthConfigured } from '@/lib/supabase/env';
 import { ensureProfileForAuthUser, toPublicUser } from '@/lib/auth/server/profiles';
 import { appendAudit } from '@/lib/auth/server/auditStore';
@@ -52,8 +59,6 @@ export async function POST(req: NextRequest) {
       'Authentication service is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.',
     );
   }
-
-  const ip = clientIp(req);
 
   const result = registerUser({ name: name.value, email: email.value, phone: phone.value, password: password.value });
   if (!result.ok) {

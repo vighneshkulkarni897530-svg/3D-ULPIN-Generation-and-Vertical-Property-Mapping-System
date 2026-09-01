@@ -63,7 +63,7 @@ const LIST_LIMIT = 1000;
 const ACTIVITY_LIMIT = 500;
 
 export async function GET(req: NextRequest) {
-  const auth = requireAuth(req);
+  const auth = await requireAuth(req);
   if ('response' in auth) return auth.response;
 
   // Demo mode: no Supabase credentials — serve the in-memory dataset directly.

@@ -22,14 +22,14 @@ import { appendAudit, isAuditAction, isAuditEntityType, queryAudit, type AuditAc
 const READ_PERMISSION = PERMISSIONS.VIEW_ACTIVITY_LOG;
 
 export async function GET(req: NextRequest) {
-  const auth = requirePermission(req, READ_PERMISSION);
+  const auth = await requirePermission(req, READ_PERMISSION);
   if ('response' in auth) return auth.response;
 
   const actionParam = req.nextUrl.searchParams.get('action');
   const entityParam = req.nextUrl.searchParams.get('entityType');
   const limitParam = Number(req.nextUrl.searchParams.get('limit') ?? '200');
 
-  const records = queryAudit({
+  const records = await queryAudit({
     ...(actionParam && isAuditAction(actionParam) ? { action: actionParam as AuditAction } : {}),
     ...(entityParam && isAuditEntityType(entityParam) ? { entityType: entityParam as never } : {}),
     limit: Number.isFinite(limitParam) ? Math.max(1, Math.min(limitParam, 500)) : 200,
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = requireAuth(req);
+  const auth = await requireAuth(req);
   if ('response' in auth) return auth.response;
   const actor = auth.user;
 

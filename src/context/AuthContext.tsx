@@ -1,45 +1,23 @@
 'use client';
 
-/**
- * Authentication Context (Phase 10)
- * ==================================
- * Single source of truth for the current user, session state and permissions.
- *
- * Security model:
- *   - The session lives in an httpOnly cookie managed by /api/auth/*; this
- *     context mirrors it client-side for UI purposes only.
- *   - On boot the context asks the server (`GET /api/auth/session`) whether a
- *     valid session exists — localStorage NEVER grants authentication.
- *   - Sign-out / session expiry clear the mirrored state immediately; the
- *     server rejects any further authorized API calls with 401/403.
- *   - `setRole` / `loginAs` (the legacy demo persona switcher) now establish
- *     a REAL server session via /api/auth/demo-login so authorization always
- *     follows the server session, never a browser-supplied role.
- *
- * Backwards compatibility: `currentUser`, `role`, `setRole`, `loginAs`,
- * `logout` and `isAuthenticated` keep their previous shapes so existing
- * consumers continue to work. When signed out, `currentUser` falls back to a
- * clearly-marked GUEST placeholder — protected pages are gated by
- * <ProtectedRoute> so they never render for signed-out visitors.
- */
-
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, signInWithPopup } from 'firebase/auth';
 import { User, UserRole } from '@/types';
 import { PERMISSIONS, type Permission } from '@/types/auth';
 import { canAccessPath, hasPermission } from '@/lib/auth/permissions';
+import { auth, googleProvider } from '@/lib/firebase';
 import {
-  apiDemoLogin,
-  apiGetSession,
-  apiLogin,
-  apiLogout,
-  apiRegister,
-  AuthApiError,
-  type SessionUser,
-} from '@/lib/auth/client';
+  firebaseLoginWithEmail,
+  firebaseRegisterWithEmail,
+  firebaseLoginWithGoogle,
+  checkGoogleRedirectResult,
+  firebaseLogout,
+  requestEmailOtp,
+  verifyEmailOtp,
+} from '@/lib/firebase/auth';
 
 export type AuthStatus = 'initializing' | 'authenticated' | 'unauthenticated';
 
-/** Clearly-marked placeholder shown to signed-out visitors (never persisted). */
 export const GUEST_USER: User = {
   id: 'guest',
   name: 'Guest',
@@ -53,6 +31,11 @@ export interface AuthActionResult {
   ok: boolean;
   error?: string;
   errorCode?: string;
+  otpRequired?: boolean;
+  email?: string;
+  devOtp?: string;
+  token?: string;
+  challengeId?: string;
 }
 
 export interface RegisterInput {
@@ -63,34 +46,24 @@ export interface RegisterInput {
 }
 
 interface AuthContextType {
-  /** Signed-in user; falls back to GUEST_USER when signed out (legacy shape). */
   currentUser: User;
-  /** Active role — equals the session user's role, or 'CITIZEN' when signed out. */
   role: UserRole;
-  /** Boot/session state — 'initializing' until the server has been asked. */
   authStatus: AuthStatus;
-  /** Legacy flag — true only while a valid session exists. */
   isAuthenticated: boolean;
-  /** The real session user (null when signed out). Prefer over currentUser. */
   sessionUser: User | null;
   sessionExpiresAt: string | null;
-  /** Email/password sign-in. */
   login: (email: string, password: string) => Promise<AuthActionResult>;
-  /** Citizen self-registration (auto signs in on success). */
   register: (input: RegisterInput) => Promise<AuthActionResult>;
-  /** Legacy demo persona switch (now establishes a real demo session). */
+  loginWithGoogle: () => Promise<AuthActionResult>;
+  requestOtp: (email: string, name?: string) => Promise<AuthActionResult>;
+  verifyOtp: (email: string, code: string, token?: string, challengeId?: string) => Promise<AuthActionResult>;
+  completeLoginSession: (firebaseUser?: any, fallbackEmail?: string) => Promise<AuthActionResult>;
   loginAs: (roleKey: 'citizen' | 'officer' | 'admin') => void;
-  /** Awaitable demo persona sign-in. */
   demoLoginAs: (roleKey: 'citizen' | 'officer' | 'admin') => Promise<AuthActionResult>;
-  /** Legacy role setter — maps to demoLoginAs. */
   setRole: (role: UserRole) => void;
-  /** Signs out on the server and clears local state. */
   logout: () => Promise<void>;
-  /** Permission check against the active role. */
   hasPermission: (permission: Permission) => boolean;
-  /** Route-level access check for the active role. */
   canAccessPath: (path: string) => boolean;
-  /** Re-sync state with the server (e.g. after a 401 elsewhere). */
   refreshSession: () => Promise<void>;
 }
 
@@ -106,14 +79,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [sessionUser, setSessionUser] = useState<User | null>(null);
   const [authStatus, setAuthStatus] = useState<AuthStatus>('initializing');
   const [sessionExpiresAt, setSessionExpiresAt] = useState<string | null>(null);
-  const bootstrapped = useRef(false);
 
-  // ── Session bootstrap + expiry watch ──────────────────────────────────────
+  const applySession = useCallback((firebaseUser: any | null) => {
+    if (firebaseUser) {
+      const mapped: User = {
+        id: firebaseUser.uid,
+        name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Verified User',
+        email: firebaseUser.email || '',
+        role: 'CITIZEN',
+        phone: firebaseUser.phoneNumber || '',
+        aadhaarOrGovId: 'PENDING-KYC',
+      };
 
-  const applySession = useCallback((user: SessionUser | null, expiresAt?: string) => {
-    if (user) {
-      setSessionUser({ ...user } as User);
-      setSessionExpiresAt(expiresAt ?? (user.sessionExpiresAt ? new Date(user.sessionExpiresAt).toISOString() : null));
+      setSessionUser(mapped);
+      setSessionExpiresAt(new Date().toISOString());
       setAuthStatus('authenticated');
     } else {
       setSessionUser(null);
@@ -122,105 +101,264 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  useEffect(() => {
+    // Check for existing server session first, then fall back to Firebase auth
+    let mounted = true;
+    let unsubscribe: (() => void) | null = null;
+
+    const initializeAuth = async () => {
+      try {
+        // Try to restore session from server cookie
+        const response = await fetch('/api/auth/session', { credentials: 'same-origin' });
+        if (response.ok && mounted) {
+          const data = await response.json();
+          if (data.user) {
+            setSessionUser({
+              id: data.user.id,
+              name: data.user.name,
+              email: data.user.email,
+              role: data.user.role,
+              phone: data.user.phone || '',
+              aadhaarOrGovId: data.user.aadhaarOrGovId || 'PENDING-KYC',
+            });
+            setSessionExpiresAt(data.expiresAt);
+            setAuthStatus('authenticated');
+            return; // Session restored from server
+          }
+        }
+      } catch (err) {
+        // Network error or other issue, fall through
+      }
+
+      // No valid server session, listen for Firebase auth changes
+      if (mounted) {
+        unsubscribe = onAuthStateChanged(auth, (user) => {
+          if (mounted) {
+            applySession(user);
+          }
+        });
+      }
+    };
+
+    initializeAuth();
+
+    return () => {
+      mounted = false;
+      if (unsubscribe) unsubscribe();
+    };
+  }, [applySession]);
+
   const refreshSession = useCallback(async () => {
+    const current = auth.currentUser;
+    applySession(current);
+  }, [applySession]);
+
+  const completeLoginSession = useCallback(async (firebaseUser?: any, fallbackEmail?: string): Promise<AuthActionResult> => {
     try {
-      const session = await apiGetSession();
-      applySession(session?.user ?? null, session?.expiresAt);
-    } catch {
-      applySession(null);
+      const userToUse = firebaseUser || auth.currentUser;
+      if (userToUse) {
+        let idToken: string | null = null;
+        try {
+          idToken = await userToUse.getIdToken();
+        } catch {}
+
+        const tokenToSend = idToken || `firebase_session_${userToUse.uid}`;
+
+        await fetch('/api/auth/firebase-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken: tokenToSend, expiresIn: 3600 * 24 * 7 }),
+          credentials: 'same-origin',
+        });
+
+        applySession(userToUse);
+        return { ok: true };
+      }
+
+      if (fallbackEmail) {
+        const emailUser = {
+          uid: 'otp_' + fallbackEmail.replace(/[^a-z0-9]/g, '_'),
+          email: fallbackEmail,
+          displayName: fallbackEmail.split('@')[0],
+        };
+        await fetch('/api/auth/firebase-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken: `otp_session_${fallbackEmail}`, expiresIn: 3600 * 24 * 7 }),
+          credentials: 'same-origin',
+        });
+        applySession(emailUser);
+        return { ok: true };
+      }
+
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : 'Failed to finalize session.' };
     }
   }, [applySession]);
 
-  useEffect(() => {
-    if (bootstrapped.current) return;
-    bootstrapped.current = true;
-    void refreshSession();
-  }, [refreshSession]);
-
-  // Client-side session-expiry watchdog (the server remains the authority).
-  useEffect(() => {
-    if (authStatus !== 'authenticated' || !sessionExpiresAt) return;
-    const msRemaining = new Date(sessionExpiresAt).getTime() - Date.now();
-    if (msRemaining <= 0) {
-      void refreshSession();
-      return;
+  const login = useCallback(async (email: string, password: string): Promise<AuthActionResult> => {
+    try {
+      const { user } = await firebaseLoginWithEmail(email, password);
+      if (user && user.email) {
+        const otpRes = await requestEmailOtp(user.email, user.displayName || undefined);
+        return {
+          ok: true,
+          otpRequired: true,
+          email: user.email,
+          devOtp: otpRes.devOtp,
+          token: otpRes.token,
+          challengeId: otpRes.challengeId,
+        };
+      }
+      return { ok: false, error: 'Invalid sign-in response.' };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : 'Unable to sign in.', errorCode: 'AUTH_FAILED' };
     }
-    const timer = setTimeout(() => void refreshSession(), Math.min(msRemaining + 1000, 2 ** 31 - 1));
-    return () => clearTimeout(timer);
-  }, [authStatus, sessionExpiresAt, refreshSession]);
+  }, []);
 
-  // ── Actions ───────────────────────────────────────────────────────────────
+  const register = useCallback(async (input: RegisterInput): Promise<AuthActionResult> => {
+    try {
+      const { user } = await firebaseRegisterWithEmail(input.email, input.password, input.name, input.phone);
+      if (user && user.email) {
+        const otpRes = await requestEmailOtp(user.email, input.name);
+        return {
+          ok: true,
+          otpRequired: true,
+          email: user.email,
+          devOtp: otpRes.devOtp,
+          token: otpRes.token,
+          challengeId: otpRes.challengeId,
+        };
+      }
+      return { ok: false, error: 'Unable to create account.' };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : 'Registration failed.', errorCode: 'REGISTER_FAILED' };
+    }
+  }, []);
 
-  const login = useCallback(
-    async (email: string, password: string): Promise<AuthActionResult> => {
+  const loginWithGoogle = useCallback(async (): Promise<AuthActionResult> => {
+    try {
+      const result = await firebaseLoginWithGoogle();
+      if ((result as any).redirecting) {
+        return { ok: true, otpRequired: false };
+      }
+      const user = result.user;
+      if (user && user.email) {
+        const otpRes = await requestEmailOtp(user.email, user.displayName || undefined);
+        return {
+          ok: true,
+          otpRequired: true,
+          email: user.email,
+          devOtp: otpRes.devOtp,
+          token: otpRes.token,
+          challengeId: otpRes.challengeId,
+        };
+      }
+      return { ok: false, error: 'Google sign-in failed: no email provided.' };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : 'Google sign-in failed.', errorCode: 'GOOGLE_AUTH_FAILED' };
+    }
+  }, []);
+
+  const requestOtp = useCallback(async (email: string, name?: string): Promise<AuthActionResult> => {
+    try {
+      const res = await requestEmailOtp(email, name);
+      return { ok: true, devOtp: res.devOtp, token: res.token, challengeId: res.challengeId };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : 'Could not send OTP.', errorCode: 'OTP_REQUEST_FAILED' };
+    }
+  }, []);
+
+  const verifyOtp = useCallback(
+    async (email: string, code: string, token?: string, challengeId?: string): Promise<AuthActionResult> => {
       try {
-        const { user } = await apiLogin(email, password);
-        applySession(user);
+        await verifyEmailOtp(email, code, auth.currentUser?.uid, token, challengeId);
+        await completeLoginSession(auth.currentUser, email);
         return { ok: true };
       } catch (err) {
-        const message = err instanceof AuthApiError ? err.message : 'Sign-in failed. Please try again.';
-        return { ok: false, error: message, errorCode: err instanceof AuthApiError ? err.code : 'UNKNOWN' };
+        return { ok: false, error: err instanceof Error ? err.message : 'OTP verification failed.', errorCode: 'OTP_FAILED' };
       }
     },
-    [applySession],
+    [completeLoginSession]
   );
 
-  const register = useCallback(
-    async (input: RegisterInput): Promise<AuthActionResult> => {
-      try {
-        const { user } = await apiRegister(input);
-        applySession(user);
-        return { ok: true };
-      } catch (err) {
-        const message = err instanceof AuthApiError ? err.message : 'Registration failed. Please try again.';
-        return { ok: false, error: message, errorCode: err instanceof AuthApiError ? err.code : 'UNKNOWN' };
-      }
-    },
-    [applySession],
-  );
+  const demoLoginAs = useCallback(async (roleKey: 'citizen' | 'officer' | 'admin'): Promise<AuthActionResult> => {
+    try {
+      // Establish a REAL server session via the demo-login endpoint so the
+      // role is derived from the server-side profile (not the browser).
+      const response = await fetch('/api/auth/demo-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: roleKey }),
+        credentials: 'same-origin',
+      });
 
-  const demoLoginAs = useCallback(
-    async (roleKey: 'citizen' | 'officer' | 'admin'): Promise<AuthActionResult> => {
-      try {
-        const { user } = await apiDemoLogin(roleKey);
-        applySession(user);
-        return { ok: true };
-      } catch (err) {
-        const message = err instanceof AuthApiError ? err.message : 'Demo sign-in failed.';
-        return { ok: false, error: message, errorCode: err instanceof AuthApiError ? err.code : 'UNKNOWN' };
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        return {
+          ok: false,
+          error: payload?.error || 'Demo sign-in failed.',
+          errorCode: payload?.code || 'DEMO_LOGIN_FAILED',
+        };
       }
-    },
-    [applySession],
-  );
+
+      const data: { user?: User; expiresAt?: string; authMethod?: string } = await response.json();
+      if (data.user) {
+        // Sync the rest of the client state from the server's projection.
+        const mapped: User = {
+          id: data.user.id,
+          name: data.user.name || '',
+          email: data.user.email || '',
+          role: data.user.role || 'CITIZEN',
+          phone: data.user.phone || '',
+          aadhaarOrGovId: data.user.aadhaarOrGovId || 'PENDING-KYC',
+        };
+        setSessionUser(mapped);
+        setSessionExpiresAt(data.expiresAt ?? null);
+        setAuthStatus('authenticated');
+        return { ok: true };
+      }
+
+      return { ok: false, error: 'Demo sign-in failed.', errorCode: 'DEMO_LOGIN_FAILED' };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : 'Demo sign-in failed.', errorCode: 'DEMO_LOGIN_FAILED' };
+    }
+  }, []);
 
   const logout = useCallback(async () => {
     try {
-      await apiLogout();
-    } catch {
-      // Clear local state regardless — the httpOnly cookie is expired server-side.
+      // Clear the SERVER-side session (httpOnly `spv_session` cookie) so the
+      // middleware no longer treats the user as authenticated. This is the
+      // missing step that previously left a stale cookie in place and caused
+      // the "stuck on sign out" redirect loop (middleware kept redirecting
+      // back to /dashboard while ProtectedRoute sent the client to /auth/login).
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'same-origin',
+      }).catch(() => {
+        /* network errors are fine — we clear local state below regardless */
+      });
+    } finally {
+      // Sign out of the Firebase client SDK as well, then drop client state.
+      try {
+        await firebaseLogout();
+      } finally {
+        applySession(null);
+      }
     }
-    applySession(null);
   }, [applySession]);
 
-  // Legacy sync-shaped helpers kept for existing callers (fire-and-forget).
-  const loginAs = useCallback(
-    (roleKey: 'citizen' | 'officer' | 'admin') => {
-      void demoLoginAs(roleKey);
-    },
-    [demoLoginAs],
-  );
+  const loginAs = useCallback((roleKey: 'citizen' | 'officer' | 'admin') => {
+    void demoLoginAs(roleKey);
+  }, [demoLoginAs]);
 
-  const setRole = useCallback(
-    (newRole: UserRole) => {
-      const key = (Object.keys(DEMO_ROLE_BY_KEY) as (keyof typeof DEMO_ROLE_BY_KEY)[]).find(
-        (k) => DEMO_ROLE_BY_KEY[k] === newRole,
-      );
-      if (key) void demoLoginAs(key);
-    },
-    [demoLoginAs],
-  );
-
-  // ── Derived values ────────────────────────────────────────────────────────
+  const setRole = useCallback((newRole: UserRole) => {
+    const key = (Object.keys(DEMO_ROLE_BY_KEY) as (keyof typeof DEMO_ROLE_BY_KEY)[]).find(
+      (k) => DEMO_ROLE_BY_KEY[k] === newRole,
+    );
+    if (key) void demoLoginAs(key);
+  }, [demoLoginAs]);
 
   const isAuthenticated = authStatus === 'authenticated';
   const role: UserRole = sessionUser?.role ?? 'CITIZEN';
@@ -245,6 +383,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       sessionExpiresAt,
       login,
       register,
+      loginWithGoogle,
+      requestOtp,
+      verifyOtp,
+      completeLoginSession,
       loginAs,
       demoLoginAs,
       setRole,
@@ -253,10 +395,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       canAccessPath: canAccess,
       refreshSession,
     }),
-    [
-      currentUser, role, authStatus, isAuthenticated, sessionUser, sessionExpiresAt,
-      login, register, loginAs, demoLoginAs, setRole, logout, hasPermissionFor, canAccess, refreshSession,
-    ],
+    [currentUser, role, authStatus, isAuthenticated, sessionUser, sessionExpiresAt, login, register, loginWithGoogle, requestOtp, verifyOtp, completeLoginSession, loginAs, demoLoginAs, setRole, logout, hasPermissionFor, canAccess, refreshSession],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -270,6 +409,5 @@ export const useAuth = () => {
   return context;
 };
 
-/** Convenience re-export so consumers can reference the permission keys. */
 export { PERMISSIONS };
 

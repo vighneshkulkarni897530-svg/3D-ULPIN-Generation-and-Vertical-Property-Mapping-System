@@ -7,17 +7,14 @@
  * rotated tokens are re-issued in the httpOnly cookie (rotation happens in
  * exactly one place so refresh tokens can never race).
  * Revoked / disabled accounts receive 401, so the client clears its state.
+ * 
+ * Supports both Supabase Auth (when configured) and Firebase Auth.
  */
 import { NextResponse, type NextRequest } from 'next/server';
 import { getSessionUser, setSessionCookie, clearSessionCookie } from '@/lib/auth/server/sessionStore';
-import { isSupabaseAuthConfigured } from '@/lib/supabase/env';
 import { jsonError } from '@/lib/auth/server/apiAuth';
 
 export async function GET(req: NextRequest) {
-  if (!isSupabaseAuthConfigured()) {
-    return jsonError(503, 'AUTH_NOT_CONFIGURED', 'Authentication service is not configured.');
-  }
-
   const resolved = await getSessionUser(req, { allowRefresh: true });
   if (!resolved) {
     const res = jsonError(401, 'UNAUTHENTICATED', 'No active session.');

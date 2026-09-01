@@ -19,7 +19,7 @@ import { clientIp } from '@/lib/auth/server/apiAuth';
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(req: NextRequest, ctx: RouteContext) {
-  const auth = requirePermission(req, PERMISSIONS.USER_MANAGEMENT);
+  const auth = await requirePermission(req, PERMISSIONS.USER_MANAGEMENT);
   if ('response' in auth) return auth.response;
 
   const { id } = await ctx.params;
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
 }
 
 export async function PATCH(req: NextRequest, ctx: RouteContext) {
-  const auth = requirePermission(req, PERMISSIONS.USER_MANAGEMENT);
+  const auth = await requirePermission(req, PERMISSIONS.USER_MANAGEMENT);
   if ('response' in auth) return auth.response;
   const actor = auth.user;
 

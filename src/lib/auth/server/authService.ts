@@ -18,8 +18,13 @@
  */
 
 import type { User } from '@/types';
-import type { User as SupabaseAuthUser } from '@supabase/supabase-js';
 import { createAnonSupabaseClient } from '@/lib/supabase/server';
+
+type SupabaseAuthUser = {
+  id: string;
+  email?: string | null;
+  phone?: string | null;
+};
 import { isSupabaseAuthConfigured } from '@/lib/supabase/env';
 import { ensureProfileForAuthUser, toPublicUser, type ProfileRecord } from './profiles';
 import { revokeSupabaseSession, type SupabaseSessionData } from './sessionStore';
@@ -96,7 +101,7 @@ export async function authenticateWithPassword(email: string, password: string):
     return { ok: false, error: 'AUTH_ERROR', message: 'Sign-in failed. Please try again.' };
   }
 
-  const session = sessionDataOf(authUser, rawSession);
+  const session = sessionDataOf(rawSession);
 
   // Load (or self-heal) the application profile — role + status live there.
   const profile = await ensureProfileForAuthUser(authUser, session.access_token);

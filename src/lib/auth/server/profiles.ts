@@ -23,8 +23,15 @@
  */
 
 import type { User, UserRole } from '@/types';
-import type { User as SupabaseAuthUser } from '@supabase/supabase-js';
 import type { DbProfile } from '@/lib/supabase/types';
+
+type SupabaseAuthUser = {
+  id: string;
+  email?: string | null;
+  phone?: string | null;
+  app_metadata?: Record<string, unknown>;
+  user_metadata?: Record<string, unknown>;
+};
 import {
   createServerSupabaseClient,
   createUserSupabaseClient,
