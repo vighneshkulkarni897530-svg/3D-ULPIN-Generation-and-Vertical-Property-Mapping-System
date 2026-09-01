@@ -1,0 +1,1 @@
+chore(auth): complete Login & Sign Up system - scrypt hashing, httpOnly sessions, password reset, RBAC, audit logging
