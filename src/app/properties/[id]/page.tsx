@@ -81,11 +81,11 @@ function PropertyDetailsPageContent() {
 
   const building = property.building;
 
-  // Phase 4 Â§13 â€” map this legacy record to its GIS vertical unit (if any) so
+  // Phase 4 §13 — map this legacy record to its GIS vertical unit (if any) so
   // the verification workspace opens with the correct unit pre-selected.
   const mappedGisUnit = gisUnits.find((u) => u.propertyId === property.id);
 
-  // Phase 7 Â§13 â€” centralized activity history for this property / unit / building / parcel
+  // Phase 7 §13 — centralized activity history for this property / unit / building / parcel
   const relatedEntityIds = [property.id, mappedGisUnit?.id, mappedGisUnit?.buildingId, mappedGisUnit?.parcelId].filter(
     Boolean,
   ) as string[];
@@ -122,11 +122,11 @@ function PropertyDetailsPageContent() {
               <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
                 <span className="flex items-center gap-1.5">
                   <MapPin className="h-3.5 w-3.5 text-cyan-400" />
-                  {property.address}, {property.city}, {property.state} â€” {property.pincode}
+                  {property.address}, {property.city}, {property.state} — {property.pincode}
                 </span>
                 <span className="flex items-center gap-1.5">
                   <ScanLine className="h-3.5 w-3.5 text-blue-400" />
-                  {property.coordinates.lat.toFixed(4)}Â°N, {property.coordinates.lng.toFixed(4)}Â°E â€” WGS 84
+                  {property.coordinates.lat.toFixed(4)}°N, {property.coordinates.lng.toFixed(4)}°E — WGS 84
                 </span>
               </div>
             </div>
@@ -139,7 +139,7 @@ function PropertyDetailsPageContent() {
                   title={
                     mappedGisUnit
                       ? "Open the verification workspace for this property"
-                      : "Open the verification queue â€” this record is not yet mapped to the GIS vertical registry"
+                      : "Open the verification queue — this record is not yet mapped to the GIS vertical registry"
                   }
                   className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2.5 text-xs font-extrabold text-slate-950 shadow-tech-cyan transition-all hover:from-cyan-400 hover:to-blue-500"
                 >
@@ -194,7 +194,7 @@ function PropertyDetailsPageContent() {
         </div>
       </section>
 
-      {/* Phase 5 Â§13 â€” related demo spatial conflicts for the mapped GIS unit */}
+      {/* Phase 5 §13 — related demo spatial conflicts for the mapped GIS unit */}
       {(() => {
         const openConflicts = mappedGisUnit
           ? conflicts.filter((c) => c.affectedPropertyIds.includes(mappedGisUnit.id) && c.status !== "Resolved")
@@ -210,7 +210,7 @@ function PropertyDetailsPageContent() {
                 <p className="text-xs font-extrabold text-red-900">Spatial Conflict Detected</p>
                 <p className="text-[11px] leading-relaxed text-red-700/90">
                   {openConflicts.length} open demo spatial conflict{openConflicts.length === 1 ? "" : "s"} affect the
-                  linked vertical property unit ({mappedGisUnit?.id}). Prototype validation â€” not an official cadastral
+                  linked vertical property unit ({mappedGisUnit?.id}). Prototype validation — not an official cadastral
                   determination.
                 </p>
               </div>
@@ -304,9 +304,9 @@ function PropertyDetailsPageContent() {
                     { label: "Address", value: property.address, wide: true },
                     { label: "Cadastral Zone", value: property.landDetails.cadastralZone.replace(/_/g, " ") },
                     { label: "Soil Classification", value: property.landDetails.soilClassification },
-                    { label: "Water Source", value: property.landDetails.waterSource ?? "â€”", wide: true },
-                    { label: "Guideline Valuation", value: `â‚¹${property.landDetails.guidelineValuationPerSqFt.toLocaleString("en-IN")}/sq ft` },
-                    { label: "Annual Property Tax", value: `â‚¹${property.landDetails.annualPropertyTax.toLocaleString("en-IN")}` },
+                    { label: "Water Source", value: property.landDetails.waterSource ?? "—", wide: true },
+                    { label: "Guideline Valuation", value: `\u20B9${property.landDetails.guidelineValuationPerSqFt.toLocaleString("en-IN")}/sq ft` },
+                    { label: "Annual Property Tax", value: `\u20B9${property.landDetails.annualPropertyTax.toLocaleString("en-IN")}` },
                   ].map((row) => (
                     <div key={row.label} className="rounded-xl bg-slate-50 border border-slate-100 p-3 sm:col-span-1">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{row.label}</span>
@@ -329,7 +329,7 @@ function PropertyDetailsPageContent() {
                           {p.direction}
                         </span>
                         <p className="mt-2 line-clamp-1 text-xs font-bold text-slate-800">{p.owner}</p>
-                        <p className="mt-0.5 font-mono text-[10px] text-slate-400">Survey {p.surveyNo} â€¢ {p.ulpin}</p>
+                        <p className="mt-0.5 font-mono text-[10px] text-slate-400">Survey {p.surveyNo} • {p.ulpin}</p>
                       </div>
                     ))}
                   </div>
@@ -338,10 +338,10 @@ function PropertyDetailsPageContent() {
             </div>
 {/* Right rail */}
             <div className="lg:col-span-4 space-y-6">
-              {/* Phase 7 Â§5 â€” clickable vertical lineage (Parcel â†’ Building â†’ Floor â†’ Unit) */}
+              {/* Phase 7 §5 — clickable vertical lineage (Parcel → Building → Floor → Unit) */}
               {mappedGisUnit && <PropertyLineage unit={mappedGisUnit} />}
 
-              {/* Phase 7 Â§13 â€” centralized activity history (single activity store) */}
+              {/* Phase 7 §13 — centralized activity history (single activity store) */}
               <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-tech">
                 <h3 className="mb-4 flex items-center gap-2 text-sm font-extrabold text-slate-900">
                   <History className="h-4 w-4 text-cyan-600" /> Recent Activity
@@ -362,7 +362,7 @@ function PropertyDetailsPageContent() {
                           </span>
                         </div>
                         <p className="mt-0.5 line-clamp-2 text-[10px] text-slate-500">{a.description}</p>
-                        <p className="mt-1 font-mono text-[9px] text-cyan-700">{a.user} Â· {a.userRole}</p>
+                        <p className="mt-1 font-mono text-[9px] text-cyan-700">{a.user} · {a.userRole}</p>
                       </div>
                     ))}
                     <Link
@@ -385,7 +385,7 @@ function PropertyDetailsPageContent() {
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Primary Owner</span>
                     <p className="mt-1 text-sm font-extrabold text-slate-900">{property.primaryOwnerName}</p>
                     <p className="mt-0.5 font-mono text-[10px] text-slate-400">
-                      Aadhaar: {property.ownerAadhaarMasked} â€¢ {property.ownerContactMasked}
+                      Aadhaar: {property.ownerAadhaarMasked} • {property.ownerContactMasked}
                     </p>
                   </div>
                   {property.coOwners?.map((c) => (
@@ -510,7 +510,7 @@ function PropertyDetailsPageContent() {
                 </div>
                 <h3 className="text-sm font-extrabold text-slate-900">No 3D Building Record</h3>
                 <p className="mx-auto mt-1 max-w-sm text-xs text-slate-500">
-                  This parcel has no registered building structure. Only the 2D cadastral boundary is available â€”
+                  This parcel has no registered building structure. Only the 2D cadastral boundary is available —
                   switch to the 2D Map tab to inspect the survey polygon.
                 </p>
                 <button
@@ -530,7 +530,7 @@ function PropertyDetailsPageContent() {
             <div className="mb-4">
               <h2 className="text-lg font-extrabold text-slate-900">Floors & Property Units</h2>
               <p className="text-xs text-slate-500">
-                Interactive unit-level cadastre â€” carpet areas, ownership, occupancy & compliance.
+                Interactive unit-level cadastre — carpet areas, ownership, occupancy & compliance.
               </p>
             </div>
             {building ? (

@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 export interface DemoEvidencePhoto {
   /** Original file name. */
   name: string;
-  /** Object-URL preview â€” session-only, never persisted. */
+  /** Object-URL preview — session-only, never persisted. */
   url: string;
 }
 
@@ -39,7 +39,7 @@ const ACCEPTED = ["image/jpeg", "image/png", "image/webp", "image/heic"];
 /**
  * Verification evidence panel: simulated-check checklist, geometry status and
  * the Demo Evidence Upload. Uploaded files stay in the browser session as
- * object URLs â€” nothing is persisted to any backend or government repository.
+ * object URLs — nothing is persisted to any backend or government repository.
  */
 export function EvidencePanel({ property, gps, boundary, photo, onPhotoChange, className }: EvidencePanelProps) {
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -58,11 +58,11 @@ export function EvidencePanel({ property, gps, boundary, photo, onPhotoChange, c
       const file = files?.[0];
       if (!file) return;
       if (!ACCEPTED.includes(file.type)) {
-        setError("Unsupported file type â€” please attach a JPEG, PNG, WebP or HEIC image.");
+        setError("Unsupported file type — please attach a JPEG, PNG, WebP or HEIC image.");
         return;
       }
       if (file.size > 8 * 1024 * 1024) {
-        setError("Image is larger than 8 MB â€” please attach a smaller photo.");
+        setError("Image is larger than 8 MB — please attach a smaller photo.");
         return;
       }
       if (photo) URL.revokeObjectURL(photo.url);
@@ -84,14 +84,14 @@ export function EvidencePanel({ property, gps, boundary, photo, onPhotoChange, c
       done: boundary?.status === "Matched",
       warn: !!boundary && boundary.status !== "Matched",
       icon: <Shapes className="h-3.5 w-3.5" />,
-      hint: boundary ? `${boundary.status} Â· ${boundary.deviationM.toFixed(2)} m max deviation` : "Run the boundary comparison",
+      hint: boundary ? `${boundary.status} · ${boundary.deviationM.toFixed(2)} m max deviation` : "Run the boundary comparison",
     },
     {
       label: "Property Image Available",
       done: !!photo,
       warn: false,
       icon: <ImageIcon className="h-3.5 w-3.5" />,
-      hint: photo ? photo.name : "Optional â€” attach a demo field photo",
+      hint: photo ? photo.name : "Optional — attach a demo field photo",
     },
   ];
 
@@ -132,7 +132,7 @@ export function EvidencePanel({ property, gps, boundary, photo, onPhotoChange, c
   );
 }
 
-// â”€â”€ Subcomponents â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Subcomponents ───────────────────────────────────────────────────────────
 
 interface ChecklistItem {
   label: string;
@@ -168,7 +168,7 @@ function Checklist({ checklist }: { checklist: ChecklistItem[] }) {
           </span>
           <span className="min-w-0 flex-1">
             <span className={cn("block text-[11.5px] font-bold", item.done ? "text-emerald-800" : item.warn ? "text-amber-800" : "text-slate-600")}>
-              {item.done ? `âœ“ ${item.label}` : item.warn ? `âš  ${item.label}` : item.label}
+              {item.done ? `✓ ${item.label}` : item.warn ? `⚠ ${item.label}` : item.label}
             </span>
             <span className="block truncate text-[10px] text-slate-500">{item.hint}</span>
           </span>
@@ -225,7 +225,7 @@ function UploadBlock({ photo, error, inputRef, propertyId, onPick, onReplace, on
         >
           <Upload className="h-5 w-5 text-slate-400" />
           <span className="text-[11px] font-bold text-slate-600">Attach demo field photo</span>
-          <span className="text-[9.5px] text-slate-400">JPEG / PNG / WebP / HEIC Â· max 8 MB Â· browser session only</span>
+          <span className="text-[9.5px] text-slate-400">JPEG / PNG / WebP / HEIC · max 8 MB · browser session only</span>
         </button>
       )}
       <input

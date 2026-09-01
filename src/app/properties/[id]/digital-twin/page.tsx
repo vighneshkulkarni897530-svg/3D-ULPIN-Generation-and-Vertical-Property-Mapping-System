@@ -1,15 +1,39 @@
 "use client";
 
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
-import { Building3DViewerDynamic, Building3DViewerHandle } from "@/components/digital-twin/Building3DViewerDynamic";
-import { Building3DViewer, ViewerTool } from "@/components/digital-twin/Building3DViewer";
+import { Township3DViewerDynamic, Township3DViewerHandle } from "@/components/digital-twin/township/Township3DViewerDynamic";
+import {
+  TownshipCameraBar,
+  TownshipControlCluster,
+  TownshipSceneHeader,
+  TownshipSelectedChip,
+} from "@/components/digital-twin/township/TownshipOverlays";
+import { TownshipLayerPanel, TownshipLocationPanel } from "@/components/digital-twin/township/TownshipPanels";
+import { TownshipBuildingPanel } from "@/components/digital-twin/township/TownshipBuildingPanel";
+import { TownshipFloorExplorer } from "@/components/digital-twin/township/TownshipFloorExplorer";
+import {
+  resolveGisFootprints,
+  resolveTowerLinkedData,
+  type ExplicitFloor,
+  type TownshipFloorMode,
+} from "@/components/digital-twin/township/townshipData";
+import { useGIS } from "@/context/GISContext";
+import { useProperty } from "@/context/PropertyContext";
+import {
+  defaultLayerState,
+  SELECTED_TOWER_ID,
+  TOWERS,
+  TOWNSHIP_SITE,
+  type CameraPresetId,
+  type TownshipLayerId,
+  type TownshipLayerState,
+} from "@/components/digital-twin/township/townshipConfig";
 import { BuildingHeader } from "@/components/digital-twin/BuildingHeader";
 import { BuildingInfoPanel } from "@/components/digital-twin/BuildingInfoPanel";
-import { BuildingControls } from "@/components/digital-twin/BuildingControls";
-import { ViewerToolbar } from "@/components/digital-twin/ViewerToolbar";
 import { VerificationScore } from "@/components/digital-twin/VerificationScore";
 import { SystemStatusPanel } from "@/components/digital-twin/SystemStatusPanel";
 import { FloorExplorer } from "@/components/digital-twin/FloorExplorer";
@@ -39,30 +63,84 @@ export default function BuildingDigitalTwinPage() {
 function BuildingDigitalTwinPageContent() {
   const [selectedFloorLevel, setSelectedFloorLevel] = useState(6);
   const [selectedUnit, setSelectedUnit] = useState<TwinUnit | null>(null);
-  const [tool, setTool] = useState<ViewerTool>("select");
-  const [floorMode, setFloorMode] = useState(false);
   const [showLayers, setShowLayers] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // Phase 15A — township scene state (illustrative layer toggles + selection)
+  const [layers, setLayers] = useState<TownshipLayerState>(defaultLayerState);
+  const [selectedTowerId, setSelectedTowerId] = useState<string | null>(SELECTED_TOWER_ID);
+  const [cameraPreset, setCameraPreset] = useState<CameraPresetId>("isometric");
+  // Phase 15C — database-driven floor state + building panel visibility
+  const [floorMode, setFloorMode] = useState<TownshipFloorMode>("all");
+  const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
+  const [showTowerPanel, setShowTowerPanel] = useState(true);
   const viewerShellRef = useRef<HTMLDivElement>(null);
-  const viewerHandleRef = useRef<Building3DViewerHandle>(null);
+  const viewerHandleRef = useRef<Township3DViewerHandle>(null);
+
+  // Route param + real data layers (sanctioned Context → UI pipeline only)
+  const params = useParams<{ id: string }>();
+  const routeId = params?.id ?? "";
+  const { buildings, floors, properties: gisUnits, parcels } = useGIS();
+  const { getPropertyByUlpinOrId } = useProperty();
+  const routeProperty = useMemo(() => getPropertyByUlpinOrId(routeId) ?? null, [getPropertyByUlpinOrId, routeId]);
+
+  // Reset floor state + reopen the building panel whenever the selection changes
+  useEffect(() => {
+    setShowTowerPanel(true);
+    setFloorMode("all");
+    setSelectedLevel(null);
+  }, [selectedTowerId]);
 
   const selectedFloor = useMemo(
     () => TWIN_FLOORS.find((f) => f.level === selectedFloorLevel) ?? TWIN_FLOORS[0],
     [selectedFloorLevel]
   );
 
-  const handleToolChange = (t: ViewerTool) => setTool(t);
   const handleSelectFloor = useCallback((level: number) => {
     setSelectedFloorLevel(level);
-    setFloorMode(false);
   }, []);
 
-  const handleBuildingView = () => {
-    setTool("rotate");
-    viewerHandleRef.current?.resetView();
-  };
-  const handleLayers = () => setShowLayers((s) => !s);
-  const handleFloorMode = () => setFloorMode((s) => !s);
+  // ---- Phase 15A township wiring ----
+  const handleLayers = useCallback(() => setShowLayers((s) => !s), []);
+  const handleToggleLayer = useCallback((id: TownshipLayerId) => {
+    setLayers((prev) => ({ ...prev, [id]: !prev[id] }));
+  }, []);
+  const handlePreset = useCallback((p: CameraPresetId) => {
+    setCameraPreset(p);
+    viewerHandleRef.current?.applyPreset(p);
+  }, []);
+  const handleIsoView = useCallback(() => {
+    setCameraPreset("isometric");
+    viewerHandleRef.current?.applyPreset("isometric");
+  }, []);
+  const handleSelectTower = useCallback((id: string | null) => setSelectedTowerId(id), []);
+  const selectedTower = useMemo(() => TOWERS.find((t) => t.id === selectedTowerId) ?? null, [selectedTowerId]);
+
+  // ---- Phase 15C township ↔ database resolution (honesty: no fabrication) ----
+  const linkedTowerData = useMemo(
+    () =>
+      resolveTowerLinkedData({
+        tower: selectedTower,
+        buildings,
+        floors,
+        properties: gisUnits,
+        parcels,
+        property: routeProperty,
+      }),
+    [selectedTower, buildings, floors, gisUnits, parcels, routeProperty]
+  );
+  const gisFootprints = useMemo(
+    () => resolveGisFootprints(linkedTowerData.siteBuildings),
+    [linkedTowerData.siteBuildings]
+  );
+  const explicitFloors = useMemo<ExplicitFloor[]>(
+    () => linkedTowerData.floors.map((f) => ({ id: f.id, floorNumber: f.floorNumber, name: f.name })),
+    [linkedTowerData.floors]
+  );
+  const towerLinkedToDb = linkedTowerData.building !== null;
+
+  const handleFloorMode = useCallback((mode: TownshipFloorMode) => setFloorMode(mode), []);
+  const handleSelectLevel = useCallback((level: number | null) => setSelectedLevel(level), []);
+  const handleCloseTowerPanel = useCallback(() => setShowTowerPanel(false), []);
 
   const handleFullscreen = useCallback(() => {
     const shell = viewerShellRef.current;
@@ -80,7 +158,10 @@ function BuildingDigitalTwinPageContent() {
 
   const handleZoomIn = () => viewerHandleRef.current?.zoomBy(1.25);
   const handleZoomOut = () => viewerHandleRef.current?.zoomBy(0.8);
-  const handleReset = () => viewerHandleRef.current?.resetView();
+  const handleReset = () => {
+    setCameraPreset("isometric");
+    viewerHandleRef.current?.applyPreset("isometric");
+  };
 
   // keep isFullscreen in sync with browser fullscreen state
   React.useEffect(() => {
@@ -103,7 +184,7 @@ function BuildingDigitalTwinPageContent() {
       <div className="relative z-10 mx-auto w-full max-w-[1600px] space-y-4 px-3 pb-10 pt-4 sm:px-5 lg:px-6">
         {/* Back link */}
         <Link
-          href="/properties/prop-hyd-002"
+          href={`/properties/${routeProperty?.id ?? routeId ?? "prop-hyd-002"}`}
           className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#64748B] transition-colors hover:text-[#00D9FF]"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> Back to property record
@@ -140,109 +221,107 @@ function BuildingDigitalTwinPageContent() {
               <div className="flex h-10 items-center justify-between border-b border-[#164E73]/60 bg-[#061426]/70 px-4 backdrop-blur">
                 <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-[#94A3B8]">
                   <span className="h-1.5 w-1.5 rounded-full bg-[#00D9FF] shadow-[0_0_8px_rgba(0,217,255,0.8)]" />
-                  3D Holographic Twin
+                  3D Township Twin
                   <span className="hidden font-mono normal-case tracking-normal text-[#64748B] sm:inline">
-                    · {TWIN_BUILDING.name} · {TWIN_BUILDING.ulpin}
+                    · Survey No {TOWNSHIP_SITE.surveyNo}, {TOWNSHIP_SITE.village}, {TOWNSHIP_SITE.district} — {TOWNSHIP_SITE.centerNote}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 font-mono text-[9px] text-[#64748B]">
-                  <span className="hidden sm:inline">SCALE 1:1</span>
-                  <span className="rounded border border-[#164E73] px-1.5 py-0.5 text-[#00D9FF]">
-                    FLOOR {selectedFloorLevel === 0 ? "G" : selectedFloorLevel}
+                  <span className="hidden sm:inline">ILLUSTRATIVE GEOMETRY</span>
+                  <span className="rounded border border-[#00D9FF]/40 bg-[#00D9FF]/10 px-1.5 py-0.5 text-[#00D9FF]">
+                    {cameraPreset.toUpperCase()} VIEW
                   </span>
                 </div>
               </div>
 
-              {/* fluid viewer + overlays */}
+              {/* fluid viewer + township overlays */}
               <div className="relative">
                 <div className="relative h-[52vh] min-h-[380px] w-full sm:h-[60vh] lg:h-[66vh]">
-                  <Building3DViewerDynamic
-                    floors={TWIN_FLOORS}
-                    selectedFloorLevel={selectedFloorLevel}
-                    onSelectFloor={setSelectedFloorLevel}
-                    tool={tool}
+                  <Township3DViewerDynamic
+                    layers={layers}
+                    selectedTowerId={selectedTowerId}
+                    onSelectTower={handleSelectTower}
+                    floorMode={floorMode}
+                    selectedLevel={selectedLevel}
+                    linkedFloors={explicitFloors}
+                    gisFootprints={gisFootprints}
                     className="h-full w-full"
                   />
                 </div>
 
-                {/* corner HUD labels */}
-                <div className="pointer-events-none absolute left-3 top-3 rounded-md border border-[#164E73]/70 bg-[#020B18]/70 px-2 py-1 text-[8px] font-mono uppercase tracking-widest text-[#64748B] backdrop-blur">
-                  ● TWIN SYNC — <span className="text-[#22C55E]">ONLINE</span>
-                </div>
-                <div className="pointer-events-none absolute bottom-3 left-3 rounded-md border border-[#164E73]/70 bg-[#020B18]/70 px-2 py-1 font-mono text-[8px] text-[#64748B] backdrop-blur">
-                  LON 73.7892°E · LAT 18.5597°N
-                </div>
-{/* Layers legend (toggled) */}
+                {/* scene identity header — LIFE REPUBLIC / MARUNJI • PUNE */}
+                <TownshipSceneHeader className="absolute left-3 top-3 z-20" />
+
+                {/* functional layer panel (toggled) */}
                 <AnimatePresence>
                   {showLayers && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -6 }}
-                      className="absolute left-3 top-12 z-20 space-y-1.5 rounded-xl border border-[#164E73] bg-[#0A1B31]/95 p-3 text-[9px] font-semibold text-[#94A3B8] shadow-2xl backdrop-blur"
-                    >
-                      <span className="block border-b border-[#164E73] pb-1 text-[8px] font-black uppercase tracking-widest text-[#00D9FF]">
-                        Map Layers
-                      </span>
-                      {[
-                        { c: "#00D9FF", label: "Property boundary" },
-                        { c: "#008CFF", label: "Building footprint" },
-                        { c: "#22C55E", label: "Verified units" },
-                        { c: "#FACC15", label: "Pending units" },
-                        { c: "#EF4444", label: "Disputed units" },
-                        { c: "#8B5CF6", label: "Holographic rings" },
-                      ].map((l) => (
-                        <span key={l.label} className="flex items-center gap-2">
-                          <span className="h-2 w-2 rounded-sm" style={{ backgroundColor: l.c, boxShadow: `0 0 6px ${l.c}` }} />
-                          {l.label}
-                        </span>
-                      ))}
-                      <button
-                        onClick={handleLayers}
-                        className="mt-1 w-full rounded-md border border-[#164E73] bg-[#061426] py-1 text-[8px] font-black text-[#00D9FF]"
-                      >
-                        OK
-                      </button>
-                    </motion.div>
+                    <TownshipLayerPanel
+                      layers={layers}
+                      onToggle={handleToggleLayer}
+                      onClose={handleLayers}
+                      className="absolute left-3 top-[122px] z-30"
+                    />
                   )}
                 </AnimatePresence>
 
-                {/* Top-right control cluster */}
-                <BuildingControls
+                {/* location information panel (collapsible on mobile) */}
+                <TownshipLocationPanel className="absolute bottom-16 left-3 z-20 sm:bottom-3" />
+
+                {/* Phase 15C — database-driven floor explorer (real floors only) */}
+                <AnimatePresence>
+                  {selectedTower && (
+                    <TownshipFloorExplorer
+                      towerLabel={selectedTower.name}
+                      floors={explicitFloors}
+                      linked={towerLinkedToDb}
+                      selectedLevel={selectedLevel}
+                      mode={floorMode}
+                      onModeChange={handleFloorMode}
+                      onSelectLevel={handleSelectLevel}
+                      className="absolute bottom-[188px] left-3 z-30 hidden w-[248px] lg:block"
+                    />
+                  )}
+                </AnimatePresence>
+
+                {/* Phase 15C — selected-tower building information panel */}
+                <AnimatePresence>
+                  {selectedTower && showTowerPanel && (
+                    <TownshipBuildingPanel
+                      tower={selectedTower}
+                      linkedBuilding={linkedTowerData.building}
+                      linkedFloors={linkedTowerData.floors}
+                      property={routeProperty}
+                      onClose={handleCloseTowerPanel}
+                      className="absolute right-3 top-[150px] z-30 hidden max-h-[calc(100%-170px)] overflow-y-auto lg:block"
+                    />
+                  )}
+                </AnimatePresence>
+
+                {/* top-right control cluster */}
+                <TownshipControlCluster
                   className="absolute right-3 top-3 z-20"
-                  onBuildingView={handleBuildingView}
+                  onIsoView={handleIsoView}
                   onLayers={handleLayers}
-                  onFloorMode={handleFloorMode}
                   onFullscreen={handleFullscreen}
                 />
 
-                {/* Floor mode chip */}
+                {/* selected building chip — honest about DB linkage */}
                 <AnimatePresence>
-                  {floorMode && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 10 }}
-                      className="absolute bottom-3 right-3 z-20 max-w-[250px] rounded-xl border border-[#00D9FF]/50 bg-[#0A1B31]/95 p-3 shadow-[0_0_22px_-6px_rgba(0,217,255,0.5)] backdrop-blur"
-                    >
-                      <span className="mb-2 block text-[8px] font-black uppercase tracking-widest text-[#00D9FF]">
-                        Floor Mode — click a floor slab
-                      </span>
-                      <FloorSelector
-                        floors={TWIN_FLOORS}
-                        selectedLevel={selectedFloorLevel}
-                        onSelect={handleSelectFloor}
-                        className="max-h-[120px] gap-1 overflow-y-auto"
-                      />
-                    </motion.div>
+                  {selectedTower && (
+                    <TownshipSelectedChip
+                      tower={selectedTower}
+                      linked={towerLinkedToDb}
+                      onClear={() => handleSelectTower(null)}
+                      className="absolute bottom-16 right-3 z-20 sm:bottom-3"
+                    />
                   )}
                 </AnimatePresence>
 
-                {/* Bottom toolbar */}
-                <ViewerToolbar
+                {/* bottom camera preset bar — TOP / FRONT / SIDE / ISOMETRIC / PROPERTY */}
+                <TownshipCameraBar
                   className="absolute bottom-3 left-1/2 z-20 -translate-x-1/2"
-                  tool={tool}
-                  onToolChange={handleToolChange}
+                  preset={cameraPreset}
+                  onPreset={handlePreset}
                   onReset={handleReset}
                   onZoomIn={handleZoomIn}
                   onZoomOut={handleZoomOut}
@@ -251,14 +330,14 @@ function BuildingDigitalTwinPageContent() {
 {/* viewer footer telemetry */}
               <div className="flex h-8 items-center justify-between border-t border-[#164E73]/60 bg-[#061426]/70 px-4 backdrop-blur">
                 <span className="flex items-center gap-2 font-mono text-[8px] text-[#64748B]">
-                  <span className="dt-blink h-1.5 w-1.5 rounded-full bg-[#22C55E]" />
-                  SENSOR FEED · LASER SCAN · 60 FPS
+                  <span className="dt-blink h-1.5 w-1.5 rounded-full bg-[#00D9FF]" />
+                  LEFT DRAG ROTATE · RIGHT DRAG PAN · WHEEL / PINCH ZOOM
                 </span>
                 <span className="hidden font-mono text-[8px] text-[#64748B] sm:inline">
-                  DGPS ±2.5cm · DRONE LiDAR 2026 · SHA-256 SEALED
+                  ILLUSTRATIVE 3D — NOT SURVEYED GIS GEOMETRY
                 </span>
                 <span className="font-mono text-[8px] text-[#00D9FF]">
-                  {tool === "select" ? "SELECT" : tool === "pan" ? "PAN" : "ROTATE"} MODE
+                  {cameraPreset.toUpperCase()} VIEW
                 </span>
               </div>
             </div>

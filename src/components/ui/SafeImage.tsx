@@ -9,7 +9,7 @@ export interface SafeImageProps extends React.ImgHTMLAttributes<HTMLImageElement
 }
 
 export const SafeImage = React.forwardRef<HTMLImageElement, SafeImageProps>(
-  ({ fallbackSrc = "/images/property-fallback.svg", className, onError, ...props }, ref) => {
+  ({ fallbackSrc = "/images/property-fallback.svg", className, onError, loading = "lazy", ...props }, ref) => {
     const [failed, setFailed] = React.useState(false);
     React.useEffect(() => { setFailed(false); }, [props.src]);
     const handleError = React.useCallback(
@@ -27,7 +27,7 @@ export const SafeImage = React.forwardRef<HTMLImageElement, SafeImageProps>(
         src={src}
         onError={handleError}
         className={cn(className)}
-        loading={props.loading ?? "lazy"}
+        loading={loading}
       />
     );
   },
