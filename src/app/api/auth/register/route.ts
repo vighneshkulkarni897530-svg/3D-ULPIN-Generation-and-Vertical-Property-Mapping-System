@@ -28,6 +28,13 @@ export async function POST(req: NextRequest) {
     if (result.error === 'EMAIL_TAKEN') {
       return jsonError(400, 'EMAIL_TAKEN', 'An account with this email already exists. Try signing in instead.');
     }
+    if (result.error === 'WEAK_PASSWORD') {
+      return jsonError(
+        400,
+        'WEAK_PASSWORD',
+        'Password must be at least 8 characters and include an uppercase letter, a lowercase letter, a number and a special character.',
+      );
+    }
     return jsonError(400, 'INVALID_INPUT', 'Registration failed validation. Check the provided details.');
   }
 

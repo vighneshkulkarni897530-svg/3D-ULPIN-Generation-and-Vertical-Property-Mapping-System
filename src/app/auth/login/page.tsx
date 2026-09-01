@@ -4,14 +4,19 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { Building, ShieldCheck, Lock, Mail, ArrowRight, Sparkles, User, Shield, Building2, AlertCircle } from 'lucide-react';
+import { Building, Lock, Mail, ArrowRight, Sparkles, User, Shield, Building2, AlertCircle, Loader2, Info } from 'lucide-react';
+import { PasswordInput } from '@/components/auth/PasswordInput';
 
 /**
- * Login page (Phase 10).
+ * Login page (Phase 10 + Login/Sign-Up completion).
  * Performs REAL authentication against /api/auth/login (scrypt-verified
  * credentials + httpOnly session cookie). The three demo personas share the
  * published prototype password below — this is clearly-labelled demo access,
  * not a production credential.
+ *
+ * Features: field-level validation, show/hide password, server-backed
+ * "Remember me" (30-day session), ?next= redirect support, accessible
+ * labels/error announcements and visible focus states. No fake social login.
  */
 const DEMO_PASSWORD = 'Bhu-Verify#2024';
 
@@ -21,13 +26,15 @@ const DEMO_ACCOUNTS: Record<'citizen' | 'officer' | 'admin', { email: string; da
   admin: { email: 'admin.cadastre@gov.in', dashboard: '/dashboard/admin' },
 };
 
-/** Honours the ?next= redirect target (same-origin paths only). */
-function destinationAfterLogin(roleKey: 'citizen' | 'officer' | 'admin'): string {
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Safe same-origin ?next= redirect target (open-redirect protected). */
+function getSafeNext(): string | null {
   if (typeof window !== 'undefined') {
     const next = new URLSearchParams(window.location.search).get('next');
     if (next && next.startsWith('/') && !next.startsWith('//')) return next;
   }
-  return DEMO_ACCOUNTS[roleKey].dashboard;
+  return null;
 }
 
 export default function LoginPage() {
@@ -37,40 +44,80 @@ export default function LoginPage() {
   const [selectedRole, setSelectedRole] = useState<'citizen' | 'officer' | 'admin'>('citizen');
   const [email, setEmail] = useState(DEMO_ACCOUNTS.citizen.email);
   const [password, setPassword] = useState(DEMO_PASSWORD);
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState<'citizen' | 'officer' | 'admin' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   React.useEffect(() => {
     if (authStatus === 'authenticated') {
-      router.replace('/dashboard');
+      router.replace(getSafeNext() ?? '/dashboard');
     }
   }, [authStatus, router]);
+
+  // Contextual notice for protected-page redirects (?next=…).
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('next')) setNotice('Sign in to continue to the page you requested.');
+  }, []);
+
+  const clearFieldErrors = () => {
+    setEmailError(null);
+    setPasswordError(null);
+  };
 
   const handleRoleSelect = (roleKey: 'citizen' | 'officer' | 'admin') => {
     setSelectedRole(roleKey);
     setEmail(DEMO_ACCOUNTS[roleKey].email);
     setPassword(DEMO_PASSWORD);
     setError(null);
+    clearFieldErrors();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    if (loading) return; // prevent accidental duplicate submissions
     setError(null);
-    const result = await login(email, password);
+    clearFieldErrors();
+
+    const trimmedEmail = email.trim();
+    let invalid = false;
+    if (!trimmedEmail) {
+      setEmailError('Email is required.');
+      invalid = true;
+    } else if (!EMAIL_PATTERN.test(trimmedEmail)) {
+      setEmailError('Enter a valid email address (e.g. name@example.com).');
+      invalid = true;
+    }
+    if (!password) {
+      setPasswordError('Password is required.');
+      invalid = true;
+    }
+    if (invalid) return;
+
+    setLoading(true);
+    const result = await login(trimmedEmail, password, rememberMe);
     setLoading(false);
     if (!result.ok) {
-      setError(result.error ?? 'Sign-in failed.');
+      setError(result.error ?? 'Invalid email or password.');
+      return;
+    }
+    const next = getSafeNext();
+    if (next) {
+      router.push(next);
       return;
     }
     const matchedRole = (Object.keys(DEMO_ACCOUNTS) as (keyof typeof DEMO_ACCOUNTS)[]).find(
-      (k) => DEMO_ACCOUNTS[k].email.toLowerCase() === email.trim().toLowerCase(),
+      (k) => DEMO_ACCOUNTS[k].email.toLowerCase() === trimmedEmail.toLowerCase(),
     );
-    router.push(destinationAfterLogin(matchedRole ?? 'citizen'));
+    router.push(matchedRole ? DEMO_ACCOUNTS[matchedRole].dashboard : '/dashboard');
   };
 
   const handleDemoAccess = async (roleKey: 'citizen' | 'officer' | 'admin') => {
+    if (demoLoading || loading) return; // prevent duplicate submissions
     setDemoLoading(roleKey);
     setError(null);
     const result = await demoLoginAs(roleKey);
@@ -79,7 +126,7 @@ export default function LoginPage() {
       setError(result.error ?? 'Demo sign-in failed.');
       return;
     }
-    router.push(destinationAfterLogin(roleKey));
+    router.push(getSafeNext() ?? DEMO_ACCOUNTS[roleKey].dashboard);
   };
 
   return (
@@ -103,12 +150,12 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Role Selector Tabs */}
+        {/* Role Selector Tabs (demo quick-fill) */}
         <div className="p-1 bg-slate-900 border border-slate-800 rounded-2xl grid grid-cols-3 gap-1">
           <button
             type="button"
             onClick={() => handleRoleSelect('citizen')}
-            className={`flex flex-col items-center gap-1 py-2.5 rounded-xl text-xs font-bold transition-all ${
+            className={`flex flex-col items-center gap-1 py-2.5 rounded-xl text-xs font-bold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/60 ${
               selectedRole === 'citizen'
                 ? 'bg-cyan-500 text-slate-950 shadow-tech-cyan'
                 : 'text-slate-400 hover:text-white'
@@ -121,7 +168,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => handleRoleSelect('officer')}
-            className={`flex flex-col items-center gap-1 py-2.5 rounded-xl text-xs font-bold transition-all ${
+            className={`flex flex-col items-center gap-1 py-2.5 rounded-xl text-xs font-bold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/60 ${
               selectedRole === 'officer'
                 ? 'bg-cyan-500 text-slate-950 shadow-tech-cyan'
                 : 'text-slate-400 hover:text-white'
@@ -134,7 +181,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => handleRoleSelect('admin')}
-            className={`flex flex-col items-center gap-1 py-2.5 rounded-xl text-xs font-bold transition-all ${
+            className={`flex flex-col items-center gap-1 py-2.5 rounded-xl text-xs font-bold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/60 ${
               selectedRole === 'admin'
                 ? 'bg-cyan-500 text-slate-950 shadow-tech-cyan'
                 : 'text-slate-400 hover:text-white'
@@ -147,70 +194,105 @@ export default function LoginPage() {
 
         {/* Login Form Card */}
         <div className="bg-slate-900/90 border border-slate-800 p-7 rounded-3xl shadow-2xl backdrop-blur-xl space-y-5">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <div className="flex items-start gap-2 rounded-xl border border-red-500/40 bg-red-500/10 px-3.5 py-2.5" role="alert">
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
-                <div>
-                  <p className="text-xs font-bold text-red-300">Sign-in failed</p>
-                  <p className="text-[11px] text-red-300/80">{error}</p>
+          {notice && (
+            <div className="flex items-start gap-2 rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-3.5 py-2.5" role="status">
+              <Info className="mt-0.5 h-4 w-4 shrink-0 text-cyan-400" aria-hidden />
+              <p className="text-[11px] font-bold text-cyan-200">{notice}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+            {/* Live region — announced immediately when sign-in fails */}
+            <div aria-live="assertive">
+              {error && (
+                <div className="flex items-start gap-2 rounded-xl border border-red-500/40 bg-red-500/10 px-3.5 py-2.5" role="alert">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" aria-hidden />
+                  <div>
+                    <p className="text-xs font-bold text-red-300">Sign-in failed</p>
+                    <p className="text-[11px] text-red-300/80">{error}</p>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
+
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                Official Email / Aadhaar ID
+              <label htmlFor="login-email" className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                Email Address
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                  <Mail className="w-4 h-4" />
+                  <Mail className="w-4 h-4" aria-hidden />
                 </div>
                 <input
-                  type="text"
+                  id="login-email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (emailError) setEmailError(null);
+                  }}
                   required
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-400 text-white rounded-xl pl-10 pr-4 py-2.5 text-xs font-medium focus:ring-2 focus:ring-cyan-500/20 outline-none"
+                  aria-invalid={emailError ? true : undefined}
+                  aria-describedby={emailError ? 'login-email-error' : undefined}
+                  className={`w-full bg-slate-950 border focus:border-cyan-400 text-white rounded-xl pl-10 pr-4 py-2.5 text-xs font-medium focus:ring-2 focus:ring-cyan-500/20 outline-none ${
+                    emailError ? 'border-red-500/70' : 'border-slate-800'
+                  }`}
                   placeholder="Enter email or ID"
                 />
               </div>
+              {emailError && (
+                <p id="login-email-error" className="mt-1 text-[10px] font-bold text-red-400">
+                  {emailError}
+                </p>
+              )}
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                <label htmlFor="login-password" className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
                   Password
                 </label>
                 <Link
                   href="/auth/forgot-password"
-                  className="text-[11px] text-cyan-400 hover:underline font-medium"
+                  className="text-[11px] text-cyan-400 hover:underline font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/40 rounded"
                 >
                   Forgot password?
                 </Link>
               </div>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                  <Lock className="w-4 h-4" />
-                </div>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-400 text-white rounded-xl pl-10 pr-4 py-2.5 text-xs font-medium focus:ring-2 focus:ring-cyan-500/20 outline-none"
-                  placeholder="••••••••••••"
-                />
-              </div>
+              <PasswordInput
+                id="login-password"
+                name="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (passwordError) setPasswordError(null);
+                }}
+                required
+                aria-invalid={passwordError ? true : undefined}
+                aria-describedby={passwordError ? 'login-password-error' : undefined}
+                className={passwordError ? 'border-red-500/70' : ''}
+                placeholder="••••••••••••"
+              />
+              {passwordError && (
+                <p id="login-password-error" className="mt-1 text-[10px] font-bold text-red-400">
+                  {passwordError}
+                </p>
+              )}
             </div>
 
             <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label htmlFor="login-remember" className="flex items-center gap-2 cursor-pointer select-none">
                 <input
+                  id="login-remember"
                   type="checkbox"
-                  defaultChecked
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
                   className="w-4 h-4 rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500/30"
                 />
-                <span>Remember session</span>
+                <span>Remember me for 30 days</span>
               </label>
               <span className="text-[11px] text-cyan-400 font-mono">256-bit SSL</span>
             </div>
@@ -218,14 +300,17 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-tech-cyan transition-all disabled:opacity-50"
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-tech-cyan transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
             >
               {loading ? (
-                <span>Authenticating...</span>
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
+                  <span>Authenticating...</span>
+                </>
               ) : (
                 <>
                   <span>Sign In</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-4 h-4" aria-hidden />
                 </>
               )}
             </button>

@@ -87,12 +87,32 @@ export interface AuditRecordClient {
 
 // ── Auth endpoints ───────────────────────────────────────────────────────────
 
-export function apiLogin(email: string, password: string): Promise<{ user: SessionUser }> {
-  return request('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+export function apiLogin(email: string, password: string, rememberMe = false): Promise<{ user: SessionUser }> {
+  return request('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password, rememberMe }) });
 }
 
 export function apiRegister(input: { name: string; email: string; phone: string; password: string }): Promise<{ user: SessionUser }> {
   return request('/api/auth/register', { method: 'POST', body: JSON.stringify(input) });
+}
+
+/** Response of POST /api/auth/forgot-password (generic — no account leakage). */
+export interface ForgotPasswordResult {
+  ok: boolean;
+  deliveryMethod: 'none';
+  message: string;
+  /** Development-only: present when email delivery is unconfigured (dev builds). */
+  devMode?: boolean;
+  devResetToken?: string;
+  devExpiresAt?: string;
+  devNote?: string;
+}
+
+export function apiForgotPassword(email: string): Promise<ForgotPasswordResult> {
+  return request('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) });
+}
+
+export function apiResetPassword(token: string, password: string): Promise<{ ok: boolean }> {
+  return request('/api/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password }) });
 }
 
 export function apiDemoLogin(role: 'citizen' | 'officer' | 'admin'): Promise<{ user: SessionUser }> {

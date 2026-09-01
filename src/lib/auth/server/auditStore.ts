@@ -35,6 +35,8 @@ export type AuditAction =
   | 'REGISTER'
   | 'LOGIN_FAILED'
   | 'SESSION_EXPIRED'
+  | 'PASSWORD_RESET_REQUESTED'
+  | 'PASSWORD_RESET_COMPLETED'
   // Administrative
   | 'USER_ROLE_CHANGE'
   | 'USER_STATUS_CHANGE'

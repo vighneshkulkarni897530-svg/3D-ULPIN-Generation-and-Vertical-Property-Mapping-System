@@ -21,6 +21,8 @@ import { SESSION_COOKIE } from '../sessionCookie';
 
 export { SESSION_COOKIE };
 export const SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
+/** Extended TTL used when the user checks "Remember me" at sign-in. */
+export const REMEMBER_ME_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 /** Server-side session record. The token is the Map key and NEVER stored here. */
 interface SessionRecord {
@@ -29,6 +31,8 @@ interface SessionRecord {
   authMethod: 'DEMO_FORM' | 'PASSWORD' | 'REGISTRATION';
   createdAt: number;
   expiresAt: number;
+  /** Lifetime applied on each sliding refresh (defaults to SESSION_TTL_MS). */
+  ttlMs: number;
 }
 
 const inMemorySessions = new Map<string, SessionRecord>();
@@ -41,6 +45,7 @@ function newToken(): string {
 export function createSession(
   userId: string,
   authMethod: SessionRecord['authMethod'],
+  ttlMs: number = SESSION_TTL_MS,
 ): { token: string; expiresAt: number } {
   const token = newToken();
   const now = Date.now();
@@ -49,9 +54,10 @@ export function createSession(
     role: findUserById(userId)?.role ?? 'CITIZEN',
     authMethod,
     createdAt: now,
-    expiresAt: now + SESSION_TTL_MS,
+    expiresAt: now + ttlMs,
+    ttlMs,
   });
-  return { token, expiresAt: now + SESSION_TTL_MS };
+  return { token, expiresAt: now + ttlMs };
 }
 
 /** Validates a token; extends sliding expiry. Returns null when invalid/expired. */
@@ -64,8 +70,8 @@ export function validateSession(token: string | undefined | null): SessionRecord
     inMemorySessions.delete(token);
     return null;
   }
-  // Sliding expiry
-  session.expiresAt = now + SESSION_TTL_MS;
+  // Sliding expiry (per-session lifetime — Remember-me sessions live longer)
+  session.expiresAt = now + session.ttlMs;
   return session;
 }
 
@@ -73,6 +79,22 @@ export function validateSession(token: string | undefined | null): SessionRecord
 export function destroySession(token: string | undefined | null): boolean {
   if (!token) return false;
   return inMemorySessions.delete(token);
+}
+
+/**
+ * Destroys every session belonging to a user (used after a password reset so
+ * stolen/old sessions cannot survive the credential change).
+ * Returns the number of sessions destroyed.
+ */
+export function destroySessionsForUser(userId: string): number {
+  let destroyed = 0;
+  for (const [token, session] of inMemorySessions) {
+    if (session.userId === userId) {
+      inMemorySessions.delete(token);
+      destroyed += 1;
+    }
+  }
+  return destroyed;
 }
 
 /** The authenticated user for a request, or null. Safe public projection. */

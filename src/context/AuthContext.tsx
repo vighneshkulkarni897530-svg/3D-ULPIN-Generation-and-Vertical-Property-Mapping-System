@@ -74,8 +74,8 @@ interface AuthContextType {
   /** The real session user (null when signed out). Prefer over currentUser. */
   sessionUser: User | null;
   sessionExpiresAt: string | null;
-  /** Email/password sign-in. */
-  login: (email: string, password: string) => Promise<AuthActionResult>;
+  /** Email/password sign-in. `rememberMe` extends the server session to 30 days. */
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<AuthActionResult>;
   /** Citizen self-registration (auto signs in on success). */
   register: (input: RegisterInput) => Promise<AuthActionResult>;
   /** Legacy demo persona switch (now establishes a real demo session). */
@@ -123,11 +123,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const refreshSession = useCallback(async () => {
-    try {
-      const session = await apiGetSession();
-      applySession(session?.user ?? null, session?.expiresAt);
-    } catch {
-      applySession(null);
+    // A transient network/server failure must NOT force sign-out: the httpOnly
+    // cookie may still hold a perfectly valid session, and clearing the
+    // mirrored state here can ping-pong against the edge middleware (which
+    // redirects cookie-bearing visitors away from /auth/login). Only a
+    // definitive 401 — or repeated failures after short retries — clears the
+    // session. The server remains the authority either way.
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        const session = await apiGetSession();
+        applySession(session?.user ?? null, session?.expiresAt);
+        return;
+      } catch (err) {
+        const definitive401 = err instanceof AuthApiError && err.status === 401;
+        if (definitive401 || attempt === 2) {
+          applySession(null);
+          return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 600 * (attempt + 1)));
+      }
     }
   }, [applySession]);
 
@@ -152,9 +166,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // ── Actions ───────────────────────────────────────────────────────────────
 
   const login = useCallback(
-    async (email: string, password: string): Promise<AuthActionResult> => {
+    async (email: string, password: string, rememberMe = false): Promise<AuthActionResult> => {
       try {
-        const { user } = await apiLogin(email, password);
+        const { user } = await apiLogin(email, password, rememberMe);
         applySession(user);
         return { ok: true };
       } catch (err) {

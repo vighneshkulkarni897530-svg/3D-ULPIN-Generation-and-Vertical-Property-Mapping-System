@@ -10,7 +10,7 @@ import {
   DEMO_PASSWORD,
   toPublicUser,
 } from '@/lib/auth/server/userStore';
-import { createSession, setSessionCookie } from '@/lib/auth/server/sessionStore';
+import { createSession, setSessionCookie, REMEMBER_ME_TTL_MS } from '@/lib/auth/server/sessionStore';
 import { appendAudit } from '@/lib/auth/server/auditStore';
 import {
   checkLoginRateLimit,
@@ -55,7 +55,11 @@ export async function POST(req: NextRequest) {
   }
 
   clearLoginRateLimit(ip, emailCheck.value);
-  const { token, expiresAt } = createSession(result.user.id, 'PASSWORD');
+  // "Remember me" extends the server-side session lifetime (30 days). The
+  // session store remains the single source of truth; the cookie expiry always
+  // matches the session expiry.
+  const rememberMe = body.rememberMe === true;
+  const { token, expiresAt } = createSession(result.user.id, 'PASSWORD', rememberMe ? REMEMBER_ME_TTL_MS : undefined);
   appendAudit({
     actorId: result.user.id,
     actorName: result.user.name,
@@ -64,7 +68,7 @@ export async function POST(req: NextRequest) {
     entityType: 'SESSION',
     entityId: result.user.id,
     newValue: 'signed-in',
-    details: `Signed in with email/password as ${result.user.role}.`,
+    details: `Signed in with email/password as ${result.user.role}${rememberMe ? ' (remembered device, 30-day session).' : '.'}`,
     ipAddress: ip,
   });
 

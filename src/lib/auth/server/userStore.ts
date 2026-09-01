@@ -23,6 +23,7 @@
 import crypto from 'node:crypto';
 import { MOCK_USERS } from '@/data/mockUsers';
 import type { User, UserRole } from '@/types';
+import { isPasswordPolicyCompliant } from '@/lib/auth/passwordPolicy';
 
 /** Internal user record — includes credential material, never leaves the server. */
 interface StoredUser extends User {
@@ -116,11 +117,14 @@ export interface RegisterInput {
 
 export type RegisterResult =
   | { ok: true; user: PublicUser }
-  | { ok: false; error: 'EMAIL_TAKEN' | 'INVALID_INPUT' };
+  | { ok: false; error: 'EMAIL_TAKEN' | 'INVALID_INPUT' | 'WEAK_PASSWORD' };
 
 /**
  * Registers a new CITIZEN account (self-registration is citizen-only;
  * officer/admin accounts are provisioned administratively).
+ * NOTE: the role is ALWAYS hardcoded to CITIZEN server-side — any role value
+ * supplied by the client is ignored, so registration can never create an
+ * OFFICER or ADMIN account.
  */
 export function registerUser(input: RegisterInput): RegisterResult {
   const name = input.name?.trim() ?? '';
@@ -130,9 +134,8 @@ export function registerUser(input: RegisterInput): RegisterResult {
   if (name.length < 2 || name.length > 80) return { ok: false, error: 'INVALID_INPUT' };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 120) return { ok: false, error: 'INVALID_INPUT' };
   if (!/^[+\d][\d\s-]{5,20}$/.test(phone)) return { ok: false, error: 'INVALID_INPUT' };
-  if (typeof input.password !== 'string' || input.password.length < 8 || input.password.length > 128) {
-    return { ok: false, error: 'INVALID_INPUT' };
-  }
+  // Full password policy (length + complexity) — see src/lib/auth/passwordPolicy.ts
+  if (!isPasswordPolicyCompliant(input.password)) return { ok: false, error: 'WEAK_PASSWORD' };
   if (findUserByEmail(email)) return { ok: false, error: 'EMAIL_TAKEN' };
 
   const salt = makeSalt();
@@ -170,6 +173,22 @@ export function checkCredentials(email: string, password: string): CredentialChe
   }
   if (user.accountStatus === 'DISABLED') return { ok: false, error: 'ACCOUNT_DISABLED' };
   return { ok: true, user };
+}
+
+export type ResetPasswordResult = { ok: true } | { ok: false; error: 'NOT_FOUND' | 'WEAK_PASSWORD' };
+
+/**
+ * Sets a new password for an account (password-reset completion). Re-salts and
+ * re-hashes with scrypt; the caller is responsible for invalidating existing
+ * sessions (sessionStore.destroySessionsForUser) after a successful reset.
+ */
+export function resetUserPassword(email: string, newPassword: string): ResetPasswordResult {
+  const user = findUserByEmail(email);
+  if (!user) return { ok: false, error: 'NOT_FOUND' };
+  if (!isPasswordPolicyCompliant(newPassword)) return { ok: false, error: 'WEAK_PASSWORD' };
+  user.passwordSalt = makeSalt();
+  user.passwordHash = hashPassword(newPassword, user.passwordSalt);
+  return { ok: true };
 }
 
 export type UpdateUserResult =

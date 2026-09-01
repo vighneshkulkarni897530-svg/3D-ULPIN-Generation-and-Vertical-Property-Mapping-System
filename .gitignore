@@ -35,3 +35,19 @@ next-env.d.ts
 # OS files
 .DS_Store
 Thumbs.db
+
+# Local prototype/test artifacts (may contain session cookies or tokens)
+cookies-*.txt
+tj-*.json
+t11*.json
+c11*.txt
+ca.txt
+cc.txt
+co.txt
+body-*.json
+jar-*.txt
+auth-test-results.txt
+auth-tests.ps1
+build-output.log
+tsc-output.txt
+dev-server.log
