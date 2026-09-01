@@ -1,52 +1,62 @@
 /**
- * API Authorization Helpers (Phase 10) — SERVER-ONLY
- * ====================================================
+ * API Authorization Helpers (Phase 10 → Phase 14) — SERVER-ONLY
+ * ==============================================================
  * The single server boundary used by every /api route:
  *
- *   401 → unauthenticated (no/invalid/expired session)
+ *   401 → unauthenticated (no/invalid/expired/revoked Supabase session)
  *   403 → authenticated but not authorized for the action
  *   400 → invalid request payload
  *   429 → rate limited (login brute-force protection)
+ *   503 → Supabase Auth/DB not configured or unavailable
+ *
+ * Phase 14: authentication is Supabase Auth. `requireAuth` verifies the
+ * session's access token with Supabase and loads the caller's profile — the
+ * ROLE and ACCOUNT STATUS always come from the server's `profiles` table,
+ * never from request bodies or headers. If the session was refreshed during
+ * verification, `requireSession` exposes the rotated session so routes can
+ * re-issue the httpOnly cookie.
  *
  * Every sensitive route MUST go through requireAuth / requirePermission —
- * role values are never accepted from request bodies or headers.
+ * role values are never accepted from the client.
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
-import type { User } from '@/types';
 import type { Permission } from '@/types/auth';
 import { ROLE_PERMISSIONS } from '@/types/auth';
-import { getSessionUser } from './sessionStore';
+import { getSessionUser, type AuthenticatedUser, type SupabaseSessionData } from './sessionStore';
 import type { AuditAction, AuditEntityType } from './auditStore';
 
-export interface AuthenticatedUser extends User {
-  sessionExpiresAt: number;
-  authMethod: string;
-}
+export type { AuthenticatedUser };
+export type { SupabaseSessionData };
 
-/** Standard JSON error envelope. */
-export function jsonError(status: 400 | 401 | 403 | 404 | 405 | 409 | 429 | 500, code: string, message: string): NextResponse {
-  return NextResponse.json({ error: { code, message } }, { status });
-}
+/** Result of the async guards: an authenticated user (+optional rotated session) or an error response. */
+export type AuthGuardResult =
+  | { user: AuthenticatedUser; refreshedSession?: SupabaseSessionData }
+  | { response: NextResponse };
 
-/** Session-based authentication check → user or a 401 response. */
-export function requireAuth(req: NextRequest): { user: AuthenticatedUser } | { response: NextResponse } {
-  const user = getSessionUser(req);
-  if (!user) {
+/** Session-based authentication check → user or a 401 response. Async: verifies with Supabase Auth. */
+export async function requireAuth(req: NextRequest): Promise<AuthGuardResult> {
+  const resolved = await getSessionUser(req);
+  if (!resolved) {
     return { response: jsonError(401, 'UNAUTHENTICATED', 'Authentication required. Please sign in.') };
   }
-  return { user };
+  return { user: resolved.user, ...(resolved.refreshedSession ? { refreshedSession: resolved.refreshedSession } : {}) };
 }
 
 /** Session + permission check → user, a 401 (not signed in) or a 403 response. */
-export function requirePermission(req: NextRequest, permission: Permission): { user: AuthenticatedUser } | { response: NextResponse } {
-  const auth = requireAuth(req);
+export async function requirePermission(req: NextRequest, permission: Permission): Promise<AuthGuardResult> {
+  const auth = await requireAuth(req);
   if ('response' in auth) return auth;
   const granted = ROLE_PERMISSIONS[auth.user.role]?.includes(permission) ?? false;
   if (!granted) {
     return { response: jsonError(403, 'FORBIDDEN', 'You do not have permission to perform this action.') };
   }
   return auth;
+}
+
+/** Standard JSON error envelope. */
+export function jsonError(status: 400 | 401 | 403 | 404 | 405 | 409 | 429 | 500 | 503, code: string, message: string): NextResponse {
+  return NextResponse.json({ error: { code, message } }, { status });
 }
 
 // ── Input validation (dependency-free) ───────────────────────────────────────

@@ -1,15 +1,28 @@
 /**
- * PROTOTYPE Audit Store (Phase 10) — SERVER-ONLY
- * ===============================================
- * ⚠ PROTOTYPE-ONLY STORAGE: audit records live in the Node.js process memory
- *   of the Next.js server (capped ring buffer) and are lost on restart.
- *   Records are ONLY created for actions actually performed in the prototype
- *   — no fake historical data is seeded. A production deployment would
- *   persist these to an append-only database table / log sink.
+ * Audit Store (Phase 10 → Phase 14) — SERVER-ONLY
+ * ================================================
+ * Phase 14: audit records are persisted to the Supabase `audit_logs` table
+ * (append-only, Phase 13 schema) when the database is reachable, and always
+ * mirrored into an in-memory ring buffer so the audit trail keeps working
+ * when the database is unavailable. NO fake historical records are seeded —
+ * only actions actually performed are recorded.
+ *
+ * Persistence paths (best-effort — audit failures never break the primary
+ * action):
+ *   1. service-role client (when SUPABASE_SERVICE_ROLE_KEY is configured);
+ *   2. the acting user's verified access token (RLS: insert own actor_id);
+ *   3. in-memory ring buffer (last resort; lost on restart).
+ *
+ * Records use the AUTHENTICATED Supabase user's id as actorId — stamped
+ * server-side, never trusted from the client. Passwords and session tokens
+ * are never recorded.
  */
 
 import crypto from 'node:crypto';
 import type { UserRole } from '@/types';
+import { auditLogRepo } from '@/lib/repositories/auditRepository';
+import { createServerSupabaseClient, createUserSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/server';
+import type { DbAuditLog } from '@/lib/supabase/types';
 
 /** Entity types that can appear in the audit trail. */
 export type AuditEntityType =
@@ -89,9 +102,45 @@ function maskIp(ip: string | null | undefined): string {
   return `${first}.x.x.x`;
 }
 
+/** Maps a database audit row to the application AuditRecord shape. */
+function dbRowToRecord(row: DbAuditLog): AuditRecord {
+  return {
+    id: row.id,
+    actorId: row.actor_id,
+    actorName: row.actor_name,
+    actorRole: row.actor_role as UserRole,
+    action: row.action as AuditAction,
+    entityType: row.entity_type as AuditEntityType,
+    entityId: row.entity_id,
+    ...(row.previous_value ? { previousValue: row.previous_value } : {}),
+    ...(row.new_value ? { newValue: row.new_value } : {}),
+    ...(row.details ? { details: row.details } : {}),
+    ipAddressMasked: row.ip_address_masked,
+    timestamp: row.created_at,
+  };
+}
+
+/** Builds the audit_logs insert payload from a record. */
+function recordToDbRow(record: AuditRecord) {
+  return {
+    actor_id: record.actorId,
+    actor_name: record.actorName,
+    actor_role: record.actorRole,
+    action: record.action,
+    entity_type: record.entityType,
+    entity_id: record.entityId,
+    previous_value: record.previousValue ?? null,
+    new_value: record.newValue ?? null,
+    details: record.details ?? null,
+    ip_address_masked: record.ipAddressMasked,
+  };
+}
+
 /**
  * Appends an audit record. Server-side callers stamp actor + timestamp here.
- * Throws nothing; audit failures must never break the primary action.
+ * The record is always mirrored into the in-memory ring buffer and persisted
+ * to Supabase fire-and-forget — audit failures must never break the primary
+ * action, and this function never throws.
  */
 export function appendAudit(input: {
   actorId: string;
@@ -104,6 +153,8 @@ export function appendAudit(input: {
   newValue?: string;
   details?: string;
   ipAddress?: string | null;
+  /** Acting user's verified access token — enables RLS-constrained persistence without a service-role key. */
+  accessToken?: string;
 }): AuditRecord {
   const record: AuditRecord = {
     id: `AUD-${crypto.randomBytes(5).toString('hex')}`,
@@ -121,18 +172,77 @@ export function appendAudit(input: {
   };
   inMemoryAudit.unshift(record);
   if (inMemoryAudit.length > MAX_RECORDS) inMemoryAudit.length = MAX_RECORDS;
+
+  // Best-effort durable persistence (never blocks or breaks the caller).
+  void (async () => {
+    const row = recordToDbRow(record);
+    try {
+      if (isSupabaseConfigured()) {
+        await auditLogRepo.create({ ...row, ipAddressMasked: record.ipAddressMasked });
+        return;
+      }
+      if (input.accessToken) {
+        const supabase = createUserSupabaseClient(input.accessToken);
+        await supabase.from('audit_logs').insert(row);
+      }
+    } catch {
+      // Intentionally swallowed — the in-memory ring still holds the record.
+    }
+  })();
+
   return record;
 }
 
-/** Newest-first audit records (optionally filtered). */
-export function queryAudit(options?: { action?: AuditAction; entityType?: AuditEntityType; limit?: number }): AuditRecord[] {
+/**
+ * Newest-first audit records (optionally filtered). Prefers the durable
+ * Supabase table (service-role, or admin access token under RLS) and falls
+ * back to the in-memory ring when the database is unavailable.
+ */
+export async function queryAudit(options?: {
+  action?: AuditAction;
+  entityType?: AuditEntityType;
+  limit?: number;
+  /** Admin caller's verified access token — enables RLS-constrained reads without a service-role key. */
+  accessToken?: string;
+}): Promise<AuditRecord[]> {
+  const limit = Math.min(options?.limit ?? 200, MAX_RECORDS);
+
+  // 1) Durable store via service-role.
+  if (isSupabaseConfigured()) {
+    try {
+      const { data, error } = await auditLogRepo.query({
+        ...(options?.action ? { action: options.action } : {}),
+        ...(options?.entityType ? { entityType: options.entityType } : {}),
+        limit,
+      });
+      if (!error) return data.map(dbRowToRecord);
+    } catch {
+      // fall through to memory
+    }
+  }
+
+  // 2) Durable store as the (admin) caller — RLS: admins may read all.
+  if (options?.accessToken) {
+    try {
+      const supabase = createUserSupabaseClient(options.accessToken);
+      let query = supabase.from('audit_logs').select('*');
+      if (options.action) query = query.eq('action', options.action);
+      if (options.entityType) query = query.eq('entity_type', options.entityType);
+      const { data, error } = await query.order('created_at', { ascending: false }).limit(limit);
+      if (!error && data) return (data as DbAuditLog[]).map(dbRowToRecord);
+    } catch {
+      // fall through to memory
+    }
+  }
+
+  // 3) In-memory ring (database unavailable).
   let records = inMemoryAudit;
   if (options?.action) records = records.filter((r) => r.action === options.action);
   if (options?.entityType) records = records.filter((r) => r.entityType === options.entityType);
-  return records.slice(0, Math.min(options?.limit ?? 200, MAX_RECORDS));
+  return records.slice(0, limit);
 }
 
-/** Number of audit records currently retained. */
+/** Number of audit records currently retained in the in-memory ring. */
 export function auditCount(): number {
   return inMemoryAudit.length;
 }

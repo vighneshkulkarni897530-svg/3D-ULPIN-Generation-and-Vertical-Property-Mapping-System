@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import type {
   LandParcel,
   Building,
@@ -21,6 +21,8 @@ import { MOCK_CONFLICTS } from '@/data/conflicts';
 import { MOCK_ACTIVITIES } from '@/data/activities';
 import { MOCK_DEMO_SPATIAL_IDS } from '@/data/demoSpatialIds';
 import { reportAudit } from '@/lib/auth/client';
+import { fetchRegistryBootstrap } from '@/lib/data/registryClient';
+import type { RegistryDataSource, RegistryStatus } from '@/types/registry';
 
 // ── Context shape ───────────────────────────────────────────────────────────
 
@@ -81,6 +83,12 @@ export interface GISContextType {
 
   // ── Activity actions ──
   addActivity: (activity: Omit<ActivityRecord, 'id'>) => void;
+
+  // ── Registry hydration (Phase 13) ──
+  /** 'loading' until the bootstrap snapshot has been applied. */
+  registryStatus: RegistryStatus;
+  /** Where the current dataset came from ('mock' demo data or 'supabase'). */
+  registrySource: RegistryDataSource;
 }
 
 const GISContext = createContext<GISContextType | undefined>(undefined);
@@ -107,14 +115,46 @@ function nowIso(): string {
 
 export const GISProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // ── Data state ──
-  const [parcels] = useState<LandParcel[]>(MOCK_PARCELS);
-  const [buildings] = useState<Building[]>(MOCK_BUILDINGS);
-  const [floors] = useState<Floor[]>(MOCK_FLOORS);
+  // Initialised from the in-memory demo dataset for instant first paint, then
+  // hydrated from GET /api/registry/bootstrap (Supabase-backed when configured,
+  // demo fallback otherwise) — see the hydration effect below.
+  const [parcels, setParcels] = useState<LandParcel[]>(MOCK_PARCELS);
+  const [buildings, setBuildings] = useState<Building[]>(MOCK_BUILDINGS);
+  const [floors, setFloors] = useState<Floor[]>(MOCK_FLOORS);
   const [properties, setProperties] = useState<PropertyUnit[]>(MOCK_PROPERTIES);
   const [verifications, setVerifications] = useState<VerificationRecord[]>(MOCK_VERIFICATIONS);
   const [conflicts, setConflicts] = useState<SpatialConflict[]>(MOCK_CONFLICTS);
   const [activities, setActivities] = useState<ActivityRecord[]>(MOCK_ACTIVITIES);
-  const [demoSpatialIds] = useState<DemoSpatialIdentifier[]>(MOCK_DEMO_SPATIAL_IDS);
+  const [demoSpatialIds, setDemoSpatialIds] = useState<DemoSpatialIdentifier[]>(MOCK_DEMO_SPATIAL_IDS);
+
+  // ── Registry hydration (Phase 13) ──
+  const [registryStatus, setRegistryStatus] = useState<RegistryStatus>('loading');
+  const [registrySource, setRegistrySource] = useState<RegistryDataSource>('mock');
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchRegistryBootstrap().then((payload) => {
+      if (cancelled) return;
+      if (!payload) {
+        // Network/server failure — keep serving the demo dataset.
+        setRegistryStatus('ready');
+        return;
+      }
+      setParcels(payload.parcels);
+      setBuildings(payload.buildings);
+      setFloors(payload.floors);
+      setProperties(payload.properties);
+      setVerifications(payload.verifications);
+      setConflicts(payload.conflicts);
+      setActivities(payload.activities);
+      setDemoSpatialIds(payload.demoSpatialIds);
+      setRegistrySource(payload.source);
+      setRegistryStatus('ready');
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // ── Selection state ──
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null);
@@ -136,23 +176,23 @@ export const GISProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSelectedFloorId(null);
     setSelectedPropertyId(null);
     if (buildingId) {
-      const building = MOCK_BUILDINGS.find((b) => b.id === buildingId);
+      const building = buildings.find((b) => b.id === buildingId);
       if (building) setSelectedParcelId(building.parcelId);
     }
-  }, []);
+  }, [buildings]);
 
   const selectFloor = useCallback((floorId: string | null) => {
     setSelectedFloorId(floorId);
     setSelectedPropertyId(null);
     if (floorId) {
-      const floor = MOCK_FLOORS.find((f) => f.id === floorId);
+      const floor = floors.find((f) => f.id === floorId);
       if (floor) {
         setSelectedBuildingId(floor.buildingId);
-        const building = MOCK_BUILDINGS.find((b) => b.id === floor.buildingId);
+        const building = buildings.find((b) => b.id === floor.buildingId);
         if (building) setSelectedParcelId(building.parcelId);
       }
     }
-  }, []);
+  }, [floors, buildings]);
 
   const selectProperty = useCallback((propertyId: string | null) => {
     setSelectedPropertyId(propertyId);
@@ -539,6 +579,8 @@ export const GISProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         lastValidationAt,
         recordSpatialValidation,
         addActivity,
+        registryStatus,
+        registrySource,
       }}
     >
       {children}
