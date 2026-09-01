@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+
+export const dynamic = 'force-static';
 import { MOCK_PARCELS } from '@/data/parcels';
 import { MOCK_BUILDINGS } from '@/data/buildings';
 import { MOCK_FLOORS } from '@/data/floors';
