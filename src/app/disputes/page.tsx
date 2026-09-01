@@ -35,7 +35,7 @@ function DisputesRegistryPageContent() {
       key: "ticket",
       header: "Ticket No.",
       render: (d) => (
-        <span className="font-mono text-xs font-black text-cyan-700">{d.disputeTicketNumber}</span>
+        <span className="font-mono text-xs font-extrabold text-cyan-700">{d.disputeTicketNumber}</span>
       ),
     },
     {
@@ -116,7 +116,7 @@ function DisputesRegistryPageContent() {
           ].map((s) => (
             <div key={s.label} className="rounded-xl border border-slate-200 bg-white p-4 shadow-tech">
               <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{s.label}</p>
-              <p className={`mt-1 text-2xl font-black tabular-nums ${s.tone}`}>{s.value}</p>
+              <p className={`mt-1 text-2xl font-extrabold tabular-nums ${s.tone}`}>{s.value}</p>
             </div>
           ))}
         </div>

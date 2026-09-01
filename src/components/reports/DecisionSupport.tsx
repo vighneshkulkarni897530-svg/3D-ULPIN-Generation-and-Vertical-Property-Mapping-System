@@ -66,15 +66,15 @@ export function DecisionSupport({ analytics, canOperate, className }: DecisionSu
               return (
                 <li key={insight.id} className={cn("rounded-2xl border p-4", s.card)}>
                   <div className="flex items-start justify-between gap-2">
-                    <p className="min-w-0 text-xs font-black tracking-tight text-slate-900">{insight.title}</p>
-                    <span className={cn("shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-widest", s.chip)}>
+                    <p className="min-w-0 text-xs font-extrabold tracking-tight text-slate-900">{insight.title}</p>
+                    <span className={cn("shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-widest", s.chip)}>
                       {insight.level}
                     </span>
                   </div>
                   <p className="mt-1.5 text-[11px] leading-relaxed text-slate-600">{insight.detail}</p>
                   <Link
                     href={insight.actionHref}
-                    className="mt-2.5 inline-flex items-center gap-1 rounded-xl bg-slate-900 px-3 py-1.5 text-[10px] font-black text-cyan-300 transition-colors hover:bg-slate-800"
+                    className="mt-2.5 inline-flex items-center gap-1 rounded-xl bg-slate-900 px-3 py-1.5 text-[10px] font-extrabold text-cyan-300 transition-colors hover:bg-slate-800"
                   >
                     {insight.actionLabel} <ArrowRight className="h-3 w-3" />
                   </Link>

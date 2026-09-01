@@ -282,7 +282,7 @@ function ResultGroup({ icon: Icon, label, count, accent, items }: ResultGroupPro
     <section>
       <div className="flex items-center gap-2 px-2.5 pb-1.5 pt-1">
         <Icon className={`h-3.5 w-3.5 ${accent}`} />
-        <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</h4>
+        <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">{label}</h4>
         <span className="rounded-full bg-slate-800 px-1.5 py-0.5 font-mono text-[9px] font-bold text-slate-400">
           {count}
         </span>

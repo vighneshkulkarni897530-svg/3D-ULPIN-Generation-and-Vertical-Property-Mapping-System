@@ -51,17 +51,17 @@ export function BuildingCard({
         <div className="mt-4 grid grid-cols-3 gap-2 border-t border-slate-100 pt-3 text-center">
           <div>
             <Layers className="mx-auto h-3.5 w-3.5 text-slate-400" />
-            <p className="mt-1 font-mono text-xs font-black text-slate-900">{floorsCount}</p>
+            <p className="mt-1 font-mono text-xs font-extrabold text-slate-900">{floorsCount}</p>
             <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">Floors</p>
           </div>
           <div>
             <Ruler className="mx-auto h-3.5 w-3.5 text-slate-400" />
-            <p className="mt-1 font-mono text-xs font-black text-slate-900">{unitsCount}</p>
+            <p className="mt-1 font-mono text-xs font-extrabold text-slate-900">{unitsCount}</p>
             <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">Units</p>
           </div>
           <div>
             <CalendarDays className="mx-auto h-3.5 w-3.5 text-slate-400" />
-            <p className="mt-1 font-mono text-xs font-black text-slate-900">{building.yearBuilt}</p>
+            <p className="mt-1 font-mono text-xs font-extrabold text-slate-900">{building.yearBuilt}</p>
             <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">Built</p>
           </div>
         </div>
@@ -78,11 +78,11 @@ export function BuildingCard({
             {verifiedCount !== undefined && (
               <div className="grid grid-cols-3 gap-1.5 text-center">
                 <span className="rounded-lg border border-emerald-200 bg-emerald-50 px-1 py-1">
-                  <span className="block text-[11px] font-black text-emerald-700">{verifiedCount}</span>
+                  <span className="block text-[11px] font-extrabold text-emerald-700">{verifiedCount}</span>
                   <span className="block text-[8.5px] font-bold uppercase tracking-wider text-emerald-600">Verified</span>
                 </span>
                 <span className="rounded-lg border border-amber-200 bg-amber-50 px-1 py-1">
-                  <span className="block text-[11px] font-black text-amber-700">{pendingCount ?? 0}</span>
+                  <span className="block text-[11px] font-extrabold text-amber-700">{pendingCount ?? 0}</span>
                   <span className="block text-[8.5px] font-bold uppercase tracking-wider text-amber-600">Pending</span>
                 </span>
                 <span
@@ -93,7 +93,7 @@ export function BuildingCard({
                 >
                   <span
                     className={cn(
-                      "block text-[11px] font-black",
+                      "block text-[11px] font-extrabold",
                       (openConflicts ?? 0) > 0 ? "text-red-700" : "text-slate-600",
                     )}
                   >

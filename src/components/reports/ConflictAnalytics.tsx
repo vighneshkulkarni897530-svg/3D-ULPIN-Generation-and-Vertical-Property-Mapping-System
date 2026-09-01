@@ -69,14 +69,14 @@ export function ConflictAnalytics({ analytics, className }: ConflictAnalyticsPro
         />
         <div className="mt-5 grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div>
-            <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Open conflicts by severity</p>
+            <p className="mb-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Open conflicts by severity</p>
             <HBarChart data={severityData} ariaLabel="Open conflicts by severity" emptyLabel="No conflicts recorded in the current scope." />
             <p className="mt-2 font-mono text-[9px] uppercase tracking-widest text-slate-400">
               Demo spatial conflict detection — prototype validation, not a legal determination
             </p>
           </div>
           <div>
-            <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Open vs resolved</p>
+            <p className="mb-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Open vs resolved</p>
             {a.totalConflicts === 0 ? (
               <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-[11px] text-slate-400">
                 No conflicts in the current scope.
@@ -98,11 +98,11 @@ export function ConflictAnalytics({ analytics, className }: ConflictAnalyticsPro
 
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div>
-            <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Conflicts grouped by land parcel</p>
+            <p className="mb-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Conflicts grouped by land parcel</p>
             {groupRows(a.conflictsByParcel, "No parcel-level conflicts in the current scope.")}
           </div>
           <div>
-            <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Conflicts grouped by building</p>
+            <p className="mb-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Conflicts grouped by building</p>
             {groupRows(a.conflictsByBuilding, "No building-level conflicts in the current scope.")}
           </div>
         </div>
@@ -115,7 +115,7 @@ export function ConflictAnalytics({ analytics, className }: ConflictAnalyticsPro
             <p className="min-w-0 flex-1 text-[11px] font-bold text-red-800">
               {a.criticalConflicts} critical demo conflict{a.criticalConflicts === 1 ? "" : "s"} in this scope — review the investigation workspace before scheduling field work.
             </p>
-            <Link href="/conflicts" className="flex items-center gap-1 rounded-xl bg-red-600 px-3 py-1.5 text-[10px] font-black text-white transition-colors hover:bg-red-700">
+            <Link href="/conflicts" className="flex items-center gap-1 rounded-xl bg-red-600 px-3 py-1.5 text-[10px] font-extrabold text-white transition-colors hover:bg-red-700">
               <MapIcon className="h-3 w-3" /> Investigate
             </Link>
           </div>

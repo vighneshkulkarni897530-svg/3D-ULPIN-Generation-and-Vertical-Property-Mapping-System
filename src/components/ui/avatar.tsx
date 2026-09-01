@@ -1,3 +1,4 @@
+import { SafeImage } from '@/components/ui/SafeImage';
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
@@ -15,7 +16,7 @@ const Avatar = React.forwardRef<HTMLImageElement, AvatarProps>(
       return (
         <span
           className={cn(
-            "flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 text-[11px] font-black text-slate-950 ring-2 ring-cyan-500/40",
+            "flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 text-[11px] font-extrabold text-slate-950 ring-2 ring-cyan-500/40",
             className
           )}
         >
@@ -25,7 +26,7 @@ const Avatar = React.forwardRef<HTMLImageElement, AvatarProps>(
     }
 
     return (
-      <img
+      <SafeImage
         ref={ref}
         src={src}
         alt={alt}

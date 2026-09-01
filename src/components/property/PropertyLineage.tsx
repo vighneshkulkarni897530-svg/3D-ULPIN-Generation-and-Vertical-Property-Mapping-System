@@ -72,7 +72,7 @@ export function PropertyLineage({ unit, className }: PropertyLineageProps) {
 
   return (
     <div className={cn("rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5", className)}>
-      <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+      <p className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
         <MousePointerClick className="h-3.5 w-3.5 text-cyan-600" /> Property Lineage — click any ancestor to navigate
       </p>
 
@@ -90,7 +90,7 @@ export function PropertyLineage({ unit, className }: PropertyLineageProps) {
                 <Icon className="h-4 w-4" />
               </span>
               <span className="min-w-0 flex-1 text-left">
-                <span className="block text-[8.5px] font-black uppercase tracking-widest text-slate-400">{level.eyebrow}</span>
+                <span className="block text-[8.5px] font-extrabold uppercase tracking-widest text-slate-400">{level.eyebrow}</span>
                 <span
                   className={cn(
                     "block truncate text-[12px] font-extrabold tracking-tight",
@@ -105,7 +105,7 @@ export function PropertyLineage({ unit, className }: PropertyLineageProps) {
                 <ChevronDown className="h-4 w-4 shrink-0 rotate-[-90deg] text-slate-300" aria-hidden />
               )}
               {level.active && (
-                <span className="shrink-0 rounded-full bg-cyan-100 px-2 py-0.5 text-[8.5px] font-black uppercase tracking-widest text-cyan-700">
+                <span className="shrink-0 rounded-full bg-cyan-100 px-2 py-0.5 text-[8.5px] font-extrabold uppercase tracking-widest text-cyan-700">
                   Current
                 </span>
               )}
@@ -145,7 +145,7 @@ export function PropertyLineage({ unit, className }: PropertyLineageProps) {
       </div>
 
       <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[9.5px] leading-relaxed text-amber-800">
-        <strong className="font-black">Demo Spatial Identifier</strong> — {unit.demoSpatialId} is platform-generated for
+        <strong className="font-extrabold">Demo Spatial Identifier</strong> — {unit.demoSpatialId} is platform-generated for
         this demo environment and is not an independently generated legally valid government ULPIN.
       </p>
     </div>

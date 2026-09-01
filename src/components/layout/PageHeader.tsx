@@ -17,7 +17,7 @@ export function PageHeader({ eyebrow, title, description, actions, className }: 
         {eyebrow && (
           <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-cyan-600">{eyebrow}</span>
         )}
-        <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">{title}</h1>
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">{title}</h1>
         {description && <p className="text-xs text-slate-500 max-w-2xl leading-relaxed">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -41,7 +41,7 @@ export function SectionHeader({
   return (
     <div className={cn("flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between", className)}>
       <div className="min-w-0">
-        <h3 className="flex items-center gap-2 text-sm font-extrabold tracking-tight text-slate-900">
+        <h3 className="flex items-center gap-2 text-sm font-bold tracking-tight text-slate-900">
           {icon && <span className="text-cyan-600">{icon}</span>}
           {title}
         </h3>
@@ -62,7 +62,7 @@ export function SectionTitle({
   className?: string;
 }) {
   return (
-    <h3 className={cn("flex items-center gap-2 text-sm font-extrabold tracking-tight text-slate-900", className)}>
+    <h3 className={cn("flex items-center gap-2 text-sm font-bold tracking-tight text-slate-900", className)}>
       {icon && <span className="text-cyan-600">{icon}</span>}
       {children}
     </h3>

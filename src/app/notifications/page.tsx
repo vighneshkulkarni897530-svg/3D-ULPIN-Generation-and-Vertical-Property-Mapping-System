@@ -51,7 +51,7 @@ function NotificationsPageContent() {
         />
 
         <div className="flex items-center gap-2">
-          <span className="rounded-full bg-cyan-100 px-3 py-1 text-[11px] font-black text-cyan-800 border border-cyan-200">
+          <span className="rounded-full bg-cyan-100 px-3 py-1 text-[11px] font-extrabold text-cyan-800 border border-cyan-200">
             {unread} unread
           </span>
           <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-bold text-slate-500 border border-slate-200">
@@ -96,7 +96,7 @@ function NotificationsPageContent() {
                       <Link
                         href={n.linkUrl}
                         onClick={() => markNotificationAsRead(n.id)}
-                        className="inline-flex items-center gap-1 text-[11px] font-black text-cyan-700 hover:underline"
+                        className="inline-flex items-center gap-1 text-[11px] font-extrabold text-cyan-700 hover:underline"
                       >
                         Open <ArrowRight className="h-3 w-3" />
                       </Link>

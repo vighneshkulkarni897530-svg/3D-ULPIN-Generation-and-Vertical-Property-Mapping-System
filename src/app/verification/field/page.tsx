@@ -140,7 +140,7 @@ function FieldVerification() {
       <div className="mx-auto max-w-md px-4 py-10">
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-6 text-center">
           <ClipboardCheck className="mx-auto h-10 w-10 text-emerald-600" />
-          <h1 className="mt-3 text-base font-black tracking-tight text-emerald-900">Field Verification Submitted</h1>
+          <h1 className="mt-3 text-base font-extrabold tracking-tight text-emerald-900">Field Verification Submitted</h1>
           <p className="mt-1 text-xs leading-relaxed text-emerald-700/90">
             <span className="font-mono font-bold">{submitted.id}</span> was recorded as{" "}
             <strong>{submitted.status}</strong>. The queue, dashboards, activity feed and GIS map are updated
@@ -195,7 +195,7 @@ function FieldVerification() {
 
       {/* Step 0 — property picker */}
       <section aria-label="Property selection" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-tech">
-        <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500">
+        <p className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-slate-500">
           <Building2 className="h-3.5 w-3.5" /> Property
         </p>
         <label htmlFor="field-property-select" className="sr-only">
@@ -222,7 +222,7 @@ function FieldVerification() {
         {property && (
           <div className="mt-3 flex items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2.5">
             <div className="min-w-0">
-              <p className="truncate font-mono text-[11px] font-black text-slate-900">{property.id}</p>
+              <p className="truncate font-mono text-[11px] font-extrabold text-slate-900">{property.id}</p>
               <p className="truncate text-[10px] font-semibold text-slate-500">
                 {building?.buildingCode ?? property.buildingId} · {floor?.name ?? property.floorId} · Unit{" "}
                 {property.unitNumber}
@@ -292,7 +292,7 @@ function ConflictContextBanner({
     .filter(Boolean);
   return (
     <div className="mb-4 rounded-xl border border-cyan-200 bg-cyan-50 px-3.5 py-3">
-      <p className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-cyan-700">
+      <p className="flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest text-cyan-700">
         <TriangleAlert className="h-3 w-3" /> Originated from Spatial Conflict
       </p>
       <p className="mt-0.5 font-mono text-[10px] font-bold text-slate-900">{conflict.conflictNumber}</p>
@@ -376,8 +376,8 @@ function FieldWorkflow({
         className="rounded-2xl border border-slate-200 bg-white p-4 shadow-tech"
       >
         <div className="flex items-center justify-between">
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Field Checklist</p>
-          <p className="font-mono text-[11px] font-black text-cyan-700">{stepsDone}/4</p>
+          <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500">Field Checklist</p>
+          <p className="font-mono text-[11px] font-extrabold text-cyan-700">{stepsDone}/4</p>
         </div>
         <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
           <div

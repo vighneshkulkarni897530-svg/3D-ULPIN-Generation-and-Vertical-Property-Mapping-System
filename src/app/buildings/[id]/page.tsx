@@ -191,7 +191,7 @@ export default function BuildingDetailPage() {
             <div className="grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-slate-50/60 p-4 sm:grid-cols-2 lg:grid-cols-4">
               <div>
                 <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Parcel Number</p>
-                <p className="mt-1 truncate font-mono text-xs font-black text-slate-900">{parcel.parcelNumber}</p>
+                <p className="mt-1 truncate font-mono text-xs font-extrabold text-slate-900">{parcel.parcelNumber}</p>
               </div>
               <div>
                 <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Location</p>
@@ -205,7 +205,7 @@ export default function BuildingDetailPage() {
               </div>
               <div>
                 <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Area</p>
-                <p className="mt-1 font-mono text-xs font-black text-slate-900">
+                <p className="mt-1 font-mono text-xs font-extrabold text-slate-900">
                   {parcel.area.toLocaleString("en-IN")} m²
                 </p>
               </div>
@@ -221,23 +221,23 @@ export default function BuildingDetailPage() {
             </p>
             <div className="mt-3 grid grid-cols-3 gap-2">
               <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-2 text-center">
-                <p className="text-lg font-black text-emerald-700">{verifiedCount}</p>
+                <p className="text-lg font-extrabold text-emerald-700">{verifiedCount}</p>
                 <p className="text-[8.5px] font-bold uppercase tracking-wider text-emerald-600">Verified</p>
               </div>
               <div className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-center">
-                <p className="text-lg font-black text-amber-700">{pendingCount}</p>
+                <p className="text-lg font-extrabold text-amber-700">{pendingCount}</p>
                 <p className="text-[8.5px] font-bold uppercase tracking-wider text-amber-600">Pending</p>
               </div>
               <div className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-2 text-center">
-                <p className="text-lg font-black text-red-700">{rejectedCount}</p>
+                <p className="text-lg font-extrabold text-red-700">{rejectedCount}</p>
                 <p className="text-[8.5px] font-bold uppercase tracking-wider text-red-600">Rejected</p>
               </div>
             </div>
             {latestVerification ? (
               <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3">
-                <p className="text-[8.5px] font-black uppercase tracking-widest text-slate-400">Latest verification</p>
+                <p className="text-[8.5px] font-extrabold uppercase tracking-widest text-slate-400">Latest verification</p>
                 <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-mono text-[10.5px] font-black text-slate-900">{latestVerification.propertyId}</p>
+                  <p className="font-mono text-[10.5px] font-extrabold text-slate-900">{latestVerification.propertyId}</p>
                   <GisStatusBadge status={latestVerification.newStatus} />
                 </div>
                 <p className="mt-1 text-[10px] text-slate-500">
@@ -270,7 +270,7 @@ export default function BuildingDetailPage() {
                 {buildingConflicts.map((c) => (
                   <li key={c.id} className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="font-mono text-[10.5px] font-black text-slate-900">{c.conflictNumber}</span>
+                      <span className="font-mono text-[10.5px] font-extrabold text-slate-900">{c.conflictNumber}</span>
                       <span className="flex items-center gap-1.5">
                         <GisStatusBadge status={c.severity} kind="severity" />
                         <GisStatusBadge status={c.status} kind="conflict-status" />
@@ -351,7 +351,7 @@ export default function BuildingDetailPage() {
                   <div key={floor.id} className="rounded-xl border border-slate-200 p-3.5">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2.5">
-                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 font-mono text-[11px] font-black text-slate-600">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 font-mono text-[11px] font-extrabold text-slate-600">
                           {floor.floorNumber === 0 ? "G" : `F${floor.floorNumber}`}
                         </span>
                         <div>

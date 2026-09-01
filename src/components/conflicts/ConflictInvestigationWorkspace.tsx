@@ -87,10 +87,10 @@ export function ConflictInvestigationWorkspace({
           <div className="absolute inset-0 tech-grid-dark opacity-40" />
           <div className="relative flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-cyan-400">
+              <p className="flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest text-cyan-400">
                 <TriangleAlert className="h-3 w-3" /> Spatial Conflict
               </p>
-              <h2 className="mt-1 truncate text-base font-black tracking-tight">{conflict.conflictNumber}</h2>
+              <h2 className="mt-1 truncate text-base font-extrabold tracking-tight">{conflict.conflictNumber}</h2>
               <p className="mt-0.5 text-[11px] text-slate-300">{conflict.type}</p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
@@ -182,7 +182,7 @@ export function ConflictInvestigationWorkspace({
 
       {/* ── Officer Action ── */}
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-tech">
-        <p className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-400">
+        <p className="flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest text-slate-400">
           <Edit3 className="h-3 w-3" /> Officer Action
         </p>
         <p className="mt-1 text-[11px] font-semibold text-slate-500">
@@ -258,7 +258,7 @@ function formatDateTime(iso: string): string {
 function InfoCell({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
-      <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">{label}</p>
+      <p className="text-[8px] font-extrabold uppercase tracking-widest text-slate-400">{label}</p>
       <p className="mt-0.5 text-[11px] font-bold text-slate-800">{value}</p>
     </div>
   );
@@ -267,7 +267,7 @@ function InfoCell({ label, value }: { label: string; value: React.ReactNode }) {
 function InfoSection({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-tech">
-      <p className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-400">
+      <p className="flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest text-slate-400">
         {icon} {title}
       </p>
       <div className="mt-2">{children}</div>
@@ -307,7 +307,7 @@ function AffectedEntityCard({
     <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3.5">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate font-mono text-[11px] font-black text-slate-900">{unit.id}</p>
+          <p className="truncate font-mono text-[11px] font-extrabold text-slate-900">{unit.id}</p>
           <p className="mt-0.5 flex items-center gap-1 truncate font-mono text-[9.5px] text-slate-500">
             <Fingerprint className="h-3 w-3 shrink-0 text-cyan-600" />
             {unit.demoSpatialId}
@@ -344,7 +344,7 @@ function AffectedEntityCard({
 function EntityRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center gap-1.5">
-      <dt className="shrink-0 text-[8px] font-black uppercase tracking-wider text-slate-400">{label}</dt>
+      <dt className="shrink-0 text-[8px] font-extrabold uppercase tracking-wider text-slate-400">{label}</dt>
       <dd className="min-w-0 truncate font-semibold text-slate-700">{value}</dd>
     </div>
   );

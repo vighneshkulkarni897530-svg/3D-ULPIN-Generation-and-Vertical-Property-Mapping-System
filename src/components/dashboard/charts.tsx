@@ -64,7 +64,7 @@ export function DonutChart({ segments, size = 168, strokeWidth = 20, centerLabel
           })}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl font-black text-slate-900 tabular-nums">{centerLabel ?? total}</span>
+          <span className="text-2xl font-extrabold text-slate-900 tabular-nums">{centerLabel ?? total}</span>
           {centerSub && <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{centerSub}</span>}
         </div>
       </div>
@@ -192,7 +192,7 @@ export function HBarChart({ data, max, valueFormatter, emptyLabel = 'No data for
               style={{ width: `${Math.max((d.value / maxValue) * 100, 2)}%`, backgroundColor: d.color ?? '#06B6D4' }}
             />
           </div>
-          <span className="w-10 shrink-0 text-right text-[11px] font-black tabular-nums text-slate-800">
+          <span className="w-10 shrink-0 text-right text-[11px] font-extrabold tabular-nums text-slate-800">
             {valueFormatter ? valueFormatter(d.value) : d.value}
           </span>
           {d.sub && <span className="hidden w-20 shrink-0 text-right font-mono text-[9px] text-slate-400 sm:block">{d.sub}</span>}

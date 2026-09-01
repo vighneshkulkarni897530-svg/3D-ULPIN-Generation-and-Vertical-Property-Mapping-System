@@ -70,7 +70,7 @@ function PropertiesDirectoryPageInner() {
       {/* Phase 7 — segmented registry control (sticky) */}
       <div className="sticky top-16 z-30 border-b border-slate-200 bg-slate-50/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-2.5 sm:px-6 lg:px-8">
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Registry view</span>
+          <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Registry view</span>
           <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
             <button type="button" onClick={() => setView('units')} className={view === 'units' ? activeCls : idleCls}>
               <Layers className="h-3.5 w-3.5" /> Vertical Property Units
@@ -174,7 +174,7 @@ function LegacyParcelRegistry({ initialQuery }: { initialQuery: string }) {
               <Sparkles className="w-3.5 h-3.5" />
               <span>National Geospatial Cadastre Directory</span>
             </div>
-            <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white">
+            <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white">
               Search Land & Property Registry
             </h1>
             <p className="text-xs sm:text-sm text-slate-300">
@@ -433,7 +433,7 @@ function VerticalUnitsRegistry() {
             <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
               <s.icon className="h-3.5 w-3.5 text-cyan-600" /> {s.label}
             </span>
-            <p className="mt-1 text-xl font-black tabular-nums text-slate-900">{s.value}</p>
+            <p className="mt-1 text-xl font-extrabold tabular-nums text-slate-900">{s.value}</p>
           </div>
         ))}
       </div>
@@ -495,7 +495,7 @@ function VerticalUnitsRegistry() {
           </div>
         </div>
         <p className="mt-3 text-xs text-slate-500">
-          Showing <strong className="font-black text-slate-900">{filteredUnits.length}</strong> of {properties.length} vertical property units
+          Showing <strong className="font-extrabold text-slate-900">{filteredUnits.length}</strong> of {properties.length} vertical property units
           {searchQuery && <> matching &quot;<strong className="text-cyan-700">{searchQuery}</strong>&quot;</>}
         </p>
       </div>
@@ -512,7 +512,7 @@ function VerticalUnitsRegistry() {
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <Link href={unitHref(u)} className="font-mono text-sm font-black text-slate-900 transition-colors hover:text-cyan-700">
+                      <Link href={unitHref(u)} className="font-mono text-sm font-extrabold text-slate-900 transition-colors hover:text-cyan-700">
                         {u.id}
                       </Link>
                       <span className="rounded-md bg-slate-900 px-1.5 py-0.5 font-mono text-[9px] font-bold text-cyan-300">{u.unitNumber}</span>
@@ -520,7 +520,7 @@ function VerticalUnitsRegistry() {
                         <Link
                           href={`/conflicts?conflict=${unitConflicts[0]}`}
                           title="Open the conflict investigation workspace"
-                          className="flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-1.5 py-0.5 text-[9px] font-black text-red-600 transition-colors hover:bg-red-100"
+                          className="flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-1.5 py-0.5 text-[9px] font-extrabold text-red-600 transition-colors hover:bg-red-100"
                         >
                           <ShieldAlert className="h-3 w-3" /> {unitConflicts.length} open conflict{unitConflicts.length === 1 ? "" : "s"}
                         </Link>
@@ -557,7 +557,7 @@ function VerticalUnitsRegistry() {
                     </Link>
                     <Link
                       href={unitHref(u)}
-                      className="flex items-center gap-1 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-[10px] font-black text-slate-950 shadow-sm transition-all hover:from-cyan-400 hover:to-blue-500"
+                      className="flex items-center gap-1 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-[10px] font-extrabold text-slate-950 shadow-sm transition-all hover:from-cyan-400 hover:to-blue-500"
                     >
                       Open <ArrowRight className="h-3 w-3" />
                     </Link>
@@ -570,7 +570,7 @@ function VerticalUnitsRegistry() {
       ) : (
         <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-tech">
           <Search className="mx-auto h-10 w-10 text-slate-300" />
-          <h3 className="mt-3 text-sm font-black text-slate-900">No Vertical Units Match</h3>
+          <h3 className="mt-3 text-sm font-extrabold text-slate-900">No Vertical Units Match</h3>
           <p className="mx-auto mt-1 max-w-sm text-xs text-slate-500">
             Try a Property ID, Demo Spatial Identifier, building or owner reference — or clear the filters.
           </p>

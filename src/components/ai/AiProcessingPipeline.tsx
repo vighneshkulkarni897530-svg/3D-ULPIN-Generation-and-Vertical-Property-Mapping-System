@@ -119,7 +119,7 @@ export function AiProcessingPipeline({
                 )}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-[8.5px] font-black uppercase tracking-widest text-slate-400">
+                <span className="block text-[8.5px] font-extrabold uppercase tracking-widest text-slate-400">
                   Step {i + 1}
                 </span>
                 <span

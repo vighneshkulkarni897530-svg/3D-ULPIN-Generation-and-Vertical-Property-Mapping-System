@@ -378,8 +378,8 @@ function VerificationWorkspace({
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-tech">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[9px] font-black uppercase tracking-widest text-cyan-600">Property Inspection</p>
-            <h2 className="mt-0.5 font-mono text-base font-black text-slate-900">{property.id}</h2>
+            <p className="text-[9px] font-extrabold uppercase tracking-widest text-cyan-600">Property Inspection</p>
+            <h2 className="mt-0.5 font-mono text-base font-extrabold text-slate-900">{property.id}</h2>
             <p className="truncate text-[11px] font-semibold text-slate-500">
               {property.ownerReferenceName ?? "Owner reference on file"} · Unit {property.unitNumber}
             </p>
@@ -425,7 +425,7 @@ function VerificationWorkspace({
           <InfoRow label="Property Type" value={property.propertyType} />
           <InfoRow label="Area" value={`${property.area.toLocaleString("en-IN")} sq ft`} mono />
           <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[9.5px] leading-relaxed text-amber-800">
-            <strong className="font-black">Demo Spatial Identifier</strong> — platform-generated for this demo
+            <strong className="font-extrabold">Demo Spatial Identifier</strong> — platform-generated for this demo
             environment. It is <strong>not</strong> a legally valid government ULPIN.
           </p>
         </InfoCard>
@@ -502,7 +502,7 @@ function VerificationWorkspace({
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <p className="text-[8.5px] font-black uppercase tracking-widest text-slate-400">{label}</p>
+      <p className="text-[8.5px] font-extrabold uppercase tracking-widest text-slate-400">{label}</p>
       <p className="truncate font-mono text-[11px] font-bold text-slate-800">{value}</p>
     </div>
   );
@@ -591,7 +591,7 @@ function QueueRow({
       )}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="font-mono text-[11px] font-black text-slate-900">{property.id}</span>
+        <span className="font-mono text-[11px] font-extrabold text-slate-900">{property.id}</span>
         <GisStatusBadge status={property.verificationStatus} kind="property" />
       </div>
       <p className="mt-1 truncate font-mono text-[9.5px] text-slate-500">{property.demoSpatialId}</p>

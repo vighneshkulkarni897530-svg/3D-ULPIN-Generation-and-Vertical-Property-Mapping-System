@@ -483,7 +483,7 @@ function MapWorkspace() {
         >
           <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span className="flex-1">
-            <strong className="font-black">Demo Tool</strong> — measurement is simulated for this demo environment and
+            <strong className="font-extrabold">Demo Tool</strong> — measurement is simulated for this demo environment and
             is not a legal survey measurement.
           </span>
           <button

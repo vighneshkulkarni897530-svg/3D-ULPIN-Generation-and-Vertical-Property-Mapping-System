@@ -112,7 +112,7 @@ export function ConflictResolutionHistory({ conflict, activities, className }: C
   return (
     <section className={cn("rounded-xl border border-slate-200 bg-white", className)}>
       <header className="border-b border-slate-100 px-4 py-3">
-        <p className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-400">
+        <p className="flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest text-slate-400">
           <History className="h-3 w-3" /> Resolution History
         </p>
       </header>
@@ -131,7 +131,7 @@ export function ConflictResolutionHistory({ conflict, activities, className }: C
               </div>
               <p className="mt-0.5 text-[10px] leading-relaxed text-slate-500">{ev.detail}</p>
               {ev.key.startsWith("detected-") && (
-                <span className="mt-1 inline-flex items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-slate-500">
+                <span className="mt-1 inline-flex items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-wider text-slate-500">
                   <Eye className="h-2.5 w-2.5" /> Demo Spatial Conflict
                 </span>
               )}

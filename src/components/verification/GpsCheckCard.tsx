@@ -74,10 +74,10 @@ export function GpsCheckCard({ expectedLat, expectedLng, result, onResult, compa
   return (
     <section className="rounded-xl border border-slate-800 bg-slate-900/60" aria-label="Demo GPS location check">
       <div className="flex items-center justify-between border-b border-slate-800 px-3.5 py-2.5">
-        <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+        <p className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
           <Crosshair className="h-3.5 w-3.5 text-cyan-400" /> Demo GPS Location Check
         </p>
-        <span className="rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[8.5px] font-black uppercase tracking-wider text-amber-400">
+        <span className="rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[8.5px] font-extrabold uppercase tracking-wider text-amber-400">
           Simulated
         </span>
       </div>
@@ -85,12 +85,12 @@ export function GpsCheckCard({ expectedLat, expectedLng, result, onResult, compa
       <div className="space-y-3 px-3.5 py-3">
         <div className="grid grid-cols-2 gap-2.5">
           <div className="rounded-lg border border-slate-800 bg-slate-950/60 px-2.5 py-2">
-            <p className="text-[8.5px] font-black uppercase tracking-widest text-slate-500">Expected location</p>
+            <p className="text-[8.5px] font-extrabold uppercase tracking-widest text-slate-500">Expected location</p>
             <p className="mt-0.5 font-mono text-[10.5px] font-bold text-slate-200">{expectedLat.toFixed(6)}</p>
             <p className="font-mono text-[10.5px] font-bold text-slate-200">{expectedLng.toFixed(6)}</p>
           </div>
           <div className="rounded-lg border border-slate-800 bg-slate-950/60 px-2.5 py-2">
-            <p className="text-[8.5px] font-black uppercase tracking-widest text-slate-500">Demo field location</p>
+            <p className="text-[8.5px] font-extrabold uppercase tracking-widest text-slate-500">Demo field location</p>
             {result ? (
               <>
                 <p className={cn("mt-0.5 font-mono text-[10.5px] font-bold", result.matched ? "text-emerald-300" : "text-amber-300")}>
@@ -148,7 +148,7 @@ export function GpsCheckCard({ expectedLat, expectedLng, result, onResult, compa
         </button>
 
         <p className="text-[9px] leading-relaxed text-slate-500">
-          <strong className="font-black text-slate-400">Demo GPS / Simulated Field Location</strong> — coordinates are
+          <strong className="font-extrabold text-slate-400">Demo GPS / Simulated Field Location</strong> — coordinates are
           generated for demonstration only and are not real GNSS, RTK or CORS measurements.
         </p>
       </div>

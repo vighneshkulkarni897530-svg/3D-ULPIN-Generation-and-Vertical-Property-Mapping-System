@@ -1,5 +1,6 @@
 "use client";
 
+import { SafeImage } from '@/components/ui/SafeImage';
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { useProperty } from "@/context/PropertyContext";
@@ -92,7 +93,7 @@ const executeAction = () => {
   };
 
   const columns: ColumnDef<FieldVerificationRequest>[] = [
-    { key: "req", header: "Request", render: (r) => (<div className="min-w-0"><p className="font-mono text-xs font-black text-cyan-700">{r.requestNumber}</p><p className="max-w-[200px] truncate text-[10px] text-slate-500">{r.propertyTitle}</p></div>) },
+    { key: "req", header: "Request", render: (r) => (<div className="min-w-0"><p className="font-mono text-xs font-extrabold text-cyan-700">{r.requestNumber}</p><p className="max-w-[200px] truncate text-[10px] text-slate-500">{r.propertyTitle}</p></div>) },
     { key: "type", header: "Survey Type", hiddenOnMobile: true, render: (r) => (<Badge variant="blue">{humanize(r.surveyType)}</Badge>) },
     { key: "urgency", header: "Urgency", render: (r) => (r.urgency === "HIGH_PRIORITY" ? <Badge variant="destructive">High Priority</Badge> : r.urgency === "URGENT" ? <Badge variant="warning">Urgent</Badge> : <Badge>Normal</Badge>) },
     { key: "status", header: "Status", render: (r) => <StatusBadge status={r.status} size="sm" /> },
@@ -178,14 +179,14 @@ return (
                 {detailProperty && (
                   <div className="mt-4 flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50/50 p-3.5">
                     <div className="h-12 w-16 shrink-0 overflow-hidden rounded-lg bg-slate-900">
-                      <img src={detailProperty.featuredImageUrl} alt="" className="h-full w-full object-cover" />
+                      <SafeImage src={detailProperty.featuredImageUrl} alt="" className="h-full w-full object-cover" />
                     </div>
                     <div className="min-w-0 flex-1 text-xs">
                       <p className="font-bold text-slate-800">{detailProperty.address}</p>
                       <p className="mt-0.5 text-[11px] text-slate-500">
                         Survey {detailProperty.landDetails.surveyNumber} • {detailProperty.landDetails.landAreaAcres} acres • Owner: {detailProperty.primaryOwnerName}
                       </p>
-                      <Link href={`/properties/${detailProperty.id}`} className="mt-1 inline-flex items-center gap-1 text-[11px] font-black text-blue-700 hover:underline">
+                      <Link href={`/properties/${detailProperty.id}`} className="mt-1 inline-flex items-center gap-1 text-[11px] font-extrabold text-blue-700 hover:underline">
                         Open cadastral record <ArrowRight className="h-3 w-3" />
                       </Link>
                     </div>
@@ -209,7 +210,7 @@ return (
                 {detailDispute ? (
                   <div className="space-y-2.5 text-xs">
                     <div className="rounded-xl border border-slate-100 bg-slate-50 p-3.5">
-                      <span className="font-mono text-[10px] font-black text-red-600">{detailDispute.disputeTicketNumber}</span>
+                      <span className="font-mono text-[10px] font-extrabold text-red-600">{detailDispute.disputeTicketNumber}</span>
                       <p className="mt-1 font-bold text-slate-800">{detailDispute.title}</p>
                       {detailDispute.officerInspectionNotes && (
                         <p className="mt-1.5 border-t border-slate-200 pt-2 text-[11px] text-slate-500">{detailDispute.officerInspectionNotes}</p>
@@ -247,7 +248,7 @@ return (
                           <p className="truncate text-xs font-bold text-slate-800">{ev.fileName}</p>
                           <p className="font-mono text-[10px] text-slate-400">{ev.fileSize} • {ev.fileType}</p>
                         </div>
-                        <span className="rounded-md bg-green-50 border border-green-200 px-1.5 py-0.5 text-[9px] font-black text-green-700">SHA-256</span>
+                        <span className="rounded-md bg-green-50 border border-green-200 px-1.5 py-0.5 text-[9px] font-extrabold text-green-700">SHA-256</span>
                       </div>
                     ))}
                   </div>

@@ -40,7 +40,7 @@ export function NotificationDropdown({ className }: { className?: string }) {
       >
         <Bell className="h-4.5 w-4.5" />
         {unreadNotificationsCount > 0 && (
-          <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-cyan-500 text-[9px] font-black text-slate-950 ring-2 ring-slate-950">
+          <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-cyan-500 text-[9px] font-extrabold text-slate-950 ring-2 ring-slate-950">
             {unreadNotificationsCount}
           </span>
         )}

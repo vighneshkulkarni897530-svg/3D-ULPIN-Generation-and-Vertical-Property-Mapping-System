@@ -259,7 +259,7 @@ function ConflictsCenter() {
           {/* Conflict Queue */}
           <section className={cn("rounded-2xl border border-slate-200 bg-white shadow-tech", !queueOpen && "hidden xl:block")}>
             <header className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-              <p className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-400">
+              <p className="flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest text-slate-400">
                 <ListOrdered className="h-3 w-3" /> Conflict Queue
               </p>
               <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 font-mono text-[9px] font-bold text-slate-500">
@@ -316,7 +316,7 @@ function ConflictsCenter() {
         {/* ── Activity feed summary (conflict-focused) ── */}
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-tech">
           <header className="mb-4 flex items-center justify-between">
-            <p className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-400">
+            <p className="flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest text-slate-400">
               <Activity className="h-3 w-3" /> Conflict Activity Feed
             </p>
             <Link href="/dashboard" className="flex items-center gap-1 text-[11px] font-bold text-cyan-700 hover:underline">

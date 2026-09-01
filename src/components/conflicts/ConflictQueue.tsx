@@ -121,7 +121,7 @@ export function ConflictQueue({
           <Filter className="h-3.5 w-3.5" />
           Filters
           {activeFilterCount > 0 && (
-            <span className="rounded-full bg-cyan-500 px-1.5 py-0.25 text-[9px] font-black text-slate-950">
+            <span className="rounded-full bg-cyan-500 px-1.5 py-0.25 text-[9px] font-extrabold text-slate-950">
               {activeFilterCount}
             </span>
           )}
@@ -186,7 +186,7 @@ export function ConflictQueue({
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-[10px] font-black text-slate-900">
+                      <span className="font-mono text-[10px] font-extrabold text-slate-900">
                         {conflict.conflictNumber}
                       </span>
                       <GisStatusBadge status={conflict.severity} kind="severity" />
@@ -202,23 +202,23 @@ export function ConflictQueue({
 
                 <div className="mt-2 flex flex-wrap items-center gap-3 text-[9px] text-slate-400">
                   <span className="flex items-center gap-1">
-                    <span className="font-black">Detected:</span>
+                    <span className="font-extrabold">Detected:</span>
                     {formatRelativeTime(conflict.detectedAt)}
                   </span>
                   {conflict.parcelId && (
                     <span className="flex items-center gap-1">
-                      <span className="font-black">Parcel:</span>
+                      <span className="font-extrabold">Parcel:</span>
                       <span className="font-mono">{conflict.parcelId}</span>
                     </span>
                   )}
                   {conflict.buildingId && (
                     <span className="flex items-center gap-1">
-                      <span className="font-black">Building:</span>
+                      <span className="font-extrabold">Building:</span>
                       <span className="font-mono">{conflict.buildingId}</span>
                     </span>
                   )}
                   <span className="flex items-center gap-1">
-                    <span className="font-black">Units:</span>
+                    <span className="font-extrabold">Units:</span>
                     {affectedUnits.length}
                   </span>
                 </div>
@@ -256,7 +256,7 @@ function FilterRow<T extends string>({
 }: { label: string; value: T; options: T[]; onChange: (v: T) => void; }) {
   return (
     <div>
-      <label className="mb-1 block text-[8px] font-black uppercase tracking-wider text-slate-500">
+      <label className="mb-1 block text-[8px] font-extrabold uppercase tracking-wider text-slate-500">
         {label}
       </label>
       <select

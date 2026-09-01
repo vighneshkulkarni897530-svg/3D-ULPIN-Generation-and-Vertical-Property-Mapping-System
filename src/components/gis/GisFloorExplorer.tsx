@@ -211,7 +211,7 @@ export function GisFloorExplorer({ buildingId, highlightUnitId }: GisFloorExplor
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="truncate font-mono text-[11px] font-black text-cyan-700 group-hover:text-cyan-800">
+                        <p className="truncate font-mono text-[11px] font-extrabold text-cyan-700 group-hover:text-cyan-800">
                           {unit.id}
                         </p>
                         <p className="mt-0.5 truncate font-mono text-[9px] text-slate-500">
@@ -268,8 +268,8 @@ function SummaryChip({ label, value, tone }: { label: string; value: number; ton
   };
   return (
     <div className={cn("rounded-lg border px-2.5 py-1.5", tones[tone])}>
-      <p className="text-[8.5px] font-black uppercase tracking-widest opacity-80">{label}</p>
-      <p className="text-sm font-black">{value}</p>
+      <p className="text-[8.5px] font-extrabold uppercase tracking-widest opacity-80">{label}</p>
+      <p className="text-sm font-extrabold">{value}</p>
     </div>
   );
 }

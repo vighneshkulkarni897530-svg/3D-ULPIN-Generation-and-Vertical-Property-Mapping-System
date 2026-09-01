@@ -48,7 +48,7 @@ export function VerificationTimeline({ propertyId }: { propertyId: string }) {
             {/* Timeline rail */}
             {i < records.length - 1 && <span aria-hidden className="absolute left-[11px] top-7 h-[calc(100%-1.75rem)] w-px bg-slate-200" />}
             <span
-              className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 bg-white text-[9px] font-black ${
+              className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 bg-white text-[9px] font-extrabold ${
                 v.newStatus === "Verified"
                   ? "border-emerald-400 text-emerald-600"
                   : v.newStatus === "Rejected"

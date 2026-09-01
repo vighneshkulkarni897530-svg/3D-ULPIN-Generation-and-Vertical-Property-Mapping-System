@@ -52,7 +52,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
       case 'FIELD_VERIFICATION_REQUESTED':
         return {
           bg: 'bg-amber-50 text-amber-800 border-amber-300 ring-amber-500/20',
-          dot: 'bg-amber-500 animate-ping',
+          dot: 'bg-amber-500 animate-pulse',
           label: status === 'FIELD_VERIFICATION_REQUESTED'
             ? 'Field Survey Requested'
             : status === 'OPEN'

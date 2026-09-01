@@ -159,7 +159,7 @@ function CitizenDashboardPageContent() {
             <div className="flex flex-1 flex-col items-center justify-center">
               <Sparkline points={[2, 3, 3, 5, 4, 7, 6, 8]} className="w-full" />
               <p className="mt-3 text-center text-xs text-slate-500">
-                <span className="font-black text-green-600">+8 records</span> verified in the last
+                <span className="font-extrabold text-green-600">+8 records</span> verified in the last
                 quarter across your properties (6-month trend shown).
               </p>
               <Link href="/properties" className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-cyan-700 hover:underline">
@@ -220,7 +220,7 @@ function CitizenDashboardPageContent() {
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-tech">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-sm font-extrabold text-slate-900">Field Verification Requests</h3>
-                <span className="rounded-full bg-cyan-100 px-2 py-0.5 font-mono text-[10px] font-black text-cyan-700">
+                <span className="rounded-full bg-cyan-100 px-2 py-0.5 font-mono text-[10px] font-extrabold text-cyan-700">
                   {myRequests.length}
                 </span>
               </div>
@@ -235,7 +235,7 @@ function CitizenDashboardPageContent() {
                   return (
                     <div key={r.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-3.5">
                       <div className="min-w-0">
-                        <p className="truncate text-xs font-black text-slate-900">{r.propertyTitle}</p>
+                        <p className="truncate text-xs font-extrabold text-slate-900">{r.propertyTitle}</p>
                         <p className="font-mono text-[10px] text-slate-400">{r.requestNumber} • {r.surveyType.replace(/_/g, " ")}</p>
                       </div>
                       <StatusBadge status={r.status} size="sm" />
@@ -252,7 +252,7 @@ function CitizenDashboardPageContent() {
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-tech">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-sm font-extrabold text-slate-900">Dispute Status</h3>
-                <span className="rounded-full bg-red-100 px-2 py-0.5 font-mono text-[10px] font-black text-red-700">
+                <span className="rounded-full bg-red-100 px-2 py-0.5 font-mono text-[10px] font-extrabold text-red-700">
                   {myDisputes.length}
                 </span>
               </div>
@@ -265,7 +265,7 @@ function CitizenDashboardPageContent() {
                 {myDisputes.map((d) => (
                   <div key={d.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-3.5">
                     <div className="min-w-0">
-                      <p className="truncate text-xs font-black text-slate-900">{d.title}</p>
+                      <p className="truncate text-xs font-extrabold text-slate-900">{d.title}</p>
                       <p className="font-mono text-[10px] text-slate-400">{d.disputeTicketNumber}</p>
                     </div>
                     <StatusBadge status={d.status} size="sm" />
@@ -294,7 +294,7 @@ function CitizenDashboardPageContent() {
                   {n.type === "VERIFICATION" ? <ShieldCheck className="h-4 w-4" /> : n.type === "DISPUTE" ? <AlertTriangle className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-black text-slate-900 line-clamp-1">{n.title}</p>
+                  <p className="text-xs font-extrabold text-slate-900 line-clamp-1">{n.title}</p>
                   <p className="mt-0.5 line-clamp-2 text-[11px] text-slate-500">{n.message}</p>
                   <span className="mt-1 inline-block font-mono text-[9px] font-bold text-slate-400">{n.createdAt}</span>
                 </div>

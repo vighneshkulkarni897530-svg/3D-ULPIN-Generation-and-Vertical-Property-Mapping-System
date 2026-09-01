@@ -36,7 +36,7 @@ export function FloorStack({
 
   return (
     <div className={cn("rounded-2xl border border-slate-200 bg-white p-4 shadow-sm", className)}>
-      <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+      <p className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
         <Building2 className="h-3.5 w-3.5 text-cyan-600" /> Vertical Floor Stack
       </p>
 
@@ -73,7 +73,7 @@ export function FloorStack({
             >
               <span
                 className={cn(
-                  "flex h-7 w-9 shrink-0 items-center justify-center rounded-md border font-mono text-[10px] font-black",
+                  "flex h-7 w-9 shrink-0 items-center justify-center rounded-md border font-mono text-[10px] font-extrabold",
                   selected ? "border-cyan-400 bg-cyan-500 text-slate-950" : "border-slate-200 bg-slate-50 text-slate-500",
                 )}
               >

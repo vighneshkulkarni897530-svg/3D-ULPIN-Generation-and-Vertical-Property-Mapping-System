@@ -226,7 +226,7 @@ export const MOCK_VERIFICATIONS: VerificationRecord[] = [
     notes: 'Verification complete. RTK GNSS match within 3 cm tolerance.',
     gpsMatched: true, boundaryMatched: true, confidenceScore: 95,
     method: 'RTK_GNSS', source: 'OFFICER',
-    photoUrl: 'https://images.unsplash.com/photo-1545324754-9e2d71398916?w=600&auto=format&fit=crop&q=80',
+    photoUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&auto=format&fit=crop&q=80',
   },
 
   // ── PROP-306-0201: Reinspection Required (3 records) ──

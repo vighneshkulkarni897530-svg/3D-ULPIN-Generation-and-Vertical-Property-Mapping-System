@@ -37,16 +37,16 @@ export function CollaborationPanel({ collaborators, recentEvents, className }: C
           const tone = presenceTone[c.status];
           return (
             <div key={c.id} className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-2.5">
-              <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 text-[11px] font-black text-slate-950">
+              <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 text-[11px] font-extrabold text-slate-950">
                 {c.name.split(" ").map((n) => n[0]).slice(0, 2).join("")}
                 <span className={cn("absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white", tone.dot)} />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[11px] font-black text-slate-900">{c.name}</p>
+                <p className="truncate text-[11px] font-extrabold text-slate-900">{c.name}</p>
                 <p className="truncate text-[9.5px] text-slate-500">{c.designation}</p>
               </div>
               <div className="shrink-0 text-right">
-                <span className="block text-[9px] font-black uppercase tracking-widest text-slate-500">{tone.label}</span>
+                <span className="block text-[9px] font-extrabold uppercase tracking-widest text-slate-500">{tone.label}</span>
                 <span className="block font-mono text-[8.5px] text-slate-400">seen {formatRelativeTime(c.lastSeen)}</span>
               </div>
             </div>
@@ -55,7 +55,7 @@ export function CollaborationPanel({ collaborators, recentEvents, className }: C
       </div>
 
       <div className="mt-4">
-        <p className="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+        <p className="mb-2 flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
           <Radio className="h-3 w-3" /> Recent task changes
         </p>
         {recentEvents.length === 0 ? (
@@ -67,7 +67,7 @@ export function CollaborationPanel({ collaborators, recentEvents, className }: C
             {recentEvents.map((e) => (
               <li key={e.id} className="rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2">
                 <p className="flex items-center justify-between gap-2 text-[10px]">
-                  <span className="font-mono font-black text-cyan-700">{e.taskId}</span>
+                  <span className="font-mono font-extrabold text-cyan-700">{e.taskId}</span>
                   <span className="font-mono text-[8.5px] text-slate-400">{formatRelativeTime(e.timestamp)}</span>
                 </p>
                 <p className="mt-0.5 text-[10px] text-slate-600">
@@ -80,7 +80,7 @@ export function CollaborationPanel({ collaborators, recentEvents, className }: C
       </div>
 
       <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[9px] leading-relaxed text-amber-800">
-        <strong className="font-black">Demo Collaboration Presence</strong> — presence and assignment indicators are
+        <strong className="font-extrabold">Demo Collaboration Presence</strong> — presence and assignment indicators are
         simulated for this prototype. No real-time multi-user synchronization is claimed.
       </p>
     </section>

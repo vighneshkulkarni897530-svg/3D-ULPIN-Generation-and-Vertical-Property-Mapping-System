@@ -84,7 +84,7 @@ export function TaskDetailPanel({ task, role, currentUserName, collaborators, on
     return (
       <div className={cn("flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50/60 p-10 text-center", className)}>
         <ClipboardList className="h-10 w-10 text-slate-300" />
-        <p className="mt-3 text-sm font-black text-slate-800">Select a task</p>
+        <p className="mt-3 text-sm font-extrabold text-slate-800">Select a task</p>
         <p className="mt-1 max-w-xs text-[11px] leading-relaxed text-slate-500">
           Choose a task from the registry to review its details, track status, view the audit history and manage assignment.
         </p>
@@ -115,17 +115,17 @@ export function TaskDetailPanel({ task, role, currentUserName, collaborators, on
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <div className="flex items-center gap-2">
-            <span className="font-mono text-[10px] font-black text-slate-400">{task.id}</span>
+            <span className="font-mono text-[10px] font-extrabold text-slate-400">{task.id}</span>
             <TaskPriorityBadge priority={task.priority} />
             <TaskStatusBadge status={task.status} />
           </div>
-          <h2 className="mt-1.5 text-base font-black tracking-tight text-slate-900">{task.title}</h2>
+          <h2 className="mt-1.5 text-base font-extrabold tracking-tight text-slate-900">{task.title}</h2>
           <p className="mt-0.5 font-mono text-[10px] text-slate-500">{entityLabel(task.entityType, task.entityId)}</p>
         </div>
         {href && (
           <Link
             href={href}
-            className="flex shrink-0 items-center gap-1 rounded-xl bg-slate-900 px-3 py-1.5 text-[10px] font-black text-cyan-300 transition-colors hover:bg-slate-800"
+            className="flex shrink-0 items-center gap-1 rounded-xl bg-slate-900 px-3 py-1.5 text-[10px] font-extrabold text-cyan-300 transition-colors hover:bg-slate-800"
           >
             Open related <ArrowRight className="h-3 w-3" />
           </Link>
@@ -135,16 +135,16 @@ export function TaskDetailPanel({ task, role, currentUserName, collaborators, on
       {/* Meta */}
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-xl border border-slate-100 bg-slate-50 p-2.5">
-          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Assignee</p>
+          <p className="text-[9px] font-extrabold uppercase tracking-widest text-slate-400">Assignee</p>
           <p className="mt-0.5 truncate text-[11px] font-extrabold text-slate-800">{task.assignedOfficerName ?? "Unassigned"}</p>
         </div>
         <div className="rounded-xl border border-slate-100 bg-slate-50 p-2.5">
-          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Created</p>
+          <p className="text-[9px] font-extrabold uppercase tracking-widest text-slate-400">Created</p>
           <p className="mt-0.5 truncate text-[11px] font-extrabold text-slate-800">{task.createdByName}</p>
           <p className="font-mono text-[9px] text-slate-400">{formatRelativeTime(task.createdAt)}</p>
         </div>
         <div className="rounded-xl border border-slate-100 bg-slate-50 p-2.5">
-          <p className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-slate-400">
+          <p className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-widest text-slate-400">
             <CalendarDays className="h-3 w-3" /> Due
           </p>
           {task.dueDate ? (
@@ -157,7 +157,7 @@ export function TaskDetailPanel({ task, role, currentUserName, collaborators, on
           )}
         </div>
         <div className="rounded-xl border border-slate-100 bg-slate-50 p-2.5">
-          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Closed</p>
+          <p className="text-[9px] font-extrabold uppercase tracking-widest text-slate-400">Closed</p>
           <p className="mt-0.5 text-[11px] font-extrabold text-slate-800">
             {task.completedAt ? formatRelativeTime(task.completedAt) : "—"}
           </p>
@@ -173,7 +173,7 @@ export function TaskDetailPanel({ task, role, currentUserName, collaborators, on
 
       {/* Status progression */}
       <div className="mt-5">
-        <p className="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+        <p className="mb-2 flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
           <Flag className="h-3 w-3" /> Status progression
         </p>
         {statusLocked ? (
@@ -197,7 +197,7 @@ export function TaskDetailPanel({ task, role, currentUserName, collaborators, on
                       title={allowed ? `Move to ${next.replace(/_/g, " ")}` : "Not permitted for your role/assignment"}
                       onClick={() => onStatusChange(task.id, next, statusNote.trim())}
                       className={cn(
-                        "rounded-xl px-3 py-2 text-[10px] font-black transition-all",
+                        "rounded-xl px-3 py-2 text-[10px] font-extrabold transition-all",
                         !allowed && "cursor-not-allowed opacity-35",
                         isComplete && allowed
                           ? "bg-gradient-to-r from-emerald-500 to-green-600 text-white hover:from-emerald-400 hover:to-green-500"
@@ -237,7 +237,7 @@ export function TaskDetailPanel({ task, role, currentUserName, collaborators, on
 
       {/* Assignment */}
       <div className="mt-5">
-        <p className="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+        <p className="mb-2 flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
           <UserCheck className="h-3 w-3" /> Assignment
         </p>
         {role === "ADMIN" ? (
@@ -257,7 +257,7 @@ export function TaskDetailPanel({ task, role, currentUserName, collaborators, on
               type="button"
               onClick={handleAssign}
               disabled={!assigneeId}
-              className="flex items-center gap-1 rounded-xl bg-slate-900 px-3 py-2.5 text-[10px] font-black text-cyan-300 transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-35"
+              className="flex items-center gap-1 rounded-xl bg-slate-900 px-3 py-2.5 text-[10px] font-extrabold text-cyan-300 transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-35"
             >
               <UserPlus className="h-3.5 w-3.5" /> {task.assignedOfficerId ? "Reassign" : "Assign"}
             </button>
@@ -271,7 +271,7 @@ export function TaskDetailPanel({ task, role, currentUserName, collaborators, on
             <button
               type="button"
               onClick={() => onAssign(task.id, currentUserName, currentUserName)}
-              className="flex items-center gap-1.5 rounded-xl border border-cyan-300 bg-cyan-50 px-3 py-2 text-[10px] font-black text-cyan-700 transition-colors hover:bg-cyan-100"
+              className="flex items-center gap-1.5 rounded-xl border border-cyan-300 bg-cyan-50 px-3 py-2 text-[10px] font-extrabold text-cyan-700 transition-colors hover:bg-cyan-100"
             >
               <UserPlus className="h-3.5 w-3.5" /> Assign this task to me
             </button>
@@ -286,7 +286,7 @@ export function TaskDetailPanel({ task, role, currentUserName, collaborators, on
       {/* Notes */}
       {operate && (
         <div className="mt-5">
-          <p className="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+          <p className="mb-2 flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
             <MessageSquarePlus className="h-3 w-3" /> Add note
           </p>
           <div className="flex flex-col gap-2 sm:flex-row">
@@ -303,7 +303,7 @@ export function TaskDetailPanel({ task, role, currentUserName, collaborators, on
                 onAddNote(task.id, note.trim());
                 setNote("");
               }}
-              className="rounded-xl bg-slate-900 px-4 py-2.5 text-[10px] font-black text-cyan-300 transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-35"
+              className="rounded-xl bg-slate-900 px-4 py-2.5 text-[10px] font-extrabold text-cyan-300 transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-35"
             >
               Add note
             </button>
@@ -313,7 +313,7 @@ export function TaskDetailPanel({ task, role, currentUserName, collaborators, on
 
       {/* History / audit */}
       <div className="mt-5">
-        <p className="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+        <p className="mb-2 flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
           <History className="h-3 w-3" /> Task history & audit
         </p>
         <ol className="relative space-y-2.5 pl-4 before:absolute before:left-[5px] before:top-1 before:bottom-1 before:w-px before:bg-slate-200">

@@ -141,7 +141,7 @@ function AdminUsersInner() {
           ].map((s) => (
             <div key={s.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{s.label}</p>
-              <p className={`mt-1 text-xl font-black ${s.tone}`}>{loading ? '…' : s.value}</p>
+              <p className={`mt-1 text-xl font-extrabold ${s.tone}`}>{loading ? '…' : s.value}</p>
             </div>
           ))}
         </div>
@@ -233,7 +233,7 @@ function AdminUsersInner() {
                         <tr className="border-b border-slate-50 last:border-0 hover:bg-slate-50/60">
                           <td className="px-5 py-3">
                             <div className="flex items-center gap-2.5">
-                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-[10px] font-black text-slate-600">
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-[10px] font-extrabold text-slate-600">
                                 {u.name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()}
                               </div>
                               <div className="min-w-0">

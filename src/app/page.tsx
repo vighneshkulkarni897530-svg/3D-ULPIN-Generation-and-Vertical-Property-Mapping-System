@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { motion } from 'framer-motion';
@@ -59,11 +59,11 @@ export default function LandingPage() {
             <motion.div variants={fadeUp} custom={0} className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 border border-cyan-500/30 text-cyan-300 text-xs font-semibold shadow-tech-cyan">
               <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
               <span>National Unified Geospatial Cadastre Platform</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
             </motion.div>
 
             {/* Headline */}
-            <motion.h1 variants={fadeUp} custom={1} className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.1] text-slate-50">
+            <motion.h1 variants={fadeUp} custom={1} className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-[1.15] text-slate-50">
               Transparent, Smart & Verified{' '}
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-sky-300 to-blue-500">
                 Land & Property Cadastre
@@ -84,22 +84,22 @@ export default function LandingPage() {
             <motion.div variants={fadeUp} custom={4} className="pt-8 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto text-left">
               <div className="p-3.5 bg-slate-900/80 border border-slate-800 rounded-2xl">
                 <span className="text-slate-400 text-xs font-medium">Verified Parcels</span>
-                <p className="text-xl sm:text-2xl font-black text-white font-mono mt-0.5">9.42M+</p>
-                <span className="text-[10px] text-emerald-400 font-semibold">↑ 100% Geo-Referenced</span>
+                <p className="text-xl sm:text-2xl font-bold text-white font-mono mt-0.5">9.42M+</p>
+                <span className="text-[10px] text-emerald-400 font-semibold">â†‘ 100% Geo-Referenced</span>
               </div>
               <div className="p-3.5 bg-slate-900/80 border border-slate-800 rounded-2xl">
                 <span className="text-slate-400 text-xs font-medium">3D Digital Twins</span>
-                <p className="text-xl sm:text-2xl font-black text-cyan-400 font-mono mt-0.5">385K+</p>
+                <p className="text-xl sm:text-2xl font-bold text-cyan-400 font-mono mt-0.5">385K+</p>
                 <span className="text-[10px] text-slate-400">Highrise & Commercial</span>
               </div>
               <div className="p-3.5 bg-slate-900/80 border border-slate-800 rounded-2xl">
                 <span className="text-slate-400 text-xs font-medium">Dispute Turnaround</span>
-                <p className="text-xl sm:text-2xl font-black text-emerald-400 font-mono mt-0.5">4.2 Days</p>
+                <p className="text-xl sm:text-2xl font-bold text-emerald-400 font-mono mt-0.5">4.2 Days</p>
                 <span className="text-[10px] text-slate-400">DGPS Field Demarcation</span>
               </div>
               <div className="p-3.5 bg-slate-900/80 border border-slate-800 rounded-2xl">
                 <span className="text-slate-400 text-xs font-medium">Officer Network</span>
-                <p className="text-xl sm:text-2xl font-black text-sky-400 font-mono mt-0.5">14,200+</p>
+                <p className="text-xl sm:text-2xl font-bold text-sky-400 font-mono mt-0.5">14,200+</p>
                 <span className="text-[10px] text-slate-400">State Cadastral Reg.</span>
               </div>
             </motion.div>
@@ -211,7 +211,7 @@ export default function LandingPage() {
             <span className="text-xs font-mono font-bold text-cyan-600 uppercase tracking-widest">
               END-TO-END WORKFLOW
             </span>
-            <h2 className="text-2xl sm:text-4xl font-black tracking-tight text-slate-900">
+            <h2 className="text-xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
               How Smart Property Verification Works
             </h2>
             <p className="text-sm text-slate-600">
@@ -222,7 +222,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 relative">
             {/* Step 1 */}
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-tech relative space-y-3">
-              <div className="w-10 h-10 rounded-xl bg-slate-900 text-cyan-400 font-mono font-black text-sm flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-slate-900 text-cyan-400 font-mono font-extrabold text-sm flex items-center justify-center">
                 01
               </div>
               <h4 className="text-base font-extrabold text-slate-900">Search Property</h4>
@@ -233,7 +233,7 @@ export default function LandingPage() {
 
             {/* Step 2 */}
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-tech relative space-y-3">
-              <div className="w-10 h-10 rounded-xl bg-slate-900 text-cyan-400 font-mono font-black text-sm flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-slate-900 text-cyan-400 font-mono font-extrabold text-sm flex items-center justify-center">
                 02
               </div>
               <h4 className="text-base font-extrabold text-slate-900">Explore 2D & 3D Twin</h4>
@@ -244,7 +244,7 @@ export default function LandingPage() {
 
             {/* Step 3 */}
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-tech relative space-y-3">
-              <div className="w-10 h-10 rounded-xl bg-slate-900 text-cyan-400 font-mono font-black text-sm flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-slate-900 text-cyan-400 font-mono font-extrabold text-sm flex items-center justify-center">
                 03
               </div>
               <h4 className="text-base font-extrabold text-slate-900">Verify or Flag Issues</h4>
@@ -255,7 +255,7 @@ export default function LandingPage() {
 
             {/* Step 4 */}
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-tech relative space-y-3">
-              <div className="w-10 h-10 rounded-xl bg-slate-900 text-cyan-400 font-mono font-black text-sm flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-slate-900 text-cyan-400 font-mono font-extrabold text-sm flex items-center justify-center">
                 04
               </div>
               <h4 className="text-base font-extrabold text-slate-900">Officer Ground Check</h4>
@@ -272,7 +272,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Citizens Card */}
-            <div className="p-8 bg-slate-900 text-white rounded-3xl border border-slate-800 shadow-2xl relative overflow-hidden space-y-6">
+            <div className="p-8 bg-slate-900 text-white rounded-2xl border border-slate-800 relative overflow-hidden space-y-6">
               <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400">
                 <Users className="w-6 h-6" />
               </div>
@@ -280,7 +280,7 @@ export default function LandingPage() {
                 <span className="text-xs font-mono text-cyan-400 uppercase tracking-widest font-bold">
                   CITIZEN EMPOWERMENT
                 </span>
-                <h3 className="text-2xl font-black tracking-tight mt-1">Benefits for Property Owners & Buyers</h3>
+                <h3 className="text-xl font-extrabold tracking-tight mt-1">Benefits for Property Owners &amp; Buyers</h3>
               </div>
 
               <ul className="space-y-3.5 text-xs text-slate-300">
@@ -314,7 +314,7 @@ export default function LandingPage() {
             </div>
 
             {/* Government Authorities Card */}
-            <div className="p-8 bg-slate-950 text-white rounded-3xl border border-slate-800 shadow-2xl relative overflow-hidden space-y-6">
+            <div className="p-8 bg-slate-950 text-white rounded-2xl border border-slate-800 relative overflow-hidden space-y-6">
               <div className="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-blue-400">
                 <Building className="w-6 h-6" />
               </div>
@@ -322,7 +322,7 @@ export default function LandingPage() {
                 <span className="text-xs font-mono text-blue-400 uppercase tracking-widest font-bold">
                   GOVERNMENT & REVENUE
                 </span>
-                <h3 className="text-2xl font-black tracking-tight mt-1">Benefits for Revenue & Cadastre Officers</h3>
+                <h3 className="text-xl font-extrabold tracking-tight mt-1">Benefits for Revenue &amp; Cadastre Officers</h3>
               </div>
 
               <ul className="space-y-3.5 text-xs text-slate-300">
@@ -366,7 +366,7 @@ export default function LandingPage() {
               <span className="text-xs font-mono font-bold text-cyan-600 uppercase tracking-widest">
                 LIVE PARCEL REPOSITORIES
               </span>
-              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">
+              <h2 className="text-xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1">
                 Explore Featured 3D & 2D Verified Properties
               </h2>
             </div>
@@ -391,7 +391,7 @@ export default function LandingPage() {
       {/* 6. CALL TO ACTION BANNER */}
       <section className="py-16 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 text-white text-center border-b border-slate-800 relative">
         <div className="max-w-4xl mx-auto px-4 space-y-6">
-          <h2 className="text-2xl sm:text-4xl font-black tracking-tight">
+          <h2 className="text-xl sm:text-3xl font-extrabold tracking-tight">
             Ready to Verify Your Land or Property Record?
           </h2>
           <p className="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto leading-relaxed">

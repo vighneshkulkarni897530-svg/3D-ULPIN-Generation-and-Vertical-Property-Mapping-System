@@ -54,7 +54,7 @@ export default function ProfilePage() {
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100">
             <User className="h-7 w-7 text-slate-400" />
           </div>
-          <h1 className="text-lg font-black text-slate-900">You are signed out</h1>
+          <h1 className="text-lg font-extrabold text-slate-900">You are signed out</h1>
           <p className="text-xs text-slate-500">Sign in to view your profile and account information.</p>
           <Link
             href="/auth/login?next=%2Fprofile"
@@ -101,11 +101,11 @@ export default function ProfilePage() {
           {/* Identity card */}
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-1">
             <div className="flex items-center gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 text-sm font-black text-slate-950">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 text-sm font-extrabold text-slate-950">
                 {user.name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()}
               </div>
               <div className="min-w-0">
-                <h2 className="truncate text-base font-black tracking-tight text-slate-900">{user.name}</h2>
+                <h2 className="truncate text-base font-extrabold tracking-tight text-slate-900">{user.name}</h2>
                 <p className="truncate text-xs text-slate-500">{user.email}</p>
               </div>
             </div>

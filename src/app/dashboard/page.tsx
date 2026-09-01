@@ -172,7 +172,7 @@ function GisDashboardPageContent() {
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <p className="font-mono text-[11px] font-black text-slate-900">{conflict.conflictNumber}</p>
+                        <p className="font-mono text-[11px] font-bold text-slate-900">{conflict.conflictNumber}</p>
                         <p className="mt-0.5 text-[10px] font-semibold text-slate-500">{conflict.type}</p>
                       </div>
                       <GisStatusBadge status={conflict.severity} kind="severity" />

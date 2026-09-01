@@ -22,7 +22,7 @@ export default function ForgotPasswordPage() {
               <Building className="w-6 h-6 text-cyan-400" />
             </div>
           </div>
-          <h2 className="text-2xl font-black tracking-tight text-white">Reset Cadastre Password</h2>
+          <h2 className="text-2xl font-extrabold tracking-tight text-white">Reset Cadastre Password</h2>
           <p className="text-xs text-slate-400">
             Enter your registered email address to receive secure OTP authentication.
           </p>
@@ -70,7 +70,7 @@ export default function ForgotPasswordPage() {
 
               <button
                 type="submit"
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-tech-cyan transition-all"
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-tech-cyan transition-all"
               >
                 <span>Send OTP Recovery Link</span>
                 <ArrowRight className="w-4 h-4" />

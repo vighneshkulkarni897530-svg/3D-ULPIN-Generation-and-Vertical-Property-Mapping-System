@@ -75,24 +75,24 @@ const propertyCols: ColumnDef<PropertyItem>[] = [
     { key: "district", header: "District", hiddenOnMobile: true, render: (p) => <span className="text-xs text-slate-600">{p.district}</span> },
     { key: "value", header: "Value", hiddenOnMobile: true, render: (p) => <span className="font-mono text-xs font-bold text-slate-800">{formatCompactINR(p.marketValuationINR)}</span> },
     { key: "status", header: "Status", render: (p) => <StatusBadge status={p.verificationStatus} size="sm" /> },
-    { key: "actions", header: "Action", render: (p) => <Link href={`/properties/${p.id}`} className="text-[11px] font-black text-blue-700 hover:underline">Open</Link> },
+    { key: "actions", header: "Action", render: (p) => <Link href={`/properties/${p.id}`} className="text-[11px] font-extrabold text-blue-700 hover:underline">Open</Link> },
   ];
 
   const disputeCols: ColumnDef<DisputeRecord>[] = [
-    { key: "ticket", header: "Ticket", render: (d) => <span className="font-mono text-xs font-black text-red-600">{d.disputeTicketNumber}</span> },
+    { key: "ticket", header: "Ticket", render: (d) => <span className="font-mono text-xs font-extrabold text-red-600">{d.disputeTicketNumber}</span> },
     { key: "title", header: "Case", render: (d) => (<div className="min-w-0"><p className="max-w-[200px] truncate text-xs font-bold text-slate-900">{d.title}</p><p className="font-mono text-[10px] text-slate-400">{d.ulpin}</p></div>) },
     { key: "category", header: "Category", hiddenOnMobile: true, render: (d) => <Badge variant="warning">{humanize(d.category)}</Badge> },
     { key: "status", header: "Status", render: (d) => <StatusBadge status={d.status} size="sm" /> },
     { key: "assignee", header: "Assignee", hiddenOnMobile: true, render: (d) => <span className="text-xs text-slate-600">{d.assignedOfficerName ?? "Unassigned"}</span> },
-    { key: "actions", header: "Action", render: (d) => <Link href={`/properties/${d.propertyId}/verification`} className="text-[11px] font-black text-blue-700 hover:underline">Review</Link> },
+    { key: "actions", header: "Action", render: (d) => <Link href={`/properties/${d.propertyId}/verification`} className="text-[11px] font-extrabold text-blue-700 hover:underline">Review</Link> },
   ];
 
   const officerCols: ColumnDef<(typeof allOfficers)[number]>[] = [
-    { key: "name", header: "Officer", render: (o) => (<div className="flex items-center gap-2.5"><div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 text-[10px] font-black text-slate-950">{o.name.split(" ").map((n) => n[0]).slice(0, 2).join("")}</div><div><p className="text-xs font-bold text-slate-900">{o.name}</p><p className="text-[10px] text-slate-400">{o.badgeNumber}</p></div></div>) },
+    { key: "name", header: "Officer", render: (o) => (<div className="flex items-center gap-2.5"><div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 text-[10px] font-extrabold text-slate-950">{o.name.split(" ").map((n) => n[0]).slice(0, 2).join("")}</div><div><p className="text-xs font-bold text-slate-900">{o.name}</p><p className="text-[10px] text-slate-400">{o.badgeNumber}</p></div></div>) },
     { key: "dept", header: "Designation", hiddenOnMobile: true, render: (o) => <span className="text-xs text-slate-600">{o.designation}</span> },
     { key: "jurisdiction", header: "Jurisdiction", hiddenOnMobile: true, render: (o) => <span className="text-xs text-slate-600">{o.jurisdictionDistrict}</span> },
     { key: "status", header: "Status", render: () => <Badge variant="success">Active</Badge> },
-    { key: "actions", header: "Action", render: () => <button className="text-[11px] font-black text-blue-700 hover:underline">Manage</button> },
+    { key: "actions", header: "Action", render: () => <button className="text-[11px] font-extrabold text-blue-700 hover:underline">Manage</button> },
   ];
 
   const logCols: ColumnDef<(typeof activityLogs)[number]>[] = [
@@ -196,7 +196,7 @@ const tabs: { id: AdminTab; label: string; icon: React.ReactNode }[] = [
               {allCitizens.map((c) => (
                 <div key={c.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 text-xs font-black text-slate-950">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 text-xs font-extrabold text-slate-950">
                       {c.name.split(" ").map((n) => n[0]).slice(0, 2).join("")}
                     </div>
                     <div>

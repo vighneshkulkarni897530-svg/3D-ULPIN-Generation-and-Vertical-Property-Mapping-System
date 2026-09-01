@@ -51,7 +51,7 @@ export function SpatialCoverageAnalytics({ analytics, className }: SpatialCovera
                 <div key={row.label}>
                   <div className="mb-1 flex items-center justify-between text-[11px]">
                     <span className="font-semibold text-slate-700">{row.label}</span>
-                    <span className="font-black tabular-nums text-slate-900">
+                    <span className="font-extrabold tabular-nums text-slate-900">
                       {row.mapped}/{row.total} · {pct}%
                     </span>
                   </div>
@@ -65,7 +65,7 @@ export function SpatialCoverageAnalytics({ analytics, className }: SpatialCovera
 
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <div className="flex flex-col items-center">
-              <p className="mb-2 self-start text-[10px] font-black uppercase tracking-widest text-slate-400">Demo Spatial ID coverage</p>
+              <p className="mb-2 self-start text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Demo Spatial ID coverage</p>
               <DonutChart
                 segments={demoSegments}
                 centerLabel={`${c.demoIdCoverage}%`}
@@ -80,10 +80,10 @@ export function SpatialCoverageAnalytics({ analytics, className }: SpatialCovera
             </div>
 
             <div className="flex flex-col justify-center rounded-2xl border border-amber-200 bg-amber-50 p-4">
-              <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-amber-700">
+              <p className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-amber-700">
                 <ShieldAlert className="h-3.5 w-3.5" /> Official ULPIN
               </p>
-              <p className="mt-2 text-sm font-black text-amber-900">External Government Integration Required</p>
+              <p className="mt-2 text-sm font-extrabold text-amber-900">External Government Integration Required</p>
               <p className="mt-1 text-[11px] leading-relaxed text-amber-800">
                 {c.unitsWithOfficialUlpin} of {c.totalUnits} units carry an official ULPIN reference. Demo Spatial
                 Identifiers shown across this system are platform-generated prototype identifiers — they are NOT

@@ -30,7 +30,7 @@ export function ExtractionMapOverlay({
   return (
     <div className="pointer-events-auto w-[19rem] max-w-[85vw] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg">
       <div className="flex items-center justify-between gap-2 bg-slate-950 px-3 py-2">
-        <p className="flex min-w-0 items-center gap-1.5 text-[10.5px] font-black uppercase tracking-widest text-cyan-300">
+        <p className="flex min-w-0 items-center gap-1.5 text-[10.5px] font-extrabold uppercase tracking-widest text-cyan-300">
           <Sparkles className="h-3.5 w-3.5 shrink-0" />
           <span className="min-w-0 truncate">Prototype Extraction</span>
         </p>
@@ -72,11 +72,11 @@ export function ExtractionMapOverlay({
         <div className="grid grid-cols-2 gap-1.5">
           <div className="rounded-lg border border-cyan-200 bg-cyan-50 px-2 py-1.5">
             <p className="text-[8.5px] font-extrabold uppercase tracking-widest text-cyan-600">Detection</p>
-            <p className="text-sm font-black text-cyan-800">{result.detectionConfidence}%</p>
+            <p className="text-sm font-extrabold text-cyan-800">{result.detectionConfidence}%</p>
           </div>
           <div className="rounded-lg border border-cyan-200 bg-cyan-50 px-2 py-1.5">
             <p className="text-[8.5px] font-extrabold uppercase tracking-widest text-cyan-600">Reconstruction</p>
-            <p className="text-sm font-black text-cyan-800">{result.reconstructionConfidence}%</p>
+            <p className="text-sm font-extrabold text-cyan-800">{result.reconstructionConfidence}%</p>
           </div>
         </div>
 

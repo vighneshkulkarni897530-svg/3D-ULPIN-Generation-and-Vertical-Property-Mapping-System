@@ -215,7 +215,7 @@ function AiExtractionWorkspace() {
         <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[10.5px] font-semibold text-amber-800">
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
           <p>
-            <strong className="font-black">Prototype demonstration only.</strong> No real AI/ML model, drone
+            <strong className="font-extrabold">Prototype demonstration only.</strong> No real AI/ML model, drone
             photogrammetry, LiDAR or GNSS is connected. Output is deterministic simulated analysis for the same demo
             input — never official government AI verification, legally authoritative boundaries or valid ULPIN
             generation.
@@ -293,7 +293,7 @@ function AiExtractionWorkspace() {
                 <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-cyan-200 bg-cyan-50 text-cyan-600">
                   <ScanLine className="h-6 w-6" />
                 </span>
-                <h3 className="mt-3 text-sm font-black tracking-tight text-slate-900">
+                <h3 className="mt-3 text-sm font-extrabold tracking-tight text-slate-900">
                   {running ? "Prototype analysis in progress…" : image ? "Ready to process" : "No extraction yet"}
                 </h3>
                 <p className="mt-1.5 max-w-sm text-[11px] font-semibold text-slate-500">

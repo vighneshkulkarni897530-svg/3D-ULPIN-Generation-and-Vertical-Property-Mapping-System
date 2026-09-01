@@ -57,7 +57,7 @@ export function VerificationAnalytics({ analytics, className }: VerificationAnal
         <div className="mt-5 grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Status distribution */}
           <div>
-            <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Property verification status distribution</p>
+            <p className="mb-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Property verification status distribution</p>
             {a.properties === 0 ? (
               <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-[11px] text-slate-400">
                 No property units in the current scope.
@@ -89,7 +89,7 @@ export function VerificationAnalytics({ analytics, className }: VerificationAnal
                             {s.status}
                           </span>
                         </td>
-                        <td className="py-1.5 text-right font-black tabular-nums text-slate-900">{s.count}</td>
+                        <td className="py-1.5 text-right font-extrabold tabular-nums text-slate-900">{s.count}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -100,7 +100,7 @@ export function VerificationAnalytics({ analytics, className }: VerificationAnal
 
           {/* Method distribution */}
           <div>
-            <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Verification method distribution</p>
+            <p className="mb-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Verification method distribution</p>
             <HBarChart
               data={methodData}
               ariaLabel="Verification records by survey method"
@@ -114,7 +114,7 @@ export function VerificationAnalytics({ analytics, className }: VerificationAnal
 
         {/* Building-wise verification progress */}
         <div className="mt-6">
-          <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Building-wise verification rate</p>
+          <p className="mb-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Building-wise verification rate</p>
           {a.buildingAnalytics.length === 0 ? (
             <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-center text-[11px] text-slate-400">
               No buildings in the current scope.
@@ -127,7 +127,7 @@ export function VerificationAnalytics({ analytics, className }: VerificationAnal
                     <span className="truncate font-bold text-slate-800" title={b.buildingName}>
                       {b.buildingName} <span className="font-mono text-[9px] text-slate-400">{b.buildingCode}</span>
                     </span>
-                    <span className="shrink-0 font-black tabular-nums text-slate-900">
+                    <span className="shrink-0 font-extrabold tabular-nums text-slate-900">
                       {b.verified}/{b.units} · {b.verificationRate}%
                     </span>
                   </div>
@@ -144,11 +144,11 @@ export function VerificationAnalytics({ analytics, className }: VerificationAnal
         {/* Floor-wise units + recent verification records */}
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div>
-            <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Floor-wise property units</p>
+            <p className="mb-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Floor-wise property units</p>
             <HBarChart data={floorData} ariaLabel="Property units per floor" emptyLabel="No mapped floor units in the current scope." />
           </div>
           <div>
-            <p className="mb-3 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+            <p className="mb-3 flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
               <Users className="h-3 w-3" /> Recent verification activity
             </p>
             {a.recentVerifications.length === 0 ? (

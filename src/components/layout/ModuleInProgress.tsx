@@ -56,7 +56,7 @@ export function ModuleInProgress({
                   {eyebrow}
                 </span>
               )}
-              <h1 className="mt-0.5 text-xl font-black tracking-tight text-slate-900 sm:text-2xl">
+              <h1 className="mt-0.5 text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl">
                 {title}
               </h1>
               <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-500">{description}</p>

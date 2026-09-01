@@ -95,7 +95,7 @@ export default function LoginPage() {
               <Building className="w-6 h-6 text-cyan-400" />
             </div>
           </div>
-          <h2 className="text-2xl font-black tracking-tight text-white">
+          <h2 className="text-2xl font-extrabold tracking-tight text-white">
             Sign In to Smart Cadastre
           </h2>
           <p className="text-xs text-slate-400">
@@ -218,7 +218,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-tech-cyan transition-all disabled:opacity-50"
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-tech-cyan transition-all disabled:opacity-50"
             >
               {loading ? (
                 <span>Authenticating...</span>

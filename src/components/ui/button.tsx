@@ -11,11 +11,11 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-cyan-500 text-slate-950 shadow-tech-cyan hover:bg-cyan-400 active:scale-[0.98]",
+          "bg-cyan-500 text-slate-950 shadow-tech-cyan hover:bg-cyan-400",
         gradient:
-          "bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 shadow-tech-cyan hover:from-cyan-400 hover:to-blue-500 active:scale-[0.98]",
+          "bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 shadow-tech-cyan hover:from-cyan-400 hover:to-blue-500",
         secondary:
-          "bg-slate-900 text-cyan-300 border border-slate-700 hover:bg-slate-800 hover:text-white",
+          "bg-slate-900 text-white border border-slate-800 hover:bg-slate-800",
         blue: "bg-blue-600 text-white hover:bg-blue-500",
         outline:
           "border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 hover:border-cyan-400 hover:text-cyan-700",
@@ -50,6 +50,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         disabled={disabled || loading}
+        aria-busy={loading || undefined}
         {...props}
       >
         {loading && <Loader2 className="h-4 w-4 animate-spin" />}

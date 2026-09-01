@@ -82,7 +82,7 @@ export function ValidationRunPanel({
     <section className={cn("rounded-xl border border-slate-200 bg-white", className)}>
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
         <div>
-          <p className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-400">
+          <p className="flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest text-slate-400">
             <FlaskConical className="h-3 w-3" /> Demo Spatial Validation Pipeline
           </p>
           <h3 className="mt-0.5 text-[13px] font-extrabold text-slate-900">Run Spatial Validation</h3>
@@ -133,7 +133,7 @@ export function ValidationRunPanel({
             >
               <span
                 className={cn(
-                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border text-[10px] font-black",
+                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border text-[10px] font-extrabold",
                   done && "border-emerald-300 bg-emerald-500 text-white",
                   active && "border-cyan-400 text-cyan-700",
                   !done && !active && "border-slate-300 text-slate-400",
@@ -153,7 +153,7 @@ export function ValidationRunPanel({
       {phase === "done" && report && (
         <div className="border-t border-slate-100 px-4 py-3.5">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-700">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-emerald-700">
               <ShieldCheck className="h-3 w-3" /> Validation Complete
             </span>
             <span className="font-mono text-[10px] font-bold text-slate-500">
@@ -185,7 +185,7 @@ export function ValidationRunPanel({
           <ol className="mt-3 space-y-1">
             {report.steps.map((s) => (
               <li key={s.index} className="flex items-start gap-2 text-[10.5px] text-slate-600">
-                <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded bg-emerald-100 font-mono text-[8.5px] font-black text-emerald-700">
+                <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded bg-emerald-100 font-mono text-[8.5px] font-extrabold text-emerald-700">
                   {s.index}
                 </span>
                 <span className="min-w-0 flex-1">
@@ -200,7 +200,7 @@ export function ValidationRunPanel({
             <div className="mt-3 overflow-x-auto">
               <table className="w-full min-w-[600px] text-left">
                 <thead>
-                  <tr className="border-b border-slate-200 text-[9px] font-black uppercase tracking-widest text-slate-400">
+                  <tr className="border-b border-slate-200 text-[9px] font-extrabold uppercase tracking-widest text-slate-400">
                     <th className="py-1.5 pr-3">Conflict Type</th>
                     <th className="py-1.5 pr-3">Severity</th>
                     <th className="py-1.5 pr-3">Entities</th>
@@ -217,7 +217,7 @@ export function ValidationRunPanel({
                       <td className="py-2 pr-3">
                         <span
                           className={cn(
-                            "inline-flex rounded-full px-2 py-0.5 text-[9.5px] font-black uppercase tracking-wide",
+                            "inline-flex rounded-full px-2 py-0.5 text-[9.5px] font-extrabold uppercase tracking-wide",
                             f.severity === "Critical" && "bg-rose-100 text-rose-700",
                             f.severity === "High" && "bg-orange-100 text-orange-700",
                             f.severity === "Medium" && "bg-amber-100 text-amber-700",
@@ -245,7 +245,7 @@ export function ValidationRunPanel({
           )}
 
           <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[9.5px] leading-relaxed text-amber-800">
-            <strong className="font-black">Prototype Spatial Validation Result</strong> — deterministic demo rules over
+            <strong className="font-extrabold">Prototype Spatial Validation Result</strong> — deterministic demo rules over
             the centralized demo registry. Not a legally authoritative cadastral validation; registered demo conflicts
             are confirmed rather than re-created.
           </p>

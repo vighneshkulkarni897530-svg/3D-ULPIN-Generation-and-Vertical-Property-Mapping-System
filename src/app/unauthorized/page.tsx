@@ -35,7 +35,7 @@ export default function UnauthorizedPage() {
             </div>
             <div className="space-y-1.5">
               <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-amber-600">HTTP 403 · FORBIDDEN</span>
-              <h1 className="text-xl font-black tracking-tight text-slate-900">You don&apos;t have permission to view this page</h1>
+              <h1 className="text-xl font-extrabold tracking-tight text-slate-900">You don&apos;t have permission to view this page</h1>
               <p className="text-xs leading-relaxed text-slate-500">
                 Your account is signed in as <span className="font-bold text-slate-700">{ROLE_LABELS[role]}</span>, which is not
                 authorized for this resource. If you believe this is a mistake, contact the cadastre administrator to review your role assignment.

@@ -71,7 +71,7 @@ export function GisLayersPanel({ layers, onToggleLayer }: GisLayersPanelProps) {
                 >
                   <span
                     className={cn(
-                      "flex h-6 w-6 items-center justify-center rounded-md border text-[11px] font-black",
+                      "flex h-6 w-6 items-center justify-center rounded-md border text-[11px] font-extrabold",
                       layers[layer.key] ? "border-cyan-500/40 bg-cyan-500/15 text-cyan-300" : "border-slate-700 bg-slate-900 text-slate-600",
                     )}
                   >
@@ -99,7 +99,7 @@ export function GisLayersPanel({ layers, onToggleLayer }: GisLayersPanelProps) {
         </section>
         {/* Parcel list */}
         <section aria-label="Parcel list">
-          <p className="mb-1.5 px-1 text-[9px] font-black uppercase tracking-widest text-slate-500">
+          <p className="mb-1.5 px-1 text-[9px] font-extrabold uppercase tracking-widest text-slate-500">
             Land Parcels · {parcels.length}
           </p>
           <ul className="space-y-1">
@@ -132,7 +132,7 @@ export function GisLayersPanel({ layers, onToggleLayer }: GisLayersPanelProps) {
           <button
             type="button"
             onClick={() => setBuildingsExpanded((v) => !v)}
-            className="flex w-full items-center gap-1.5 px-1 text-left text-[9px] font-black uppercase tracking-widest text-slate-500"
+            className="flex w-full items-center gap-1.5 px-1 text-left text-[9px] font-extrabold uppercase tracking-widest text-slate-500"
           >
             {buildingsExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />}
             Buildings
@@ -178,7 +178,7 @@ export function GisLayersPanel({ layers, onToggleLayer }: GisLayersPanelProps) {
             <button
               type="button"
               onClick={() => setFloorsExpanded((v) => !v)}
-              className="flex w-full items-center gap-1.5 px-1 text-left text-[9px] font-black uppercase tracking-widest text-slate-500"
+              className="flex w-full items-center gap-1.5 px-1 text-left text-[9px] font-extrabold uppercase tracking-widest text-slate-500"
             >
               {floorsExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />}
               Floors
@@ -202,7 +202,7 @@ export function GisLayersPanel({ layers, onToggleLayer }: GisLayersPanelProps) {
 
         {/* Conflicts summary */}
         <section aria-label="Conflict summary">
-          <p className="mb-1 flex items-center gap-1.5 px-1 text-[9px] font-black uppercase tracking-widest text-slate-500">
+          <p className="mb-1 flex items-center gap-1.5 px-1 text-[9px] font-extrabold uppercase tracking-widest text-slate-500">
             <TriangleAlert className="h-3 w-3 text-rose-400" />
             Conflicts · {openConflicts} open
           </p>

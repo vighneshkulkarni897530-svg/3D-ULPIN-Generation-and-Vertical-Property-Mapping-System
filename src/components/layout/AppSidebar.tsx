@@ -1,5 +1,6 @@
 "use client";
 
+import { SafeImage } from '@/components/ui/SafeImage';
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -58,7 +59,7 @@ function SidebarBody({
   onClose?: () => void;
 }) {
   const pathname = usePathname();
-  const { currentUser, role } = useAuth();
+  const { currentUser, role, hasPermission } = useAuth();
   const { conflicts, properties } = useGIS();
 
   const openConflicts = conflicts.filter((c) => c.status !== "Resolved").length;
@@ -108,7 +109,7 @@ function SidebarBody({
         </div>
         {!collapsed && (
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-black tracking-tight text-white">BHU-VERIFY</p>
+            <p className="truncate text-sm font-bold tracking-tight text-white">BHU-VERIFY</p>
             <p className="truncate font-mono text-[9px] uppercase tracking-widest text-cyan-400">
               3D ULPIN · Vertical Cadastre
             </p>
@@ -118,17 +119,21 @@ function SidebarBody({
           <CollapseControl />
         </span>
       </div>
-      {/* Navigation sections */}
-      <nav className="sidebar-scroll flex-1 space-y-5 overflow-y-auto px-3 py-4">
-        {NAV_SECTIONS.map((section) => (
+      {/* Navigation sections — permission-filtered (Phase 10 RBAC-aware) */}
+      <nav className="sidebar-scroll flex-1 space-y-5 overflow-y-auto px-3 py-4" aria-label="Primary">
+        {NAV_SECTIONS.map((section) => {
+          if (section.permission && !hasPermission(section.permission)) return null;
+          const items = section.items.filter((item) => !item.permission || hasPermission(item.permission));
+          if (items.length === 0) return null;
+          return (
           <div key={section.id}>
             {!collapsed && (
-              <p className="mb-1.5 px-2.5 text-[9px] font-black uppercase tracking-widest text-slate-500">
+              <p className="mb-1.5 px-2.5 text-[9px] font-bold uppercase tracking-widest text-slate-500">
                 {section.label}
               </p>
             )}
             <ul className="space-y-0.5">
-              {section.items.map((item) => {
+              {items.map((item) => {
                 const Icon = item.icon;
                 const active = isNavItemActive(pathname, item);
                 const badge = badgeFor(item.badge);
@@ -172,7 +177,8 @@ function SidebarBody({
               })}
             </ul>
           </div>
-        ))}
+          );
+        })}
       </nav>
 
       {/* User / officer section */}
@@ -183,7 +189,7 @@ function SidebarBody({
           </div>
         )}
         <div className={cn("flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/70 p-2.5", collapsed && "justify-center")}>
-          <img
+          <SafeImage
             src={currentUser.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"}
             alt={currentUser.name}
             className="h-9 w-9 shrink-0 rounded-xl object-cover ring-2 ring-cyan-500/40"

@@ -145,7 +145,7 @@ function WorkflowPageInner() {
               <button
                 type="button"
                 onClick={() => setCreateOpen(true)}
-                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2.5 text-xs font-black text-slate-950 shadow-tech-cyan transition-all hover:from-cyan-400 hover:to-blue-500"
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2.5 text-xs font-extrabold text-slate-950 shadow-tech-cyan transition-all hover:from-cyan-400 hover:to-blue-500"
               >
                 <Plus className="h-4 w-4" /> New Task
               </button>
@@ -160,7 +160,7 @@ function WorkflowPageInner() {
         {/* Role + demo collaboration banner */}
         <p className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-[11px] font-semibold text-slate-600">
           <ClipboardList className="h-3.5 w-3.5 text-cyan-600" />
-          Viewing as <span className="font-black text-slate-900">{currentUser.name}</span> ({role}) —{" "}
+          Viewing as <span className="font-extrabold text-slate-900">{currentUser.name}</span> ({role}) —{" "}
           {canCreate
             ? "full workflow controls (create, assign, progress)."
             : "read-only workflow visibility. Officers and admins can manage task state."}

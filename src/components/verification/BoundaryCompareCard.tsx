@@ -121,10 +121,10 @@ export function BoundaryCompareCard({ property }: { property: PropertyUnit }) {
   return (
     <section className="rounded-xl border border-slate-800 bg-slate-900/60" aria-label="Prototype spatial boundary comparison">
       <div className="flex items-center justify-between border-b border-slate-800 px-3.5 py-2.5">
-        <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+        <p className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
           <Shapes className="h-3.5 w-3.5 text-cyan-400" /> Boundary Verification
         </p>
-        <span className="rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[8.5px] font-black uppercase tracking-wider text-amber-400">
+        <span className="rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[8.5px] font-extrabold uppercase tracking-wider text-amber-400">
           Prototype
         </span>
       </div>
@@ -165,7 +165,7 @@ export function BoundaryCompareCard({ property }: { property: PropertyUnit }) {
         </div>
 
         <p className="text-[9px] leading-relaxed text-slate-500">
-          <strong className="font-black text-slate-400">Prototype Spatial Boundary Comparison</strong> — simplified demo
+          <strong className="font-extrabold text-slate-400">Prototype Spatial Boundary Comparison</strong> — simplified demo
           geometry overlay for workflow illustration only. Not a legal cadastral boundary validation.
         </p>
       </div>

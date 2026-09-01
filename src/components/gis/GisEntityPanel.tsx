@@ -163,7 +163,7 @@ function CardShell({
           {icon}
         </span>
         <div className="min-w-0">
-          <p className="text-[9px] font-black uppercase tracking-widest text-cyan-400">{eyebrow}</p>
+          <p className="text-[9px] font-extrabold uppercase tracking-widest text-cyan-400">{eyebrow}</p>
           <h3 className="truncate text-[13px] font-extrabold text-slate-100">{title}</h3>
           {subtitle && <p className="truncate text-[10px] text-slate-500">{subtitle}</p>}
         </div>
@@ -217,14 +217,14 @@ function PropertyCard({ property }: { property: ReturnType<typeof useGIS>["prope
       </dl>
 
       <p className="mt-2.5 rounded-lg border border-amber-500/25 bg-amber-500/5 px-2.5 py-2 text-[9.5px] leading-relaxed text-amber-300/90">
-        <strong className="font-black">Demo Spatial Identifier</strong> — the identifier above is platform-generated
+        <strong className="font-extrabold">Demo Spatial Identifier</strong> — the identifier above is platform-generated
         for this demo environment. It is <strong>not</strong> a legally valid government ULPIN.
       </p>
 
       {/* Phase 5 §13 — open spatial conflicts affecting this unit */}
       {openConflicts.length > 0 && (
         <div className="mt-2.5 rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 py-2">
-          <p className="flex items-center gap-1.5 text-[9.5px] font-black text-red-300">
+          <p className="flex items-center gap-1.5 text-[9.5px] font-extrabold text-red-300">
             <TriangleAlert className="h-3 w-3" /> Spatial Conflict Detected
           </p>
           <p className="mt-0.5 text-[9.5px] leading-relaxed text-red-200/80">
@@ -240,7 +240,7 @@ function PropertyCard({ property }: { property: ReturnType<typeof useGIS>["prope
         </div>
       )}
 
-      <p className="mb-1 mt-3 flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500">
+      <p className="mb-1 mt-3 flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest text-slate-500">
         <Compass className="h-3 w-3" /> Spatial Information
       </p>
       <dl>
@@ -251,7 +251,7 @@ function PropertyCard({ property }: { property: ReturnType<typeof useGIS>["prope
         <Row label="Geometry Status" value={geometryTypeLabel(property.geometry.type, property.dataSource)} />
       </dl>
 
-      <p className="mb-1 mt-3 flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500">
+      <p className="mb-1 mt-3 flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest text-slate-500">
         <ShieldCheck className="h-3 w-3" /> Verification
       </p>
       <dl>
@@ -312,7 +312,7 @@ function BuildingCard({
       </dl>
 
       {/* Integrated floor control — same GISContext selections as the left panel */}
-      <p className="mb-1.5 mt-3 flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500">
+      <p className="mb-1.5 mt-3 flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest text-slate-500">
         <Layers className="h-3 w-3" /> Floors
       </p>
       <div className="flex flex-wrap gap-1.5">
@@ -410,7 +410,7 @@ function ParcelCard({
 
       {buildings.length > 0 && (
         <>
-          <p className="mb-1.5 mt-3 flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500">
+          <p className="mb-1.5 mt-3 flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest text-slate-500">
             <Building2 className="h-3 w-3" /> Buildings on this parcel
           </p>
           <ul className="space-y-1">
@@ -490,7 +490,7 @@ function ConflictCard({
 
       {affected.length > 0 && (
         <>
-          <p className="mb-1.5 mt-3 flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500">
+          <p className="mb-1.5 mt-3 flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest text-slate-500">
             <Hash className="h-3 w-3" /> Affected properties
           </p>
           <ul className="space-y-1">

@@ -145,7 +145,7 @@ function ReportsPageInner() {
       <div className="space-y-7">
         {/* Print-only report cover block */}
         <div className="hidden print:block">
-          <p className="text-lg font-black tracking-tight text-slate-900">
+          <p className="text-lg font-extrabold tracking-tight text-slate-900">
             3D ULPIN Generation &amp; Vertical Property Mapping System — Analytics Report
           </p>
           <p className="mt-1 text-xs text-slate-600">
@@ -166,7 +166,7 @@ function ReportsPageInner() {
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2.5 text-xs font-black text-slate-950 shadow-tech-cyan transition-all hover:from-cyan-400 hover:to-blue-500"
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2.5 text-xs font-extrabold text-slate-950 shadow-tech-cyan transition-all hover:from-cyan-400 hover:to-blue-500"
               >
                 <Printer className="h-4 w-4" /> Print / Save as PDF
               </button>
@@ -184,7 +184,7 @@ function ReportsPageInner() {
         {/* Role context line */}
         <p className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-[11px] font-semibold text-slate-600 print:hidden">
           <BarChart3 className="h-3.5 w-3.5 text-cyan-600" />
-          Viewing as <span className="font-black text-slate-900">{role}</span> —{" "}
+          Viewing as <span className="font-extrabold text-slate-900">{role}</span> —{" "}
           {canOperate
             ? "full operational analytics access."
             : "read-only analytics view (demo role switcher grants officer/admin access)."}

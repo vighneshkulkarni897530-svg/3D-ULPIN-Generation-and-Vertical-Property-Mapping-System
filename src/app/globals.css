@@ -17,23 +17,23 @@ body {
   overflow-x: hidden;
 }
 
-/* Custom Sleek Scrollbars */
+/* Custom Sleek Scrollbars — light-surface theme (matches #F8FAFC app background) */
 ::-webkit-scrollbar {
   width: 7px;
   height: 7px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0b1120;
+  background: #f1f5f9;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: #cbd5e1;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #06b6d4;
+  background: #94a3b8;
 }
 
 /* Tech Grid Utility */
@@ -47,18 +47,24 @@ body {
   background-size: 20px 20px;
 }
 
-/* Custom glow animations */
-@keyframes pulse-cyan {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 35px rgba(6, 182, 212, 0.6);
-  }
+/* Emphasis highlight (static, professional) — replaced the old pulsing glow.
+   Derived shades of the existing accent cyan #06B6D4; no animation. */
+.glow-cyan {
+  box-shadow:
+    0 0 0 1px rgba(6, 182, 212, 0.3),
+    0 4px 12px -4px rgba(6, 182, 212, 0.25);
 }
 
-.glow-cyan {
-  animation: pulse-cyan 3s infinite ease-in-out;
+/* Respect users who prefer reduced motion (accessibility). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Radix overlay / content animation fallbacks */

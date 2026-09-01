@@ -33,7 +33,7 @@ export function UnitCard({ unit, selected = false, onClick, compact = false }: U
       <div className="flex items-center justify-between gap-2">
         <span
           className={cn(
-            "font-mono font-black tracking-tight",
+            "font-mono font-extrabold tracking-tight",
             compact ? "text-xs" : "text-sm",
             selected ? "text-cyan-700" : "text-slate-900"
           )}

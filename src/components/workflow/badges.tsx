@@ -22,7 +22,7 @@ const priorityStyles: Record<TaskPriority, string> = {
 
 export function TaskStatusBadge({ status, className }: { status: TaskStatus; className?: string }) {
   return (
-    <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-widest", statusStyles[status], className)}>
+    <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-widest", statusStyles[status], className)}>
       {status.replace(/_/g, " ")}
     </span>
   );
@@ -30,7 +30,7 @@ export function TaskStatusBadge({ status, className }: { status: TaskStatus; cla
 
 export function TaskPriorityBadge({ priority, className }: { priority: TaskPriority; className?: string }) {
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-widest", priorityStyles[priority], className)}>
+    <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-widest", priorityStyles[priority], className)}>
       {priority === "CRITICAL" && <span className="h-1.5 w-1.5 rounded-full bg-current" />}
       {priority}
     </span>

@@ -73,7 +73,7 @@ export const UserMenu: React.FC = () => {
           className="flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900/80 py-1 pl-1 pr-2.5 transition-colors hover:border-cyan-500/50"
           aria-label="Account menu"
         >
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-700 text-[10px] font-black text-slate-950">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-700 text-[10px] font-extrabold text-slate-950">
             {initials(currentUser.name)}
           </span>
           <span className="hidden flex-col items-start leading-tight md:flex">

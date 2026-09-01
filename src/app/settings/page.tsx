@@ -1,5 +1,6 @@
 "use client";
 
+import { SafeImage } from '@/components/ui/SafeImage';
 import * as React from "react";
 import {
   Settings,
@@ -60,13 +61,13 @@ function SettingsPageContent() {
               <h2 className="text-xs font-extrabold tracking-tight text-slate-900">Officer / Demo Profile</h2>
             </div>
             <div className="flex flex-wrap items-center gap-4 rounded-xl border border-slate-200 bg-slate-50/60 p-4">
-              <img
+              <SafeImage
                 src={currentUser.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"}
                 alt={currentUser.name}
                 className="h-14 w-14 rounded-2xl object-cover ring-2 ring-cyan-500/40"
               />
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-black tracking-tight text-slate-900">{surname}</p>
+                <p className="text-sm font-extrabold tracking-tight text-slate-900">{surname}</p>
                 <p className="text-[11px] font-semibold text-cyan-700">{roleLabel}</p>
                 <p className="mt-1 truncate text-[10px] text-slate-500">
                   {currentUser.designation ?? currentUser.email} · {currentUser.jurisdictionDistrict ?? currentUser.department ?? "Demo workspace"}
@@ -114,7 +115,7 @@ function SettingsPageContent() {
                 <div className="flex items-center gap-2 text-[10px] font-bold text-slate-600">
                   <Globe2 className="h-3.5 w-3.5 text-cyan-500" /> Integration Status
                 </div>
-                <p className="mt-1.5 font-mono text-[11px] font-black text-slate-900">
+                <p className="mt-1.5 font-mono text-[11px] font-extrabold text-slate-900">
                   FUTURE · EXTERNAL_GOVERNMENT_API
                 </p>
                 <p className="mt-1.5 text-[10px] leading-relaxed text-slate-400">
@@ -142,7 +143,7 @@ function SettingsPageContent() {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 text-center">
-      <p className="font-mono text-lg font-black text-slate-900">{value}</p>
+      <p className="font-mono text-lg font-extrabold text-slate-900">{value}</p>
       <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
     </div>
   );

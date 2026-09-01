@@ -1,4 +1,5 @@
 'use client';
+import { SafeImage } from '@/components/ui/SafeImage';
 
 import React from 'react';
 import Link from 'next/link';
@@ -25,7 +26,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
     <div className="group bg-white border border-slate-200/90 hover:border-cyan-500/50 rounded-2xl overflow-hidden shadow-tech hover:shadow-tech-lg transition-all duration-300 flex flex-col justify-between">
       {/* Top Image Preview & Badges */}
       <div className="relative h-48 sm:h-52 w-full overflow-hidden bg-slate-900">
-        <img
+        <SafeImage
           src={property.featuredImageUrl}
           alt={property.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90 group-hover:opacity-100"
@@ -80,7 +81,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
           <div>
             <span className="text-slate-400 text-[11px]">Govt Valuation</span>
             <p className="font-bold text-slate-900 font-mono">
-              ₹{(property.governmentValuationINR / 10000000).toFixed(2)} Cr
+              â‚¹{(property.governmentValuationINR / 10000000).toFixed(2)} Cr
             </p>
           </div>
           <div>

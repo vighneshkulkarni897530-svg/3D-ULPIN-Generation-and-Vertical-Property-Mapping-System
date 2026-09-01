@@ -1,5 +1,6 @@
 "use client";
 
+import { SafeImage } from '@/components/ui/SafeImage';
 import React, { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -177,7 +178,7 @@ if (submitted) {
             <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 border border-green-300 animate-zoom-in">
               <CheckCircle2 className="h-8 w-8 text-green-600" />
             </div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Dispute Report Submitted</h1>
+            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Dispute Report Submitted</h1>
             <p className="mx-auto mt-2 max-w-md text-xs text-slate-500 leading-relaxed">
               Your grievance has been digitally lodged with the Department of Land Records. A revenue officer
               will review the evidence and the property now carries an active dispute flag.
@@ -187,9 +188,9 @@ if (submitted) {
             <div className="mx-auto mt-6 max-w-sm overflow-hidden rounded-2xl border border-cyan-200 bg-cyan-50/60">
               <div className="flex items-center gap-2 border-b border-cyan-200/70 bg-cyan-500/10 px-4 py-2.5">
                 <Ticket className="h-4 w-4 text-cyan-700" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-cyan-800">Tracking Reference</span>
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-cyan-800">Tracking Reference</span>
               </div>
-              <div className="px-4 py-4 font-mono text-lg font-black text-slate-900">{submitted.ticket}</div>
+              <div className="px-4 py-4 font-mono text-lg font-extrabold text-slate-900">{submitted.ticket}</div>
             </div>
 
             {/* Next steps */}
@@ -200,7 +201,7 @@ if (submitted) {
                 { step: "3", text: "Status update + notification" },
               ].map((s) => (
                 <div key={s.step} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-[10px] font-black text-cyan-300">{s.step}</span>
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-[10px] font-extrabold text-cyan-300">{s.step}</span>
                   <p className="mt-2 text-[10px] font-bold leading-snug text-slate-600">{s.text}</p>
                 </div>
               ))}
@@ -301,10 +302,10 @@ if (submitted) {
               {selectedProperty ? (
                 <div className="mt-3 flex items-start gap-3 rounded-xl border border-green-200 bg-green-50/60 p-3.5 animate-fade-in">
                   <div className="h-14 w-20 shrink-0 overflow-hidden rounded-lg bg-slate-900">
-                    <img src={selectedProperty.featuredImageUrl} alt="" className="h-full w-full object-cover" />
+                    <SafeImage src={selectedProperty.featuredImageUrl} alt="" className="h-full w-full object-cover" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-black text-slate-900">{selectedProperty.title}</p>
+                    <p className="truncate text-xs font-extrabold text-slate-900">{selectedProperty.title}</p>
                     <p className="mt-0.5 font-mono text-[10px] text-slate-500">
                       ULPIN {selectedProperty.ulpin} • Survey {selectedProperty.landDetails.surveyNumber}
                     </p>

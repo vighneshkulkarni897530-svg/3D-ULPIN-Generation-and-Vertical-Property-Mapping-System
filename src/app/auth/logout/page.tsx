@@ -49,7 +49,7 @@ export default function LogoutPage() {
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50">
               <CheckCircle2 className="h-7 w-7 text-emerald-600" />
             </div>
-            <h1 className="text-lg font-black tracking-tight text-slate-900">You have been signed out</h1>
+            <h1 className="text-lg font-extrabold tracking-tight text-slate-900">You have been signed out</h1>
             <p className="text-xs leading-relaxed text-slate-500">
               Your session was closed on the server and the session cookie has been cleared. The logout action has been recorded in the audit trail.
             </p>

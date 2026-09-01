@@ -1,5 +1,6 @@
 "use client";
 
+import { SafeImage } from '@/components/ui/SafeImage';
 import * as React from "react";
 import {
   Building2,
@@ -100,7 +101,7 @@ export function AiImageUploader({
         <div className="mt-4 space-y-3">
           <div className="flex flex-col gap-3 sm:flex-row">
             <div className="relative h-36 w-full shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 sm:w-48">
-              <img
+              <SafeImage
                 src={image.previewUrl}
                 alt={`Preview of ${image.name}`}
                 onError={onPreviewError}

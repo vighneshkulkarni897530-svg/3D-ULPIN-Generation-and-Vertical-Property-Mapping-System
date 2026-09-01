@@ -1,5 +1,6 @@
 'use client';
 
+import { SafeImage } from '@/components/ui/SafeImage';
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -59,7 +60,7 @@ export const Sidebar: React.FC = () => {
       <div className="space-y-6">
         {/* User Identity Mini Card */}
         <div className="p-3.5 bg-slate-900/80 rounded-2xl border border-slate-800 flex items-center gap-3">
-          <img
+          <SafeImage
             src={currentUser.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
             alt={currentUser.name}
             className="w-10 h-10 rounded-xl object-cover ring-2 ring-cyan-500/40"

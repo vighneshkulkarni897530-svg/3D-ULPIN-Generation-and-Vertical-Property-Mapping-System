@@ -83,7 +83,7 @@ export function ActivityAnalytics({ analytics, className }: ActivityAnalyticsPro
 
         <div className="mt-5 grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div>
-            <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Activity by type</p>
+            <p className="mb-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Activity by type</p>
             <HBarChart data={typeData} ariaLabel="Activity records by type" emptyLabel="No activity records in the current scope." />
             <div className="mt-3 flex flex-wrap gap-2">
               <span className="flex items-center gap-1.5 rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[10px] font-bold text-cyan-700">
@@ -95,7 +95,7 @@ export function ActivityAnalytics({ analytics, className }: ActivityAnalyticsPro
             </div>
           </div>
           <div>
-            <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Records per day (latest 7 active days)</p>
+            <p className="mb-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Records per day (latest 7 active days)</p>
             {dayData.length < 2 ? (
               <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-center text-[11px] text-slate-400">
                 Not enough timestamped records in the current scope for a trend view — see the type distribution instead.
@@ -109,7 +109,7 @@ export function ActivityAnalytics({ analytics, className }: ActivityAnalyticsPro
         </div>
 
         <div className="mt-6">
-          <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Recent activity</p>
+          <p className="mb-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Recent activity</p>
           <ActivityTimeline
             items={a.recentActivities.map((rec) => ({
               id: rec.id,

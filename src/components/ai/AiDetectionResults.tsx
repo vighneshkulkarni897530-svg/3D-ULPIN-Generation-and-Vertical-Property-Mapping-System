@@ -54,7 +54,7 @@ function Tile({
             <XCircle className="h-3 w-3 text-amber-500" />
           ))}
       </p>
-      <p className="mt-1 truncate text-lg font-black tracking-tight">{value}</p>
+      <p className="mt-1 truncate text-lg font-extrabold tracking-tight">{value}</p>
       <p className="mt-0.5 truncate text-[9.5px] font-semibold opacity-70">{sub}</p>
     </div>
   );

@@ -67,7 +67,7 @@ export function GisWorkflow({ open, onComplete, onCancel }: GisWorkflowProps) {
       <div className="mx-4 w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-950 p-5 shadow-2xl shadow-cyan-500/10">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[9px] font-black uppercase tracking-widest text-cyan-400">2D → 3D Reconstruction</p>
+            <p className="text-[9px] font-extrabold uppercase tracking-widest text-cyan-400">2D → 3D Reconstruction</p>
             <h3 className="mt-0.5 text-[15px] font-extrabold text-slate-100">Visualization Pipeline</h3>
           </div>
           <button
@@ -121,7 +121,7 @@ export function GisWorkflow({ open, onComplete, onCancel }: GisWorkflowProps) {
                   {done ? <CheckCircle2 className="h-3.5 w-3.5" /> : active ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icon className="h-3.5 w-3.5" />}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[9px] font-black uppercase tracking-widest text-slate-500">Step {i + 1}</span>
+                  <span className="block text-[9px] font-extrabold uppercase tracking-widest text-slate-500">Step {i + 1}</span>
                   <span className={cn("block text-[11px] font-bold", done ? "text-emerald-300" : active ? "text-cyan-200" : "text-slate-400")}>
                     {s.label}
                   </span>
@@ -132,7 +132,7 @@ export function GisWorkflow({ open, onComplete, onCancel }: GisWorkflowProps) {
         </ol>
 
         <p className="mt-4 rounded-lg border border-amber-500/25 bg-amber-500/5 px-2.5 py-2 text-[9px] leading-relaxed text-amber-300/90">
-          <strong className="font-black">Demo Reconstruction / Visualization Pipeline</strong> — deterministic
+          <strong className="font-extrabold">Demo Reconstruction / Visualization Pipeline</strong> — deterministic
           processing over the centralized demo geometry. Not an AI reconstruction and not a legal survey.
         </p>
       </div>

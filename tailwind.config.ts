@@ -78,9 +78,9 @@ const config: Config = {
       },
       boxShadow: {
         tech: "0 4px 20px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04)",
-        "tech-cyan": "0 0 25px -5px rgba(6, 182, 212, 0.35)",
+        "tech-cyan": "0 1px 2px rgba(15, 23, 42, 0.06), 0 4px 12px -4px rgba(6, 182, 212, 0.28)",
         "tech-lg": "0 10px 30px -4px rgba(15, 23, 42, 0.12), 0 4px 12px -2px rgba(15, 23, 42, 0.06)",
-        "tech-glow": "0 0 35px -5px rgba(59, 130, 246, 0.3)",
+        "tech-glow": "0 1px 2px rgba(15, 23, 42, 0.06), 0 4px 14px -4px rgba(59, 130, 246, 0.24)",
       },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",

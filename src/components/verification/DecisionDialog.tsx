@@ -194,7 +194,7 @@ function DialogShell({
               onConfirm(notes.trim());
             }}
             className={cn(
-              "rounded-xl px-4 py-2.5 text-xs font-black text-white shadow-lg transition-all sm:py-2",
+              "rounded-xl px-4 py-2.5 text-xs font-extrabold text-white shadow-lg transition-all sm:py-2",
               meta.buttonClass,
               !canConfirm && "cursor-not-allowed opacity-40 shadow-none",
             )}

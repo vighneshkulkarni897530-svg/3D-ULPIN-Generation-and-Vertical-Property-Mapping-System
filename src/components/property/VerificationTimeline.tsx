@@ -1,5 +1,6 @@
 'use client';
 
+import { SafeImage } from '@/components/ui/SafeImage';
 import React from 'react';
 import { PropertyItem, VerificationStatus, VerificationHistoryEvent } from '@/types';
 import { 
@@ -199,7 +200,7 @@ export const VerificationTimeline: React.FC<VerificationTimelineProps> = ({ prop
             {officer ? (
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <img
+                  <SafeImage
                     src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=120&auto=format&fit=crop&q=80"
                     alt={officer.name}
                     className="w-12 h-12 rounded-xl ring-2 ring-cyan-500/40 object-cover"

@@ -24,7 +24,7 @@ export default function PropertyVerificationPage() {
   if (!property) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-24 text-center">
-        <h1 className="text-xl font-black text-slate-900">Record Not Found</h1>
+        <h1 className="text-xl font-extrabold text-slate-900">Record Not Found</h1>
         <Link href="/properties" className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-xs font-bold text-cyan-300">
           <ArrowLeft className="h-4 w-4" /> Back to Registry
         </Link>
@@ -81,7 +81,7 @@ export default function PropertyVerificationPage() {
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-tech">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h3 className="text-base font-black text-slate-900">{property.title}</h3>
+              <h3 className="text-base font-extrabold text-slate-900">{property.title}</h3>
               <p className="mt-1 text-xs text-slate-500">
                 {property.address} • {humanize(property.propertyType)} • {formatCompactINR(property.marketValuationINR)}
               </p>

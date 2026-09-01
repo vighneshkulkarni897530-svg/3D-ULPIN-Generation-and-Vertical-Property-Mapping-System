@@ -1,5 +1,6 @@
 "use client";
 
+import { SafeImage } from '@/components/ui/SafeImage';
 import * as React from "react";
 import { Ruler, Compass, CircleDot, ScanLine, BoxSelect } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -93,7 +94,7 @@ export function FootprintComparison({
         <figure className="overflow-hidden rounded-xl border border-slate-200">
           <div className="relative h-44 w-full bg-slate-100">
             {previewUrl ? (
-              <img src={previewUrl} alt="Uploaded source" className="h-full w-full object-cover" />
+              <SafeImage src={previewUrl} alt="Uploaded source" className="h-full w-full object-cover" />
             ) : (
               <div className="flex h-full items-center justify-center text-[10px] font-semibold text-slate-400">
                 Source preview unavailable (session expired)
@@ -162,19 +163,19 @@ export function FootprintComparison({
           <p className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-widest text-slate-400">
             <CircleDot className="h-3 w-3" /> Corner Points
           </p>
-          <p className="mt-0.5 text-base font-black text-slate-900">{pts.length}</p>
+          <p className="mt-0.5 text-base font-extrabold text-slate-900">{pts.length}</p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
           <p className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-widest text-slate-400">
             <Ruler className="h-3 w-3" /> Footprint Area
           </p>
-          <p className="mt-0.5 text-base font-black text-slate-900">{result.estimatedFootprintAreaSqm.toLocaleString()} m²</p>
+          <p className="mt-0.5 text-base font-extrabold text-slate-900">{result.estimatedFootprintAreaSqm.toLocaleString()} m²</p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
           <p className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-widest text-slate-400">
             <Compass className="h-3 w-3" /> Orientation
           </p>
-          <p className="mt-0.5 text-base font-black text-slate-900">{result.orientationDeg}°</p>
+          <p className="mt-0.5 text-base font-extrabold text-slate-900">{result.orientationDeg}°</p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
           <p className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-widest text-slate-400">

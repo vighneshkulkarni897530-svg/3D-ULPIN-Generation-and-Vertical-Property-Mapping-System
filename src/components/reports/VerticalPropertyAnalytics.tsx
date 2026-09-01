@@ -59,7 +59,7 @@ export function VerticalPropertyAnalytics({ analytics, className }: VerticalProp
 
         <div className="mt-5 grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div>
-            <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Registered floors by building</p>
+            <p className="mb-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Registered floors by building</p>
             {floorsByBuilding.length === 0 ? (
               <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-center text-[11px] text-slate-400">No buildings in scope.</p>
             ) : (
@@ -69,13 +69,13 @@ export function VerticalPropertyAnalytics({ analytics, className }: VerticalProp
             )}
           </div>
           <div>
-            <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Property units by building</p>
+            <p className="mb-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Property units by building</p>
             <HBarChart data={unitsByBuilding} ariaLabel="Property units by building" emptyLabel="No buildings in scope." />
           </div>
         </div>
 
         <div className="mt-6">
-          <p className="mb-3 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+          <p className="mb-3 flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
             <Box className="h-3 w-3" /> Vertical hierarchy coverage (declared floors carrying registry units)
           </p>
           <HBarChart

@@ -61,7 +61,7 @@ export function DashboardCard({
       </div>
       <div className="mt-3">
         <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">{label}</p>
-        <p className="mt-1 text-2xl font-black tracking-tight text-slate-900 tabular-nums">{value}</p>
+        <p className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 tabular-nums">{value}</p>
         {sub && <p className="mt-0.5 text-[11px] text-slate-400 font-medium">{sub}</p>}
       </div>
     </>

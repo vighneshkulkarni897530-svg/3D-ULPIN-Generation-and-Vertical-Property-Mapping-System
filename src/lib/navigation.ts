@@ -23,8 +23,12 @@ import {
   AlertCircle,
   ClipboardCheck,
   Bell,
+  Workflow,
+  Users,
+  History,
   type LucideIcon,
 } from 'lucide-react';
+import { PERMISSIONS, type Permission } from '@/types/auth';
 
 export interface NavItem {
   label: string;
@@ -36,29 +40,27 @@ export interface NavItem {
   customActive?: (pathname: string) => boolean;
   /** Sidebar renders a live count badge for this item. */
   badge?: 'conflicts' | 'verification';
+  /** Permission required to see this item (Phase 10 RBAC-aware nav). */
+  permission?: Permission;
 }
 
 export interface NavSection {
   id: string;
   label: string;
+  /** When set, the whole section is hidden unless the user holds the permission. */
+  permission?: Permission;
   items: NavItem[];
 }
 
 export const NAV_SECTIONS: NavSection[] = [
   {
     id: 'platform',
-    label: 'Platform',
+    label: 'Property & GIS',
     items: [
       { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, match: ['/dashboard'] },
-      { label: '3D Map', href: '/map', icon: Box, match: ['/map'] },
+      { label: '3D Map', href: '/map', icon: Box, match: ['#/map', '/map'] },
       { label: 'Properties', href: '/properties', icon: Building2, match: ['/properties'] },
       { label: 'Buildings', href: '/buildings', icon: Building, match: ['/buildings'] },
-    ],
-  },
-  {
-    id: 'operations',
-    label: 'Operations',
-    items: [
       {
         label: 'Floor Explorer',
         href: '/floors',
@@ -66,13 +68,32 @@ export const NAV_SECTIONS: NavSection[] = [
         customActive: (p) =>
           p.startsWith('/floors') || /^\/buildings\/[^/]+\/floors(\/|$)/.test(p),
       },
-      { label: 'AI Extraction', href: '/ai-extraction', icon: ScanLine, match: ['/ai-extraction'] },
+    ],
+  },
+  {
+    id: 'verification',
+    label: 'Verification',
+    items: [
+      {
+        label: 'AI Extraction',
+        href: '/ai-extraction',
+        icon: ScanLine,
+        match: ['/ai-extraction'],
+        permission: PERMISSIONS.RUN_SPATIAL_VALIDATION,
+      },
       {
         label: 'Verification',
         href: '/verification',
         icon: ShieldCheck,
         match: ['/verification'],
         badge: 'verification',
+        permission: PERMISSIONS.VIEW_VERIFICATION_QUEUE,
+      },
+      {
+        label: 'Field Verification',
+        href: '/field-verification/request',
+        icon: ClipboardCheck,
+        match: ['/field-verification'],
       },
       {
         label: 'Conflicts',
@@ -84,25 +105,47 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    id: 'management',
-    label: 'Management',
+    id: 'operations',
+    label: 'Operations',
     items: [
-      { label: 'Reports', href: '/reports', icon: BarChart3, match: ['/reports'] },
-      { label: 'Settings', href: '/settings', icon: Settings, match: ['/settings'] },
+      { label: 'Workflow', href: '/workflow', icon: Workflow, match: ['/workflow'] },
+      { label: 'Notifications', href: '/notifications', icon: Bell, match: ['/notifications'] },
+      { label: 'Report Dispute', href: '/disputes/new', icon: AlertCircle, match: ['/disputes'] },
     ],
   },
   {
-    id: 'services',
-    label: 'Public Services',
+    id: 'analytics',
+    label: 'Analytics',
     items: [
-      { label: 'Report Dispute', href: '/disputes/new', icon: AlertCircle, match: ['/disputes'] },
+      { label: 'Reports', href: '/reports', icon: BarChart3, match: ['/reports'] },
+    ],
+  },
+  {
+    id: 'administration',
+    label: 'Administration',
+    permission: PERMISSIONS.SYSTEM_ADMIN,
+    items: [
       {
-        label: 'Field Verification',
-        href: '/field-verification/request',
-        icon: ClipboardCheck,
-        match: ['/field-verification'],
+        label: 'Users',
+        href: '/admin/users',
+        icon: Users,
+        match: ['/admin/users'],
+        permission: PERMISSIONS.USER_MANAGEMENT,
       },
-      { label: 'Notifications', href: '/notifications', icon: Bell, match: ['/notifications'] },
+      {
+        label: 'Audit Log',
+        href: '/admin/audit-log',
+        icon: History,
+        match: ['/admin/audit-log'],
+        permission: PERMISSIONS.VIEW_ACTIVITY_LOG,
+      },
+      {
+        label: 'Settings',
+        href: '/settings',
+        icon: Settings,
+        match: ['/settings'],
+        permission: PERMISSIONS.SYSTEM_ADMIN,
+      },
     ],
   },
 ];

@@ -159,7 +159,7 @@ export const FloorUnitExplorer: React.FC<FloorUnitExplorerProps> = ({ property }
                       UNIT CADASTRE RECORD
                     </span>
                   </div>
-                  <h3 className="text-2xl font-black text-slate-900 mt-1">
+                  <h3 className="text-2xl font-extrabold text-slate-900 mt-1">
                     Unit {selectedUnit.unitNumber}
                   </h3>
                   <p className="text-xs text-slate-500">

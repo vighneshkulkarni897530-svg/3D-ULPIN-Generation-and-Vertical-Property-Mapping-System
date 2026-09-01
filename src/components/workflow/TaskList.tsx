@@ -34,7 +34,7 @@ export function TaskList({ tasks, selectedId, onSelect, emptyTitle = "No tasks m
     return (
       <div className={cn("rounded-2xl border border-dashed border-slate-300 bg-slate-50/60 p-8 text-center", className)}>
         <ClipboardList className="mx-auto h-8 w-8 text-slate-300" />
-        <p className="mt-2 text-xs font-black text-slate-700">{emptyTitle}</p>
+        <p className="mt-2 text-xs font-extrabold text-slate-700">{emptyTitle}</p>
         <p className="mt-1 text-[11px] text-slate-500">{emptyDescription}</p>
       </div>
     );
@@ -56,7 +56,7 @@ export function TaskList({ tasks, selectedId, onSelect, emptyTitle = "No tasks m
             )}
           >
             <div className="flex items-start justify-between gap-2">
-              <span className="font-mono text-[10px] font-black text-slate-400">{task.id}</span>
+              <span className="font-mono text-[10px] font-extrabold text-slate-400">{task.id}</span>
               <span className="flex shrink-0 items-center gap-1.5">
                 <TaskPriorityBadge priority={task.priority} />
                 <TaskStatusBadge status={task.status} />
@@ -75,7 +75,7 @@ export function TaskList({ tasks, selectedId, onSelect, emptyTitle = "No tasks m
               </span>
               <span className="flex shrink-0 items-center gap-1.5">
                 {dueStatus && (
-                  <span className={cn("rounded-full px-1.5 py-0.5 font-black uppercase tracking-widest", overdue ? "bg-red-50 text-red-600" : "bg-slate-100 text-slate-500")}>
+                  <span className={cn("rounded-full px-1.5 py-0.5 font-extrabold uppercase tracking-widest", overdue ? "bg-red-50 text-red-600" : "bg-slate-100 text-slate-500")}>
                     {dueStatus}
                   </span>
                 )}
