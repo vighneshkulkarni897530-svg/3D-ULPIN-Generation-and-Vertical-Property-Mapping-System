@@ -29,6 +29,11 @@ export default function ForgotPasswordPage() {
       const res = await requestEmailOtp(email.trim());
       setChallengeId(res.challengeId || null);
       setToken(res.token || null);
+      if (typeof window !== 'undefined') {
+        if (res.challengeId) sessionStorage.setItem('bhu_challengeId', res.challengeId);
+        if (res.token) sessionStorage.setItem('bhu_token', res.token);
+        sessionStorage.setItem('bhu_reset_email', email.trim());
+      }
       setSubmitted(true);
     } catch (err: any) {
       setError(err?.message || 'Failed to dispatch password reset OTP. Please try again.');

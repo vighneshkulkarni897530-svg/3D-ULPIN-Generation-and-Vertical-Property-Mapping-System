@@ -48,10 +48,12 @@ export type AuditAction =
   | 'REGISTER'
   | 'LOGIN_FAILED'
   | 'SESSION_EXPIRED'
+  | 'PASSWORD_CHANGED'
   // Administrative
   | 'USER_ROLE_CHANGE'
   | 'USER_STATUS_CHANGE'
   | 'USER_CREATED'
+  | 'USER_DELETED'
   | 'ADMIN_ACTION'
   // Domain actions reported by the client app (server-stamped)
   | 'PROPERTY_UPDATED'

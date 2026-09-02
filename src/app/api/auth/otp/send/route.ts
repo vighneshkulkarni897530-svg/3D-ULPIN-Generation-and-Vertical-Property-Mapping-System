@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     const localOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
     // Save locally with challengeId for fallback
-    const { token } = await saveOtpRecord(email, localOtp, 5 * 60 * 1000);
+    const { token } = await saveOtpRecord(email, localOtp, 5 * 60 * 1000, challengeId);
 
     let emailSent = false;
     let gasMessage = '';

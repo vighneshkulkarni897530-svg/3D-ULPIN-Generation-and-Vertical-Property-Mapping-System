@@ -59,7 +59,7 @@ function SidebarBody({
   onClose?: () => void;
 }) {
   const pathname = usePathname();
-  const { currentUser, role, hasPermission } = useAuth();
+  const { currentUser, role, hasPermission, isAuthenticated } = useAuth();
   const { conflicts, properties } = useGIS();
 
   const openConflicts = conflicts.filter((c) => c.status !== "Resolved").length;
@@ -182,34 +182,36 @@ function SidebarBody({
       </nav>
 
       {/* User / officer section */}
-      <div className="border-t border-slate-800 p-3">
-        {drawer && (
-          <div className="mb-3 flex justify-center">
-            <RoleSwitcher />
-          </div>
-        )}
-        <div className={cn("flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/70 p-2.5", collapsed && "justify-center")}>
-          <SafeImage
-            src={currentUser.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"}
-            alt={currentUser.name}
-            className="h-9 w-9 shrink-0 rounded-xl object-cover ring-2 ring-cyan-500/40"
-          />
-          {!collapsed && (
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[11px] font-bold text-white">{currentUser.name}</p>
-              <p className="flex items-center gap-1 truncate text-[10px] font-medium text-cyan-400">
-                <ShieldCheck className="h-2.5 w-2.5 shrink-0" />
-                {roleLabel}
-              </p>
+      {isAuthenticated && currentUser && currentUser.name !== 'Guest' && (
+        <div className="border-t border-slate-800 p-3">
+          {drawer && (
+            <div className="mb-3 flex justify-center">
+              <RoleSwitcher />
             </div>
           )}
+          <div className={cn("flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/70 p-2.5", collapsed && "justify-center")}>
+            <SafeImage
+              src={currentUser.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"}
+              alt={currentUser.name}
+              className="h-9 w-9 shrink-0 rounded-xl object-cover ring-2 ring-cyan-500/40"
+            />
+            {!collapsed && (
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[11px] font-bold text-white">{currentUser.name}</p>
+                <p className="flex items-center gap-1 truncate text-[10px] font-medium text-cyan-400">
+                  <ShieldCheck className="h-2.5 w-2.5 shrink-0" />
+                  {roleLabel}
+                </p>
+              </div>
+            )}
+          </div>
+          {!collapsed && (
+            <p className="mt-2 px-1 text-center font-mono text-[8px] uppercase tracking-widest text-slate-600">
+              Demo persona · role switch in top bar
+            </p>
+          )}
         </div>
-        {!collapsed && (
-          <p className="mt-2 px-1 text-center font-mono text-[8px] uppercase tracking-widest text-slate-600">
-            Demo persona · role switch in top bar
-          </p>
-        )}
-      </div>
+      )}
     </>
   );
 }
