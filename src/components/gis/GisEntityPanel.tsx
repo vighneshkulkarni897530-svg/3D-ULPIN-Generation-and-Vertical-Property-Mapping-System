@@ -192,10 +192,14 @@ function PropertyCard({ property }: { property: ReturnType<typeof useGIS>["prope
         <Row
           label={
             <span className="inline-flex items-center gap-1">
-              <Fingerprint className="h-3 w-3" /> Demo Spatial ID
+              <Fingerprint className="h-3 w-3 text-cyan-400" /> 3D Vertical ULPIN
             </span>
           }
-          value={property.demoSpatialId}
+          value={
+            <span className="font-mono text-cyan-300 font-bold break-all">
+              {property.demoSpatialId}
+            </span>
+          }
           mono
         />
         <Row
@@ -204,8 +208,8 @@ function PropertyCard({ property }: { property: ReturnType<typeof useGIS>["prope
             property.officialUlpinReference ? (
               <span className="font-mono text-emerald-300">{property.officialUlpinReference}</span>
             ) : (
-              <span className="text-[10px] font-bold uppercase tracking-wide text-amber-400">
-                External Government Integration Required
+              <span className="text-[9.5px] font-bold uppercase tracking-wide text-amber-400">
+                Platform Bhu-Aadhaar Standard (API Pending)
               </span>
             )
           }
@@ -217,9 +221,32 @@ function PropertyCard({ property }: { property: ReturnType<typeof useGIS>["prope
       </dl>
 
       <p className="mt-2.5 rounded-lg border border-amber-500/25 bg-amber-500/5 px-2.5 py-2 text-[9.5px] leading-relaxed text-amber-300/90">
-        <strong className="font-extrabold">Demo Spatial Identifier</strong> — the identifier above is platform-generated
-        for this demo environment. It is <strong>not</strong> a legally valid government ULPIN.
+        <strong className="font-extrabold">Spatial Identifier Notice</strong> — the 3D Vertical ULPIN above follows
+        the 14-digit Bhu-Aadhaar standard encoding for this platform. Official land title verification is conducted
+        via the Government Officer portal.
       </p>
+
+      {/* Quick Action Links */}
+      <div className="mt-3 flex flex-col gap-1.5">
+        <Link
+          href={`/properties/${property.parcelId}/digital-twin?building=${property.buildingId}&flat=${property.id}`}
+          className="flex items-center justify-center gap-1.5 rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-[10px] font-bold text-cyan-300 hover:bg-cyan-500/20"
+        >
+          <Box className="h-3.5 w-3.5" /> Open Unit in 3D Digital Twin
+        </Link>
+        <Link
+          href={`/government/societies/${property.parcelId}`}
+          className="flex items-center justify-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-[10px] font-bold text-slate-300 hover:border-slate-600 hover:text-white"
+        >
+          <ShieldCheck className="h-3.5 w-3.5" /> Government Verification Workbench
+        </Link>
+        <Link
+          href={`/society/${property.parcelId}`}
+          className="flex items-center justify-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-[10px] font-bold text-slate-300 hover:border-slate-600 hover:text-white"
+        >
+          <ExternalLink className="h-3.5 w-3.5" /> Open Society Portal
+        </Link>
+      </div>
 
       {/* Phase 5 §13 — open spatial conflicts affecting this unit */}
       {openConflicts.length > 0 && (
@@ -341,21 +368,12 @@ function BuildingCard({
         >
           <ExternalLink className="h-3.5 w-3.5" /> Open Building Details
         </Link>
-        {linkedLegacyId ? (
-          <Link
-            href={`/properties/${linkedLegacyId}/digital-twin`}
-            className="flex items-center justify-center gap-1.5 rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-[10.5px] font-bold text-cyan-300 transition-colors hover:bg-cyan-500/20"
-          >
-            <Box className="h-3.5 w-3.5" /> Launch Digital Twin
-          </Link>
-        ) : (
-          <span
-            className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-700 bg-slate-900/50 px-3 py-2 text-[10px] font-bold text-slate-500"
-            title="A 3D reconstruction mapping for this building is not available yet."
-          >
-            <Box className="h-3.5 w-3.5" /> Digital Twin — mapping scheduled
-          </span>
-        )}
+        <Link
+          href={`/properties/${parcelNumber ?? building.parcelId}/digital-twin?building=${building.id}`}
+          className="flex items-center justify-center gap-1.5 rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-[10.5px] font-bold text-cyan-300 transition-colors hover:bg-cyan-500/20"
+        >
+          <Box className="h-3.5 w-3.5" /> Launch in 3D Digital Twin
+        </Link>
       </div>
     </CardShell>
   );

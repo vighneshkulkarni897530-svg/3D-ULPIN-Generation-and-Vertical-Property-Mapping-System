@@ -8,16 +8,19 @@ import {
   AMENITY,
   CAMERA_PRESET_DEFS,
   CENTRAL_MEADOW_RADIUS,
+  ENTRANCE,
   FLOOR_HEIGHT,
   LAWNS,
   PARKING_LANES,
   PARKING_LOTS,
+  PLACE,
   RING_ROAD,
   ROAD_SEGMENTS,
   SELECTED_TOWER_ID,
   SIDEWALKS,
   SITE_BOUNDARY,
   TOWERS,
+  TOWNSHIP_SITE,
   WATER_FEATURE,
   type CameraPresetId,
   type TownshipLayerState,
@@ -87,6 +90,26 @@ export interface Township3DViewerProps {
   linkedFloors?: ExplicitFloor[];
   /** Phase 15C — verified GIS footprint overlays (rendered on the gisData layer). */
   gisFootprints?: GisFootprint[];
+  /** Phase 7 — Building isolation mode (dims non-selected towers). */
+  buildingIsolation?: boolean;
+  /** Phase 7 — Solar & shadow analysis enabled. */
+  shadowAnalysis?: boolean;
+  /** Phase 7 — Solar simulated time in minutes since midnight (e.g. 720 for 12:00 PM). */
+  solarTimeMinutes?: number;
+  /** Phase 7 — 3D interactive point-to-point measurement mode. */
+  measurementMode?: boolean;
+  measurePointA?: { x: number; y: number; z: number } | null;
+  measurePointB?: { x: number; y: number; z: number } | null;
+  onMeasureClick?: (point: { x: number; y: number; z: number }) => void;
+  /** Phase 7 — Discrepancy & spatial conflict overlay enabled. */
+  discrepancyOverlay?: boolean;
+  conflicts?: Array<{
+    id: string;
+    conflictNumber: string;
+    severity: string;
+    description: string;
+    affectedPropertyIds: string[];
+  }>;
   className?: string;
 }
 
@@ -386,6 +409,8 @@ interface TowerProps {
   realFloors?: ExplicitFloor[];
   /** Phase 15C — whether the "Floors" layer is enabled. */
   floorsEnabled?: boolean;
+  /** Phase 7 — Dim this tower when another tower is isolated. */
+  isDimmed?: boolean;
 }
 
 const EMPTY_FLOORS: ExplicitFloor[] = [];
@@ -404,6 +429,7 @@ function Tower({
   selectedLevel = null,
   realFloors = EMPTY_FLOORS,
   floorsEnabled = false,
+  isDimmed = false,
 }: TowerProps) {
   const [hovered, setHovered] = React.useState(false);
   const [w, d] = tower.footprint;
@@ -420,13 +446,13 @@ function Tower({
   // "hide" caps the illustrated body at the selected real floor level.
   const capY = selectedLevel !== null ? Math.min((selectedLevel + 1) * FLOOR_HEIGHT, h) : h;
   const cappedBodyH = floorsActive && floorMode === "hide" ? Math.max(0, capY - 4.8) : h - 4.8;
-  const bodyFull = !floorsActive || floorMode === "show";
-  const bodyGhosted = floorsActive && (floorMode === "isolate" || floorMode === "explode");
-  const showRoof = bodyFull || (floorsActive && floorMode === "hide" && cappedBodyH > 0.5);
+  const bodyFull = !isDimmed && (!floorsActive || floorMode === "show");
+  const bodyGhosted = isDimmed || (floorsActive && (floorMode === "isolate" || floorMode === "explode"));
+  const showRoof = !isDimmed && (bodyFull || (floorsActive && floorMode === "hide" && cappedBodyH > 0.5));
   const topY = bodyFull ? h : 4.8 + cappedBodyH;
 
   const plates = React.useMemo<FloorPlate[]>(() => {
-    if (!floorsActive) return [];
+    if (!floorsActive || isDimmed) return [];
     const out: FloorPlate[] = [];
     sortedFloors.forEach((f, i) => {
       if (floorMode === "isolate" && selectedLevel !== null && f.floorNumber !== selectedLevel) return;
@@ -437,7 +463,7 @@ function Tower({
       out.push({ floor: f, y, ghost: floorMode === "hide" && f.floorNumber !== selectedLevel });
     });
     return out;
-  }, [floorsActive, sortedFloors, floorMode, selectedLevel, h]);
+  }, [floorsActive, isDimmed, sortedFloors, floorMode, selectedLevel, h]);
 
   React.useEffect(() => {
     if (!hovered) return;
@@ -452,9 +478,14 @@ function Tower({
       {/* landscaped plinth pad */}
       <mesh geometry={UNIT_BOX} material={M.pad} receiveShadow position={[0, 0.05, 0]} scale={[w + 5, 0.12, d + 5]} />
       {/* glass lobby base */}
-      <mesh geometry={UNIT_BOX} material={M.lobby} castShadow position={[0, 2.4, 0]} scale={[w + 1.4, 4.8, d + 1.4]} />
+      <mesh geometry={UNIT_BOX} material={M.lobby} castShadow={!isDimmed} position={[0, 2.4, 0]} scale={[w + 1.4, 4.8, d + 1.4]} />
 
-      {/* type-specific volumes (hidden when floor modes replace the body) */}
+      {/* Dimmed ghost body */}
+      {isDimmed && (
+        <mesh geometry={UNIT_BOX} material={M.bodyGhost} position={[0, 4.8 + (h - 4.8) / 2, 0]} scale={[w, h - 4.8, d]} />
+      )}
+
+      {/* type-specific volumes (hidden when floor modes replace the body or when dimmed) */}
       {bodyFull && tower.type === "A" && (
         <group>
           <mesh geometry={UNIT_BOX} material={bodyMat} castShadow receiveShadow position={[0, 4.8 + (h - 4.8) / 2, 0]} scale={[w, h - 4.8, d]}>
@@ -498,37 +529,38 @@ function Tower({
         </group>
       )}
 
-      {/* balcony / floor-division slabs (suppressed when floor modes replace the body) */}
+      {/* balcony / floor-division slabs (suppressed when floor modes replace the body or when dimmed) */}
       {bodyFull &&
         slabs.map((y, i) => (
           <mesh key={`slab-${i}`} geometry={UNIT_BOX} material={M.slab} castShadow receiveShadow position={[0, y, 0]} scale={[w + 0.7, 0.32, d + 0.7]} />
         ))}
 
       {/* Phase 15C — capped simple body for "hide" mode */}
-      {floorsActive && floorMode === "hide" && cappedBodyH > 0.5 && (
+      {!isDimmed && floorsActive && floorMode === "hide" && cappedBodyH > 0.5 && (
         <mesh geometry={UNIT_BOX} material={bodyMat} castShadow receiveShadow position={[0, 4.8 + cappedBodyH / 2, 0]} scale={[w, cappedBodyH, d]}>
           {selected && <Edges />}
         </mesh>
       )}
 
       {/* Phase 15C — ghosted body for "isolate" / "explode" modes */}
-      {bodyGhosted && (
+      {!isDimmed && bodyGhosted && (
         <mesh geometry={UNIT_BOX} material={M.bodyGhost} position={[0, 4.8 + (h - 4.8) / 2, 0]} scale={[w, h - 4.8, d]} />
       )}
 
       {/* Phase 15C — real-floor plates (only when real DB floors are linked) */}
-      {plates.map(({ floor, y, ghost }) => (
-        <mesh
-          key={`plate-${floor.id}`}
-          geometry={UNIT_BOX}
-          material={floor.floorNumber === selectedLevel && floorMode !== "hide" ? M.floorPlateSel : ghost ? M.floorPlateGhost : M.floorPlate}
-          castShadow={floor.floorNumber === selectedLevel && floorMode !== "hide"}
-          position={[0, y, 0]}
-          scale={[w + 0.9, 0.55, d + 0.9]}
-        />
-      ))}
+      {!isDimmed &&
+        plates.map(({ floor, y, ghost }) => (
+          <mesh
+            key={`plate-${floor.id}`}
+            geometry={UNIT_BOX}
+            material={floor.floorNumber === selectedLevel && floorMode !== "hide" ? M.floorPlateSel : ghost ? M.floorPlateGhost : M.floorPlate}
+            castShadow={floor.floorNumber === selectedLevel && floorMode !== "hide"}
+            position={[0, y, 0]}
+            scale={[w + 0.9, 0.55, d + 0.9]}
+          />
+        ))}
 
-      {/* rooftop parapet + core (hidden while ghosted) */}
+      {/* rooftop parapet + core (hidden while ghosted or dimmed) */}
       {showRoof && <mesh geometry={UNIT_BOX} material={M.roof} castShadow position={[0, topY + 0.5, 0]} scale={[w + 0.4, 1.1, d + 0.4]} />}
       {bodyFull && <mesh geometry={UNIT_BOX} material={M.bodyGrey} castShadow position={[w * 0.18, h + 2.2, 0]} scale={[w * 0.34, 2.8, d * 0.4]} />}
 
@@ -1055,6 +1087,8 @@ function ParkingExtras() {
 /* --------------------------- Phase 15B entrance ---------------------------
  * LIFE REPUBLIC gateway signage — canvas-textured board (no font loading,
  * no external assets) on the Phase 15A gate structure (Boundary layer).
+ * Phase 16A (Part 1): sign text is driven by the Place 1 config so the 3D
+ * scene always matches the place registry. Client-only (document check).
  * ------------------------------------------------------------------------ */
 
 function EntranceSignage() {
@@ -1073,13 +1107,13 @@ function EntranceSignage() {
     ctx.textAlign = "center";
     ctx.fillStyle = "#F8FAFC";
     ctx.font = "bold 92px Arial, sans-serif";
-    ctx.fillText("LIFE REPUBLIC", canvas.width / 2, 112);
+    ctx.fillText(PLACE.displayName, canvas.width / 2, 112);
     ctx.fillStyle = "#00D9FF";
     ctx.font = "bold 44px Arial, sans-serif";
-    ctx.fillText("SURVEY NO. 74", canvas.width / 2, 182);
+    ctx.fillText(`SURVEY NO. ${TOWNSHIP_SITE.surveyNo}`, canvas.width / 2, 182);
     ctx.fillStyle = "#94A3B8";
     ctx.font = "36px Arial, sans-serif";
-    ctx.fillText("MARUNJI, PUNE", canvas.width / 2, 236);
+    ctx.fillText(`${TOWNSHIP_SITE.village.toUpperCase()}, ${TOWNSHIP_SITE.district.toUpperCase()}`, canvas.width / 2, 236);
     ctx.fillStyle = "#64748B";
     ctx.font = "22px Arial, sans-serif";
     ctx.fillText("ILLUSTRATIVE 3D ENVIRONMENT", canvas.width / 2, 286);
@@ -1109,6 +1143,38 @@ function EntranceSignage() {
       {/* support posts */}
       {[-5.4, 5.4].map((x) => (
         <mesh key={x} geometry={UNIT_BOX} material={M.pole} castShadow position={[x, 8.1, SITE_BOUNDARY.gateZ + 0.6]} scale={[0.22, 3.4, 0.22]} />
+      ))}
+    </group>
+  );
+}
+
+/**
+ * Phase 16A (Part 2) — main township entrance. Approach apron, entry/exit
+ * lane strips, a median divider and a security booth — all ILLUSTRATIVE
+ * geometry on the Boundary layer. No official branding/approvals are
+ * rendered (the township name signage lives in EntranceSignage and is
+ * driven by the Place 1 config).
+ */
+function EntranceApron() {
+  const { gate, apron, apronInside, median, booth } = ENTRANCE;
+  return (
+    <group>
+      {/* approach apron outside the boundary */}
+      <mesh geometry={UNIT_BOX} material={M.road} receiveShadow position={[0, 0.045, apron.z]} scale={[apron.width, 0.08, apron.depth]} />
+      {/* slip connection: spine road → gate line */}
+      <mesh geometry={UNIT_BOX} material={M.road} receiveShadow position={[0, 0.045, apronInside.z]} scale={[apronInside.width, 0.08, apronInside.depth]} />
+      {/* entry / exit lane edge strips */}
+      {[-1, 1].map((s) => (
+        <mesh key={`lane-${s}`} geometry={UNIT_BOX} material={M.curb} position={[s * (apronInside.width / 2 + 0.2), 0.055, apronInside.z]} scale={[0.3, 0.12, apronInside.depth]} />
+      ))}
+      {/* median divider down the approach (inbound / outbound separation) */}
+      <mesh geometry={UNIT_BOX} material={M.curb} position={[0, 0.06, median.z]} scale={[median.width, 0.14, median.depth]} />
+      {/* security booth beside the gate */}
+      <mesh geometry={UNIT_BOX} material={M.amenityBody} castShadow receiveShadow position={[booth.x, booth.size[1] / 2, booth.z]} scale={booth.size} />
+      <mesh geometry={UNIT_BOX} material={M.roof} castShadow position={[booth.x, booth.size[1] + 0.15, booth.z]} scale={[booth.size[0] + 0.5, 0.25, booth.size[2] + 0.5]} />
+      {/* small landscaped margin blocks framing the gate line */}
+      {[-1, 1].map((s) => (
+        <mesh key={`gframe-${s}`} geometry={UNIT_BOX} material={M.hedge} position={[s * (gate.halfWidth + 1.8), 0.4, gate.z + 0.4]} scale={[1.6, 0.8, 1.6]} />
       ))}
     </group>
   );
@@ -1422,6 +1488,96 @@ function GisFootprintOverlay({ footprints }: { footprints: GisFootprint[] }) {
   );
 }
 
+/* ------------------- Phase 7: Measurement & Discrepancies ---------------- */
+
+function MeasurementVisualization({
+  pointA,
+  pointB,
+}: {
+  pointA?: { x: number; y: number; z: number } | null;
+  pointB?: { x: number; y: number; z: number } | null;
+}) {
+  const linePoints = React.useMemo(() => {
+    if (!pointA || !pointB) return [];
+    return [
+      [pointA.x, pointA.y + 0.3, pointA.z] as [number, number, number],
+      [pointB.x, pointB.y + 0.3, pointB.z] as [number, number, number],
+    ];
+  }, [pointA, pointB]);
+
+  const midPoint = React.useMemo(() => {
+    if (!pointA || !pointB) return null;
+    return [
+      (pointA.x + pointB.x) / 2,
+      (pointA.y + pointB.y) / 2 + 2,
+      (pointA.z + pointB.z) / 2,
+    ] as [number, number, number];
+  }, [pointA, pointB]);
+
+  const dist = React.useMemo(() => {
+    if (!pointA || !pointB) return null;
+    const dx = pointB.x - pointA.x;
+    const dy = pointB.y - pointA.y;
+    const dz = pointB.z - pointA.z;
+    return Math.sqrt(dx * dx + dy * dy + dz * dz);
+  }, [pointA, pointB]);
+
+  return (
+    <group>
+      {pointA && (
+        <mesh position={[pointA.x, pointA.y + 0.3, pointA.z]}>
+          <sphereGeometry args={[0.9, 16, 16]} />
+          <meshStandardMaterial color="#00D9FF" emissive="#00D9FF" emissiveIntensity={0.8} />
+        </mesh>
+      )}
+      {pointB && (
+        <mesh position={[pointB.x, pointB.y + 0.3, pointB.z]}>
+          <sphereGeometry args={[0.9, 16, 16]} />
+          <meshStandardMaterial color="#FACC15" emissive="#FACC15" emissiveIntensity={0.8} />
+        </mesh>
+      )}
+      {linePoints.length === 2 && (
+        <Line points={linePoints} color="#00D9FF" lineWidth={3} dashed dashScale={1} />
+      )}
+      {midPoint && dist !== null && (
+        <Html position={midPoint} center distanceFactor={220} zIndexRange={[50, 0]} style={{ pointerEvents: "none" }}>
+          <div className="rounded-lg border border-[#00D9FF] bg-[#061426]/95 px-2 py-1 font-mono text-[10px] font-black text-[#00D9FF] shadow-2xl backdrop-blur">
+            Distance: {dist.toFixed(2)} m (approx)
+          </div>
+        </Html>
+      )}
+    </group>
+  );
+}
+
+function DiscrepancyMarkersOverlay({
+  conflicts = [],
+}: {
+  conflicts?: Array<{ id: string; conflictNumber: string; severity: string; description: string }>;
+}) {
+  if (!conflicts || conflicts.length === 0) return null;
+
+  return (
+    <group>
+      {conflicts.map((c, idx) => {
+        const targetTower = TOWERS[idx % TOWERS.length];
+        const [x, z] = targetTower.position;
+        const y = targetTower.floors * FLOOR_HEIGHT + 16;
+        return (
+          <group key={c.id} position={[x, y, z]}>
+            <Html center distanceFactor={260} zIndexRange={[60, 0]} style={{ pointerEvents: "none" }}>
+              <div className="flex items-center gap-1 rounded-md border border-red-500 bg-red-950/95 px-2 py-0.5 font-mono text-[9px] font-black text-red-200 shadow-xl backdrop-blur">
+                <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                <span>{c.conflictNumber}: {c.severity}</span>
+              </div>
+            </Html>
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
 /* --------------------------- Main component ----------------------------- */
 
 export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Township3DViewerProps>(
@@ -1434,6 +1590,15 @@ export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Townshi
       selectedLevel = null,
       linkedFloors = EMPTY_FLOORS,
       gisFootprints,
+      buildingIsolation = false,
+      shadowAnalysis = false,
+      solarTimeMinutes = 720,
+      measurementMode = false,
+      measurePointA = null,
+      measurePointB = null,
+      onMeasureClick,
+      discrepancyOverlay = false,
+      conflicts = [],
       className,
     },
     ref
@@ -1443,6 +1608,18 @@ export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Townshi
     const [preset, setPreset] = React.useState<CameraPresetId>("isometric");
     const [flightNonce, setFlightNonce] = React.useState(0);
     const tier = useMobileTier();
+
+    // Phase 7: Dynamic Sun Calculation from solarTimeMinutes (default 720 = 12:00 PM)
+    const sunPos = React.useMemo(() => {
+      const dayFraction = Math.max(0, Math.min(1, (solarTimeMinutes - 360) / 720));
+      const altRad = (Math.max(5, Math.sin(dayFraction * Math.PI) * 72) * Math.PI) / 180;
+      const azRad = ((80 + dayFraction * 200) * Math.PI) / 180;
+      const radius = 320;
+      const x = radius * Math.cos(altRad) * Math.sin(azRad);
+      const y = radius * Math.sin(altRad);
+      const z = radius * Math.cos(altRad) * Math.cos(azRad);
+      return [x, y, z] as [number, number, number];
+    }, [solarTimeMinutes]);
 
     React.useImperativeHandle(
       ref,
@@ -1466,15 +1643,29 @@ export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Townshi
           gl={{ antialias: true, powerPreference: "high-performance" }}
           onPointerMissed={() => onSelectTower(null)}
         >
+          {/* Phase 7 3D raycast click receiver for measurement */}
+          {measurementMode && onMeasureClick && (
+            <mesh
+              position={[0, 0, 0]}
+              rotation={[-Math.PI / 2, 0, 0]}
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                onMeasureClick({ x: e.point.x, y: e.point.y, z: e.point.z });
+              }}
+            >
+              <planeGeometry args={[3000, 3000]} />
+              <meshBasicMaterial visible={false} />
+            </mesh>
+          )}
           {/* neutral daylight */}
           <color attach="background" args={["#bfd3e2"]} />
           <fog attach="fog" args={["#bfd3e2", 540, 1250]} />
           <hemisphereLight args={["#cfe3ee", "#55684a", 0.85]} />
           <ambientLight intensity={0.3} />
           <directionalLight
-            position={[170, 210, 120]}
+            position={sunPos}
             intensity={2.1}
-            castShadow={layers.shadows}
+            castShadow={layers.shadows || shadowAnalysis}
             shadow-mapSize={tier === "low" ? [1024, 1024] : [2048, 2048]}
             shadow-camera-left={-250}
             shadow-camera-right={250}
@@ -1527,6 +1718,7 @@ export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Townshi
             <SceneErrorBoundary>
               <SiteBoundary />
               <EntranceSignage />
+              <EntranceApron />
             </SceneErrorBoundary>
           )}
           {layers.buildings &&
@@ -1540,6 +1732,7 @@ export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Townshi
                 selectedLevel={t.id === selectedTowerId ? selectedLevel : null}
                 realFloors={t.id === selectedTowerId ? linkedFloors : EMPTY_FLOORS}
                 floorsEnabled={layers.floors}
+                isDimmed={buildingIsolation && selectedTowerId !== null && t.id !== selectedTowerId}
               />
             ))}
           {layers.gisData && gisFootprints && gisFootprints.length > 0 && (
@@ -1551,6 +1744,16 @@ export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Townshi
             <SceneErrorBoundary>
               <Vegetation tier={tier} />
             </SceneErrorBoundary>
+          )}
+
+          {/* Phase 7 Measurement Visualizer */}
+          {measurementMode && (
+            <MeasurementVisualization pointA={measurePointA} pointB={measurePointB} />
+          )}
+
+          {/* Phase 7 Spatial Discrepancy Overlay */}
+          {discrepancyOverlay && (
+            <DiscrepancyMarkersOverlay conflicts={conflicts} />
           )}
 
           <MapLabels selectedTowerId={layers.buildings ? selectedTowerId : null} />

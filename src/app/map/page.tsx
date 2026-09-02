@@ -88,11 +88,12 @@ function MapWorkspace() {
     setLayers((prev) => ({ ...prev, [key]: !prev[key] }));
   }, []);
 
-  // ── Query-parameter deep links: ?parcel= ?building= ?property= ?floor= ?conflict= ──
+  // ── Query-parameter deep links: ?society= ?parcel= ?building= ?property= ?flat= ?ulpin= ?floor= ?conflict= ──
   React.useEffect(() => {
-    const propertyParam = searchParams.get("property");
+    const propertyParam = searchParams.get("property") || searchParams.get("flat");
     const buildingParam = searchParams.get("building");
-    const parcelParam = searchParams.get("parcel");
+    const parcelParam = searchParams.get("parcel") || searchParams.get("society");
+    const ulpinParam = searchParams.get("ulpin");
     const floorParam = searchParams.get("floor");
     const conflictParam = searchParams.get("conflict");
     const extractionParam = searchParams.get("extraction");
@@ -101,7 +102,27 @@ function MapWorkspace() {
     if (modeParam === "3d") setMode("3d");
     else if (modeParam === "2d") setMode("2d");
 
-    if (propertyParam) {
+    if (ulpinParam) {
+      const cleanUlpin = ulpinParam.trim().toUpperCase();
+      const matchedProperty = properties.find(
+        (p) => p.demoSpatialId.toUpperCase() === cleanUlpin || p.demoSpatialId.replace(/[^A-Z0-9]/g, '') === cleanUlpin.replace(/[^A-Z0-9]/g, '')
+      );
+      const matchedParcel = parcels.find(
+        (p) => p.parcelNumber.toUpperCase() === cleanUlpin || p.parcelNumber.replace(/[^A-Z0-9]/g, '') === cleanUlpin.replace(/[^A-Z0-9]/g, '')
+      );
+
+      if (matchedProperty) {
+        selectProperty(matchedProperty.id);
+        setRightOpen(true);
+        setSheetOpen(true);
+      } else if (matchedParcel) {
+        selectParcel(matchedParcel.id);
+        setRightOpen(true);
+        setSheetOpen(true);
+      } else {
+        setNotFound(`ULPIN / Spatial ID "${ulpinParam}" was not found in the registry.`);
+      }
+    } else if (propertyParam) {
       if (properties.some((p) => p.id === propertyParam)) {
         selectProperty(propertyParam);
         setRightOpen(true);
@@ -123,7 +144,7 @@ function MapWorkspace() {
         setRightOpen(true);
         setSheetOpen(true);
       } else {
-        setNotFound(`Parcel "${parcelParam}" was not found in the registry.`);
+        setNotFound(`Parcel/Society "${parcelParam}" was not found in the registry.`);
       }
     }
 

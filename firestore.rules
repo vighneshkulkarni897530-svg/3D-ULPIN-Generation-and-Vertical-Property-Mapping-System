@@ -1,0 +1,551 @@
+rules_version = '2';
+
+// Firestore Security Rules — Phase 1+2 (Society Registration & Structure Management)
+// ==================================================================================
+// NOTE: This project previously shipped NO firestore.rules file (the only
+// firebase.json entry was `hosting`). These rules are therefore NEW — they
+// are not a replacement of any existing ruleset. They take effect ONLY when
+// deployed explicitly:
+//
+//     firebase deploy --only firestore:rules
+//
+// Until then, the project's deployed rules remain unchanged.
+//
+// Design:
+//   - `societies`: any authenticated user may create a society where
+//     `createdBy` equals their own UID. Only active society-admin members
+//     may update; `createdBy` / `createdAt` are immutable from the client.
+//   - `societyMembers`: deterministic doc IDs `{societyId}_{userId}`;
+//     clients may only bootstrap their OWN `society-admin` membership, and
+//     can never write the reserved roles `super-admin` /
+//     `government-officer` (those are provisioned server-side later).
+//   - `buildings`, `floors`, `flats`: only active society-admins of the
+//     parent society may create/update/delete. Every child record MUST
+//     carry the correct parent IDs — cross-society access is blocked.
+//   - `users`: preserves the existing Phase 10 client profile behaviour
+//     (users read/write their own profile document only; server routes use
+//     the Admin SDK, which bypasses these rules).
+//   - Every other collection: DENY by default (no catch-all grants).
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Shared helpers ─────────────────────────────────────────────
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function membershipPath(societyId) {
+      return /databases/$(database)/documents/societyMembers/$(societyId + '_' + request.auth.uid);
+    }
+
+    // True when the caller holds an active `society-admin` membership.
+    function isSocietyAdmin(societyId) {
+      return isAuthenticated()
+        && exists(membershipPath(societyId))
+        && get(membershipPath(societyId)).data.status == 'active'
+        && get(membershipPath(societyId)).data.role == 'society-admin';
+    }
+
+    function isSocietyAdminForDoc() {
+      return isSocietyAdmin(resource.data.societyId);
+    }
+
+    // True when the caller holds an active government officer record.
+    function isGovernmentOfficer() {
+      return isAuthenticated()
+        && exists(/databases/$(database)/documents/governmentOfficers/$(request.auth.uid))
+        && get(/databases/$(database)/documents/governmentOfficers/$(request.auth.uid)).data.status == 'active';
+    }
+
+    // ── societies ──────────────────────────────────────────────────
+    match /societies/{societyId} {
+      allow read: if isAuthenticated();
+
+      allow create: if isAuthenticated()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 3
+        && request.resource.data.type is string
+        && request.resource.data.type.size() > 0
+        && request.resource.data.status == 'active'
+        && request.resource.data.location.source == 'user-provided'
+        && request.resource.data.location.dataStatus == 'illustrative'
+        && request.resource.data.imageUrl == null
+        && request.resource.data.logoUrl == null
+        && request.resource.data.address.line1 is string
+        && request.resource.data.address.line1.size() > 0
+        && request.resource.data.address.city is string
+        && request.resource.data.address.city.size() > 0
+        && request.resource.data.address.state is string
+        && request.resource.data.address.state.size() > 0
+        && request.resource.data.address.pinCode is string
+        && request.resource.data.address.pinCode.matches('\\d{6}');
+
+      // Only active society-admins may update, and identity fields stay
+      // immutable (createdBy can never be changed from the client).
+      allow update: if isSocietyAdmin(societyId)
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt;
+
+      allow delete: if false; // Phase 1 — no client-side deletion.
+    }
+
+    // ── societyMembers ─────────────────────────────────────────────
+    match /societyMembers/{memberId} {
+      // Members read their own memberships; society admins read the
+      // memberships of societies they administer.
+      allow read: if isAuthenticated()
+        && (resource.data.userId == request.auth.uid || isSocietyAdminForDoc());
+
+      // Bootstrap only: a user creates their OWN membership, as
+      // `society-admin`, with the deterministic `{societyId}_{uid}` ID —
+      // so one membership per user per society, and no forged documents.
+      // Phase 3 additions: (1) a user bootstraps their OWN `resident`
+      // membership as `pending` (registration), and (2) an active
+      // society-admin creates/activates a `resident` membership for another
+      // user of THEIR society (atomic with approval). Reserved roles
+      // (super-admin / government-officer) remain unwritable from clients.
+      allow create: if isAuthenticated() && (
+        (request.resource.data.userId == request.auth.uid
+          && request.resource.data.status == 'active'
+          && request.resource.data.role == 'society-admin'
+          && memberId == (request.resource.data.societyId + '_' + request.auth.uid))
+        ||
+        (request.resource.data.userId == request.auth.uid
+          && request.resource.data.role == 'resident'
+          && request.resource.data.status == 'pending'
+          && memberId == (request.resource.data.societyId + '_' + request.auth.uid))
+        ||
+        (isSocietyAdmin(request.resource.data.societyId)
+          && request.resource.data.role == 'resident'
+          && request.resource.data.status == 'active'
+          && request.resource.data.userId is string
+          && request.resource.data.userId.size() > 0
+          && request.resource.data.userId != request.auth.uid
+          && memberId == (request.resource.data.societyId + '_' + request.resource.data.userId))
+      );
+
+      // Admins manage memberships of their societies, but: identity fields
+      // are immutable, reserved roles are unwritable, and an admin can
+      // never change their own role.
+      allow update: if isSocietyAdminForDoc()
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.societyId == resource.data.societyId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.role in ['society-admin', 'resident']
+        && !(resource.data.userId == request.auth.uid
+             && request.resource.data.role != resource.data.role);
+
+      allow delete: if false; // Phase 1 — no client-side deletion.
+    }
+
+    // ── buildings ──────────────────────────────────────────────────
+    // Path: societies/{societyId}/buildings/{buildingId}
+    match /societies/{societyId}/buildings/{buildingId} {
+      allow read: if isAuthenticated();
+
+      allow create: if isSocietyAdmin(societyId)
+        && request.resource.data.societyId == societyId
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.code is string
+        && request.resource.data.code.size() > 0
+        && request.resource.data.type is string
+        && request.resource.data.type.size() > 0
+        && request.resource.data.floorCount is number
+        && request.resource.data.floorCount >= 1
+        && request.resource.data.status == 'active'
+        && request.resource.data.location.source == 'user-provided'
+        && request.resource.data.location.dataStatus == 'illustrative';
+
+      allow update: if isSocietyAdmin(societyId)
+        && request.resource.data.societyId == resource.data.societyId
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt;
+
+      allow delete: if isSocietyAdmin(societyId);
+    }
+
+    // ── floors ─────────────────────────────────────────────────────
+    // Path: societies/{societyId}/buildings/{buildingId}/floors/{floorId}
+    match /societies/{societyId}/buildings/{buildingId}/floors/{floorId} {
+      allow read: if isAuthenticated();
+
+      allow create: if isSocietyAdmin(societyId)
+        && request.resource.data.societyId == societyId
+        && request.resource.data.buildingId == buildingId
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.floorNumber is number
+        && request.resource.data.floorLabel is string
+        && request.resource.data.floorLabel.size() > 0
+        && request.resource.data.floorType is string
+        && request.resource.data.floorType.size() > 0
+        && request.resource.data.status == 'active';
+
+      allow update: if isSocietyAdmin(societyId)
+        && request.resource.data.societyId == resource.data.societyId
+        && request.resource.data.buildingId == resource.data.buildingId
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt;
+
+      allow delete: if isSocietyAdmin(societyId);
+    }
+
+    // ── flats ──────────────────────────────────────────────────────
+    // Path: societies/{societyId}/buildings/{buildingId}/floors/{floorId}/flats/{flatId}
+    match /societies/{societyId}/buildings/{buildingId}/floors/{floorId}/flats/{flatId} {
+      allow read: if isAuthenticated();
+
+      allow create: if isSocietyAdmin(societyId)
+        && request.resource.data.societyId == societyId
+        && request.resource.data.buildingId == buildingId
+        && request.resource.data.floorId == floorId
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.flatNumber is string
+        && request.resource.data.flatNumber.size() > 0
+        && request.resource.data.unitType is string
+        && request.resource.data.unitType.size() > 0
+        && request.resource.data.status is string
+        && request.resource.data.status.size() > 0;
+
+      allow update: if isSocietyAdmin(societyId)
+        && request.resource.data.societyId == resource.data.societyId
+        && request.resource.data.buildingId == resource.data.buildingId
+        && request.resource.data.floorId == resource.data.floorId
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.createdAt == resource.data.createdAt;
+
+      allow delete: if isSocietyAdmin(societyId);
+    }
+
+    // ── residents (Phase 3 — Resident Registration & Personal Profile) ──
+    // Path: residents/{residentId}. The client uses the deterministic claim
+    // ID `{societyId}_{flatId}` so one claim per flat cannot be raced (the
+    // registration transaction in residentService.ts reads THIS document).
+    match /residents/{residentId} {
+
+      function residentProfileIsValid(p) {
+        return p.fullName is string
+          && p.fullName.size() >= 2
+          && p.fullName.size() <= 100
+          && (p.preferredName == null || (p.preferredName is string && p.preferredName.size() <= 100))
+          && p.email is string
+          && p.email.size() <= 200
+          && (p.phone == null || (p.phone is string && p.phone.size() <= 25))
+          && (p.occupation == null || (p.occupation is string && p.occupation.size() <= 100))
+          && (p.emergencyContactName == null || (p.emergencyContactName is string && p.emergencyContactName.size() <= 100))
+          && (p.emergencyContactPhone == null || (p.emergencyContactPhone is string && p.emergencyContactPhone.size() <= 25));
+      }
+
+      function residentOccupancyIsValid(o) {
+        return o.type is string
+          && o.type in ['Owner Occupant', 'Tenant', 'Family Member', 'Authorized Occupant', 'Other']
+          && (o.moveInDate == null || (o.moveInDate is string && o.moveInDate.size() <= 10))
+          && o.residentCount is number
+          && o.residentCount >= 1
+          && o.residentCount <= 50
+          && (o.notes == null || (o.notes is string && o.notes.size() <= 500));
+      }
+
+      // The document ID must equal `{societyId}_{flatId}` — one claim per flat.
+      function claimIdMatchesDoc(d) {
+        return d.userId is string
+          && d.societyId is string
+          && d.buildingId is string
+          && d.floorId is string
+          && d.flatId is string
+          && d.societyId.size() > 0
+          && d.flatId.size() > 0
+          && residentId == (d.societyId + '_' + d.flatId);
+      }
+
+      // The claimed flat must REALLY exist under the claimed society/building/
+      // floor path — client-supplied hierarchy is never trusted.
+      function referencedFlatExists(d) {
+        return exists(/databases/$(database)/documents/societies/$(d.societyId)/buildings/$(d.buildingId)/floors/$(d.floorId)/flats/$(d.flatId));
+      }
+
+      function approvalFieldsAreNull(d) {
+        return d.approvedAt == null
+          && d.approvedBy == null
+          && d.rejectedAt == null
+          && d.rejectedBy == null
+          && d.rejectionReason == null;
+      }
+
+      // READ: the owner, an active society-admin of the SAME society, or an authorized government officer.
+      // No public directory reads — residents can never enumerate profiles.
+      allow read: if isAuthenticated()
+        && (resource.data.userId == request.auth.uid
+            || isSocietyAdmin(resource.data.societyId)
+            || isGovernmentOfficer());
+
+      // CREATE: a resident registers themselves (deterministic claim ID).
+      // Status starts as 'pending' and every approval field must be null.
+      allow create: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.submittedAt == request.time
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && claimIdMatchesDoc(request.resource.data)
+        && referencedFlatExists(request.resource.data)
+        && residentProfileIsValid(request.resource.data.profile)
+        && residentOccupancyIsValid(request.resource.data.occupancy)
+        && approvalFieldsAreNull(request.resource.data);
+
+      // UPDATE — three tightly-scoped cases:
+      //
+      // (a) OWNER self-edit: only profile/occupancy/updatedAt may change.
+      //     Identity (userId), the whole flat claim (societyId/buildingId/
+      //     floorId/flatId), status, submittedAt/createdAt and every
+      //     approval/rejection field are IMMUTABLE for the owner.
+      //
+      // (b) OWNER resubmission: an owner may revive their own REJECTED claim
+      //     back to 'pending' (clearing the rejection fields). Nobody else
+      //     can ever take over a rejected claim.
+      //
+      // (c) SOCIETY-ADMIN approval/rejection: an active society-admin of the
+      //     SAME society may move pending → approved/rejected, setting ONLY
+      //     the approval workflow fields (approvedBy/rejectedBy must equal
+      //     request.auth.uid). Admins can never touch the resident's
+      //     profile/occupancy or the claim IDs.
+      allow update: if isAuthenticated() && (
+        (resource.data.userId == request.auth.uid
+          && request.resource.data.userId == resource.data.userId
+          && request.resource.data.societyId == resource.data.societyId
+          && request.resource.data.buildingId == resource.data.buildingId
+          && request.resource.data.floorId == resource.data.floorId
+          && request.resource.data.flatId == resource.data.flatId
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.submittedAt == resource.data.submittedAt
+          && request.resource.data.status == resource.data.status
+          && request.resource.data.approvedAt == resource.data.approvedAt
+          && request.resource.data.approvedBy == resource.data.approvedBy
+          && request.resource.data.rejectedAt == resource.data.rejectedAt
+          && request.resource.data.rejectedBy == resource.data.rejectedBy
+          && request.resource.data.rejectionReason == resource.data.rejectionReason
+          && residentProfileIsValid(request.resource.data.profile)
+          && residentOccupancyIsValid(request.resource.data.occupancy))
+        ||
+        (resource.data.userId == request.auth.uid
+          && resource.data.status == 'rejected'
+          && request.resource.data.status == 'pending'
+          && request.resource.data.userId == resource.data.userId
+          && request.resource.data.societyId == resource.data.societyId
+          && request.resource.data.buildingId == resource.data.buildingId
+          && request.resource.data.floorId == resource.data.floorId
+          && request.resource.data.flatId == resource.data.flatId
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.submittedAt == request.time
+          && request.resource.data.updatedAt == request.time
+          && request.resource.data.approvedAt == null
+          && request.resource.data.approvedBy == null
+          && request.resource.data.rejectedAt == null
+          && request.resource.data.rejectedBy == null
+          && request.resource.data.rejectionReason == null
+          && claimIdMatchesDoc(request.resource.data)
+          && referencedFlatExists(request.resource.data)
+          && residentProfileIsValid(request.resource.data.profile)
+          && residentOccupancyIsValid(request.resource.data.occupancy))
+        ||
+        (isSocietyAdmin(resource.data.societyId)
+          && resource.data.status == 'pending'
+          && request.resource.data.userId == resource.data.userId
+          && request.resource.data.societyId == resource.data.societyId
+          && request.resource.data.buildingId == resource.data.buildingId
+          && request.resource.data.floorId == resource.data.floorId
+          && request.resource.data.flatId == resource.data.flatId
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.submittedAt == resource.data.submittedAt
+          && request.resource.data.profile == resource.data.profile
+          && request.resource.data.occupancy == resource.data.occupancy
+          && ((request.resource.data.status == 'approved'
+                && request.resource.data.approvedBy == request.auth.uid
+                && request.resource.data.approvedAt == request.time
+                && request.resource.data.rejectedAt == null
+                && request.resource.data.rejectedBy == null
+                && request.resource.data.rejectionReason == null)
+              ||
+              (request.resource.data.status == 'rejected'
+                && request.resource.data.rejectedBy == request.auth.uid
+                && request.resource.data.rejectedAt == request.time
+                && request.resource.data.rejectionReason is string
+                && request.resource.data.rejectionReason.size() >= 3
+                && request.resource.data.rejectionReason.size() <= 500
+                && request.resource.data.approvedAt == null
+                && request.resource.data.approvedBy == null)))
+      );
+
+      // DELETE: only a same-society admin, and ONLY rejected registrations
+      // (an explicit way to free a flat). Residents can never delete.
+      allow delete: if isSocietyAdmin(resource.data.societyId)
+        && resource.data.status == 'rejected';
+    }
+
+    // ── users (Phase 10 compatibility — behaviour unchanged) ───────
+    match /users/{userId} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow create, update: if isAuthenticated() && request.auth.uid == userId;
+      allow delete: if false;
+    }
+
+    // ── Phase 4 — Government Officer Portal & Property Verification ──
+
+    // ── governmentOfficers ─────────────────────────────────────────
+    match /governmentOfficers/{userId} {
+      // Officers read their own profile; other active officers may read directory metadata.
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isGovernmentOfficer());
+
+      // Officers manage their own directory profile record.
+      allow create, update: if isAuthenticated()
+        && request.auth.uid == userId
+        && request.resource.data.userId == request.auth.uid;
+
+      allow delete: if false;
+    }
+
+    // ── verifications ──────────────────────────────────────────────
+    match /verifications/{verificationId} {
+      allow read: if isAuthenticated();
+
+      // Only active government officers may record or update verification decisions.
+      // VerifiedBy is immutable and must match the authenticated officer UID.
+      allow create, update: if isGovernmentOfficer()
+        && request.resource.data.verifiedBy == request.auth.uid
+        && request.resource.data.status in ['pending', 'verified', 'rejected', 'flagged', 'needs-review']
+        && request.resource.data.targetType in ['society', 'building', 'flat', 'resident'];
+
+      allow delete: if false;
+    }
+
+    // ── verificationHistory ────────────────────────────────────────
+    match /verificationHistory/{historyId} {
+      allow read: if isAuthenticated();
+
+      // Strictly append-only: active government officers record audit events.
+      allow create: if isGovernmentOfficer()
+        && request.resource.data.performedBy == request.auth.uid;
+
+      allow update, delete: if false;
+    }
+
+    // ── discrepancies ──────────────────────────────────────────────
+    match /discrepancies/{discrepancyId} {
+      allow read: if isAuthenticated();
+
+      // Officers and admins can create discrepancies
+      allow create: if isAuthenticated() && (isGovernmentOfficer() || isSocietyAdmin(request.resource.data.societyId));
+
+      // Government officers manage discrepancy status lifecycle.
+      allow update: if isAuthenticated() && (isGovernmentOfficer() || isSocietyAdmin(resource.data.societyId));
+
+      allow delete: if false;
+    }
+
+    // ── Phase 8 — Verification Cases ───────────────────────────────
+    match /verificationCases/{caseId} {
+      allow read: if isAuthenticated();
+
+      allow create: if isAuthenticated() && (
+        isGovernmentOfficer() || isSocietyAdmin(request.resource.data.societyId)
+      );
+
+      allow update: if isAuthenticated() && (
+        isGovernmentOfficer() || isSocietyAdmin(resource.data.societyId)
+      );
+
+      allow delete: if false;
+
+      // Internal government investigation notes subcollection
+      match /notes/{noteId} {
+        allow read, create: if isGovernmentOfficer();
+        allow update, delete: if false;
+      }
+    }
+
+    // ── Phase 8 — Evidence Records ─────────────────────────────────
+    match /evidence/{evidenceId} {
+      allow read: if isAuthenticated();
+
+      allow create: if isAuthenticated()
+        && request.resource.data.uploadedBy == request.auth.uid;
+
+      allow update: if isGovernmentOfficer();
+      allow delete: if false;
+    }
+
+    // ── Phase 8 — Investigation Notes ──────────────────────────────
+    match /verificationNotes/{noteId} {
+      // Government investigation notes are strictly confidential to government officers
+      allow read, create: if isGovernmentOfficer();
+
+      allow update, delete: if false;
+    }
+
+    // ── Phase 5 — GIS + ULPIN Property Spatial Records ─────────────
+    match /propertySpatialRecords/{propertyId} {
+      allow read: if isAuthenticated();
+
+      allow create, update: if (isAuthenticated() && (
+        isSocietyAdmin(request.resource.data.societyId) || isGovernmentOfficer()
+      ));
+
+      allow delete: if false;
+    }
+
+    // ── Phase 10 — In-App Citizen Notifications ────────────────────
+    match /notifications/{notificationId} {
+      // Citizens and officers read only notifications addressed to themselves
+      allow read: if isAuthenticated()
+        && resource.data.recipientUid == request.auth.uid;
+
+      // Authenticated users and officers can create notifications
+      allow create: if isAuthenticated()
+        && request.resource.data.recipientUid is string
+        && request.resource.data.recipientUid.size() > 0;
+
+      // Recipients can only update the 'read' status boolean of their own notifications
+      allow update: if isAuthenticated()
+        && resource.data.recipientUid == request.auth.uid
+        && request.resource.data.recipientUid == resource.data.recipientUid
+        && request.resource.data.type == resource.data.type
+        && request.resource.data.title == resource.data.title;
+
+      // Citizens cannot delete official notification logs
+      allow delete: if false;
+    }
+
+    // ── Phase 11 — AI Property Documents & Analyses ────────────────
+    match /propertyDocuments/{documentId} {
+      allow read: if isAuthenticated();
+
+      allow create: if isAuthenticated()
+        && request.resource.data.societyId is string;
+
+      allow update: if isAuthenticated()
+        && (resource.data.uploadedBy == request.auth.uid || isGovernmentOfficer());
+
+      allow delete: if false;
+    }
+
+    match /documentAnalyses/{analysisId} {
+      allow read: if isAuthenticated();
+
+      allow create: if isAuthenticated()
+        && request.resource.data.societyId is string;
+
+      allow update: if isAuthenticated()
+        && (resource.data.uploadedBy == request.auth.uid || isGovernmentOfficer());
+
+      allow delete: if false;
+    }
+
+    // ── Everything else: DENY by default (no catch-all grants) ─────
+  }
+}
+
+
+

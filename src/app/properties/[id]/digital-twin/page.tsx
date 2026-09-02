@@ -2,9 +2,9 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, MapPinned, FileText } from "lucide-react";
 import { Township3DViewerDynamic, Township3DViewerHandle } from "@/components/digital-twin/township/Township3DViewerDynamic";
 import {
   TownshipCameraBar,
@@ -15,6 +15,14 @@ import {
 import { TownshipLayerPanel, TownshipLocationPanel } from "@/components/digital-twin/township/TownshipPanels";
 import { TownshipBuildingPanel } from "@/components/digital-twin/township/TownshipBuildingPanel";
 import { TownshipFloorExplorer } from "@/components/digital-twin/township/TownshipFloorExplorer";
+import { InspectionToolbar } from "@/components/digital-twin/inspection/InspectionToolbar";
+import { InspectionPanel } from "@/components/digital-twin/inspection/InspectionPanel";
+import { InspectionLegend } from "@/components/digital-twin/inspection/InspectionLegend";
+import { InspectionSummary } from "@/components/digital-twin/inspection/InspectionSummary";
+import { SolarShadowControls } from "@/components/digital-twin/analysis/SolarShadowControls";
+import { MeasurementTool } from "@/components/digital-twin/analysis/MeasurementTool";
+import { DiscrepancyOverlay } from "@/components/digital-twin/inspection/DiscrepancyOverlay";
+import { useDigitalTwinInspection } from "@/context/DigitalTwinInspectionContext";
 import {
   resolveGisFootprints,
   resolveTowerLinkedData,
@@ -25,6 +33,8 @@ import { useGIS } from "@/context/GISContext";
 import { useProperty } from "@/context/PropertyContext";
 import {
   defaultLayerState,
+  PLACE_ID,
+  resolvePlace,
   SELECTED_TOWER_ID,
   TOWERS,
   TOWNSHIP_SITE,
@@ -47,41 +57,78 @@ import { TWIN_BUILDING, TWIN_FLOORS, TwinUnit } from "@/data/mockDigitalTwin";
 import { fadeIn, slideInLeft, slideInRight } from "@/components/digital-twin/motion";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { DigitalTwinInspectionProvider } from "@/context/DigitalTwinInspectionContext";
 
 /**
- * Digital Twin route (Phase 10): the rendering/isolation implementation is
- * untouched — this wrapper only enforces authentication at the route boundary.
+ * Digital Twin route (Phase 7, 10 & 16): Enforces authentication and provides
+ * real Firestore-driven 3D Property Inspection & Spatial Analysis Workbench.
  */
 export default function BuildingDigitalTwinPage() {
   return (
     <ProtectedRoute>
-      <BuildingDigitalTwinPageContent />
+      <DigitalTwinInspectionProvider>
+        <BuildingDigitalTwinPageContent />
+      </DigitalTwinInspectionProvider>
     </ProtectedRoute>
   );
 }
 
 function BuildingDigitalTwinPageContent() {
+  const inspection = useDigitalTwinInspection();
   const [selectedFloorLevel, setSelectedFloorLevel] = useState(6);
   const [selectedUnit, setSelectedUnit] = useState<TwinUnit | null>(null);
   const [showLayers, setShowLayers] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  // Phase 15A — township scene state (illustrative layer toggles + selection)
   const [layers, setLayers] = useState<TownshipLayerState>(defaultLayerState);
   const [selectedTowerId, setSelectedTowerId] = useState<string | null>(SELECTED_TOWER_ID);
   const [cameraPreset, setCameraPreset] = useState<CameraPresetId>("isometric");
-  // Phase 15C — database-driven floor state + building panel visibility
   const [floorMode, setFloorMode] = useState<TownshipFloorMode>("all");
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
+  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [showTowerPanel, setShowTowerPanel] = useState(true);
+  const [showInspectionSummary, setShowInspectionSummary] = useState(false);
   const viewerShellRef = useRef<HTMLDivElement>(null);
   const viewerHandleRef = useRef<Township3DViewerHandle>(null);
 
-  // Route param + real data layers (sanctioned Context → UI pipeline only)
+  // Route param + search params for deep-linking (?building=..., ?floor=..., ?flat=...)
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const routeId = params?.id ?? "";
-  const { buildings, floors, properties: gisUnits, parcels } = useGIS();
+
+  const queryBuilding = searchParams?.get("building") ?? null;
+  const queryFloor = searchParams?.get("floor") ?? null;
+  const queryFlat = searchParams?.get("flat") ?? null;
+
+  const { buildings, floors, properties: gisUnits, parcels, conflicts } = useGIS();
   const { getPropertyByUlpinOrId } = useProperty();
   const routeProperty = useMemo(() => getPropertyByUlpinOrId(routeId) ?? null, [getPropertyByUlpinOrId, routeId]);
+
+  // Deep-link auto-selection
+  useEffect(() => {
+    if (queryBuilding) {
+      const match = buildings.find((b) => b.id === queryBuilding || b.buildingCode === queryBuilding);
+      if (match) {
+        setSelectedTowerId(match.id);
+        inspection.selectBuilding(match.id);
+      } else {
+        setSelectedTowerId(queryBuilding);
+        inspection.selectBuilding(queryBuilding);
+      }
+    }
+    if (queryFloor) {
+      const fNum = parseInt(queryFloor, 10);
+      if (!isNaN(fNum)) {
+        setSelectedLevel(fNum);
+        inspection.selectFloor(fNum);
+      }
+    }
+    if (queryFlat) {
+      setSelectedUnitId(queryFlat);
+      inspection.selectFlat(queryFlat);
+    }
+  }, [queryBuilding, queryFloor, queryFlat, buildings]);
+
+  const place = resolvePlace(PLACE_ID);
 
   // Reset floor state + reopen the building panel whenever the selection changes
   useEffect(() => {
@@ -89,6 +136,13 @@ function BuildingDigitalTwinPageContent() {
     setFloorMode("all");
     setSelectedLevel(null);
   }, [selectedTowerId]);
+
+  // Sync inspection context floorMode
+  useEffect(() => {
+    if (inspection.floorMode !== floorMode) {
+      setFloorMode(inspection.floorMode);
+    }
+  }, [inspection.floorMode]);
 
   const selectedFloor = useMemo(
     () => TWIN_FLOORS.find((f) => f.level === selectedFloorLevel) ?? TWIN_FLOORS[0],
@@ -99,7 +153,6 @@ function BuildingDigitalTwinPageContent() {
     setSelectedFloorLevel(level);
   }, []);
 
-  // ---- Phase 15A township wiring ----
   const handleLayers = useCallback(() => setShowLayers((s) => !s), []);
   const handleToggleLayer = useCallback((id: TownshipLayerId) => {
     setLayers((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -112,10 +165,30 @@ function BuildingDigitalTwinPageContent() {
     setCameraPreset("isometric");
     viewerHandleRef.current?.applyPreset("isometric");
   }, []);
-  const handleSelectTower = useCallback((id: string | null) => setSelectedTowerId(id), []);
-  const selectedTower = useMemo(() => TOWERS.find((t) => t.id === selectedTowerId) ?? null, [selectedTowerId]);
+  const handleSelectTower = useCallback((id: string | null) => {
+    setSelectedTowerId(id);
+    inspection.selectBuilding(id);
+  }, [inspection]);
+  const selectedTower = useMemo(
+    () =>
+      TOWERS.find((t) => t.id === selectedTowerId) ??
+      (selectedTowerId
+        ? {
+            id: selectedTowerId,
+            name: buildings.find((b) => b.id === selectedTowerId)?.name ?? "Building",
+            type: "A" as const,
+            typeLabel: "Residential Building",
+            position: [0, -52] as [number, number],
+            rotation: 0.05,
+            floors: buildings.find((b) => b.id === selectedTowerId)?.totalFloors ?? 12,
+            footprint: [18, 16] as [number, number],
+            dataStatus: "verified" as const,
+          }
+        : null),
+    [selectedTowerId, buildings]
+  );
 
-  // ---- Phase 15C township ↔ database resolution (honesty: no fabrication) ----
+  // Real database resolution
   const linkedTowerData = useMemo(
     () =>
       resolveTowerLinkedData({
@@ -125,8 +198,9 @@ function BuildingDigitalTwinPageContent() {
         properties: gisUnits,
         parcels,
         property: routeProperty,
+        targetBuildingId: selectedTowerId,
       }),
-    [selectedTower, buildings, floors, gisUnits, parcels, routeProperty]
+    [selectedTower, buildings, floors, gisUnits, parcels, routeProperty, selectedTowerId]
   );
   const gisFootprints = useMemo(
     () => resolveGisFootprints(linkedTowerData.siteBuildings),
@@ -138,8 +212,14 @@ function BuildingDigitalTwinPageContent() {
   );
   const towerLinkedToDb = linkedTowerData.building !== null;
 
-  const handleFloorMode = useCallback((mode: TownshipFloorMode) => setFloorMode(mode), []);
-  const handleSelectLevel = useCallback((level: number | null) => setSelectedLevel(level), []);
+  const handleFloorMode = useCallback((mode: TownshipFloorMode) => {
+    setFloorMode(mode);
+    inspection.setFloorMode(mode);
+  }, [inspection]);
+  const handleSelectLevel = useCallback((level: number | null) => {
+    setSelectedLevel(level);
+    inspection.selectFloor(level);
+  }, [inspection]);
   const handleCloseTowerPanel = useCallback(() => setShowTowerPanel(false), []);
 
   const handleFullscreen = useCallback(() => {
@@ -161,6 +241,7 @@ function BuildingDigitalTwinPageContent() {
   const handleReset = () => {
     setCameraPreset("isometric");
     viewerHandleRef.current?.applyPreset("isometric");
+    inspection.resetInspection();
   };
 
   // keep isFullscreen in sync with browser fullscreen state
@@ -169,6 +250,26 @@ function BuildingDigitalTwinPageContent() {
     document.addEventListener("fullscreenchange", onFsChange);
     return () => document.removeEventListener("fullscreenchange", onFsChange);
   }, []);
+
+  // Safe fallback when the place cannot be resolved.
+  if (!place) {
+    return (
+      <div className="digital-twin flex min-h-screen w-full items-center justify-center px-4 text-[#F8FAFC]">
+        <div className="dt-hud dt-card-accent w-full max-w-md rounded-2xl px-6 py-8 text-center">
+          <h2 className="text-sm font-black uppercase tracking-[0.22em] text-[#F8FAFC]">Place not found</h2>
+          <p className="mt-2 text-[11px] font-semibold leading-relaxed text-[#64748B]">
+            The requested place could not be resolved in the Digital Twin place registry.
+          </p>
+          <Link
+            href="/properties"
+            className="mt-5 inline-flex items-center gap-1.5 text-[11px] font-bold text-[#00D9FF] transition-colors hover:text-[#7CE8FF]"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> Back to properties
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="digital-twin min-h-screen w-full text-[#F8FAFC]">
@@ -182,13 +283,39 @@ function BuildingDigitalTwinPageContent() {
       </div>
 
       <div className="relative z-10 mx-auto w-full max-w-[1600px] space-y-4 px-3 pb-10 pt-4 sm:px-5 lg:px-6">
-        {/* Back link */}
-        <Link
-          href={`/properties/${routeProperty?.id ?? routeId ?? "prop-hyd-002"}`}
-          className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#64748B] transition-colors hover:text-[#00D9FF]"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" /> Back to property record
-        </Link>
+        {/* Top Navigation Strip */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Link
+            href={`/properties/${routeProperty?.id ?? routeId ?? "prop-hyd-002"}`}
+            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#64748B] transition-colors hover:text-[#00D9FF]"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> Back to property record
+          </Link>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowInspectionSummary(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[#164E73] bg-[#061426] px-3 py-1.5 text-[11px] font-bold text-[#F8FAFC] transition-colors hover:border-[#00D9FF]/50 hover:text-[#00D9FF]"
+            >
+              <FileText className="h-3.5 w-3.5 text-[#00D9FF]" /> Inspection Summary
+            </button>
+            <Link
+              href={`/map?society=${linkedTowerData.parcel?.id ?? ""}${linkedTowerData.building?.id ? `&building=${linkedTowerData.building.id}` : ""}`}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[#00D9FF]/40 bg-[#00D9FF]/10 px-3 py-1.5 text-[11px] font-bold text-[#00D9FF] transition-colors hover:bg-[#00D9FF]/20"
+            >
+              <MapPinned className="h-3.5 w-3.5" /> View on 2D GIS Map
+            </Link>
+            {linkedTowerData.parcel?.id && (
+              <Link
+                href={`/society/${linkedTowerData.parcel.id}`}
+                className="hidden rounded-lg border border-[#164E73] bg-[#061426] px-3 py-1.5 text-[11px] font-bold text-[#F8FAFC] transition-colors hover:border-[#00D9FF]/50 hover:text-[#00D9FF] sm:inline-flex"
+              >
+                Society Portal
+              </Link>
+            )}
+          </div>
+        </div>
 
         <BuildingHeader building={TWIN_BUILDING} onFullscreen={handleFullscreen} />
 
@@ -221,13 +348,15 @@ function BuildingDigitalTwinPageContent() {
               <div className="flex h-10 items-center justify-between border-b border-[#164E73]/60 bg-[#061426]/70 px-4 backdrop-blur">
                 <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-[#94A3B8]">
                   <span className="h-1.5 w-1.5 rounded-full bg-[#00D9FF] shadow-[0_0_8px_rgba(0,217,255,0.8)]" />
-                  3D Township Twin
+                  3D Property Inspection Workbench
                   <span className="hidden font-mono normal-case tracking-normal text-[#64748B] sm:inline">
-                    · Survey No {TOWNSHIP_SITE.surveyNo}, {TOWNSHIP_SITE.village}, {TOWNSHIP_SITE.district} — {TOWNSHIP_SITE.centerNote}
+                    · {linkedTowerData.parcel?.parcelNumber ? `Parcel ${linkedTowerData.parcel.parcelNumber}` : place.name} · Cadastral Base ULPIN: {linkedTowerData.parcel?.parcelNumber ?? "27412104101A8F"}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 font-mono text-[9px] text-[#64748B]">
-                  <span className="hidden sm:inline">ILLUSTRATIVE GEOMETRY</span>
+                  <span className="hidden uppercase sm:inline">
+                    {towerLinkedToDb ? "Real Database Linked" : place.visualizationStatus}
+                  </span>
                   <span className="rounded border border-[#00D9FF]/40 bg-[#00D9FF]/10 px-1.5 py-0.5 text-[#00D9FF]">
                     {cameraPreset.toUpperCase()} VIEW
                   </span>
@@ -245,12 +374,76 @@ function BuildingDigitalTwinPageContent() {
                     selectedLevel={selectedLevel}
                     linkedFloors={explicitFloors}
                     gisFootprints={gisFootprints}
+                    buildingIsolation={inspection.buildingIsolation}
+                    shadowAnalysis={inspection.shadowAnalysis}
+                    solarTimeMinutes={inspection.solarTimeMinutes}
+                    measurementMode={inspection.measurementMode}
+                    measurePointA={inspection.measurePointA}
+                    measurePointB={inspection.measurePointB}
+                    onMeasureClick={inspection.setMeasurePoint}
+                    discrepancyOverlay={inspection.discrepancyOverlay}
+                    conflicts={conflicts}
                     className="h-full w-full"
                   />
                 </div>
 
                 {/* scene identity header — LIFE REPUBLIC / MARUNJI • PUNE */}
                 <TownshipSceneHeader className="absolute left-3 top-3 z-20" />
+
+                {/* Phase 7 — 3D Inspection Toolbar */}
+                <InspectionToolbar
+                  className="absolute left-1/2 top-3 z-30 hidden -translate-x-1/2 md:flex"
+                  onResetCamera={handleReset}
+                  openDiscrepancyCount={conflicts.length}
+                />
+
+                {/* Phase 7 — Solar & Shadow Analysis Floating Panel */}
+                <AnimatePresence>
+                  {inspection.shadowAnalysis && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="absolute right-3 top-[56px] z-30"
+                    >
+                      <SolarShadowControls />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Phase 7 — 3D Measurement Tool Floating Panel */}
+                <AnimatePresence>
+                  {inspection.measurementMode && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="absolute left-3 top-[56px] z-30"
+                    >
+                      <MeasurementTool />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Phase 7 — Spatial Discrepancy Overlay Panel */}
+                <AnimatePresence>
+                  {inspection.discrepancyOverlay && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="absolute right-3 top-[56px] z-30"
+                    >
+                      <DiscrepancyOverlay
+                        onSelectConflict={(c) => {
+                          if (c.affectedPropertyIds && c.affectedPropertyIds.length > 0) {
+                            setSelectedUnitId(c.affectedPropertyIds[0]);
+                          }
+                        }}
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 {/* functional layer panel (toggled) */}
                 <AnimatePresence>
@@ -264,33 +457,39 @@ function BuildingDigitalTwinPageContent() {
                   )}
                 </AnimatePresence>
 
-                {/* location information panel (collapsible on mobile) */}
+                {/* location information panel & legend */}
                 <TownshipLocationPanel className="absolute bottom-16 left-3 z-20 sm:bottom-3" />
 
-                {/* Phase 15C — database-driven floor explorer (real floors only) */}
+                {/* Phase 15C & 16 — database-driven floor explorer (real floors & units) */}
                 <AnimatePresence>
                   {selectedTower && (
                     <TownshipFloorExplorer
                       towerLabel={selectedTower.name}
                       floors={explicitFloors}
+                      units={linkedTowerData.units}
+                      selectedUnitId={selectedUnitId}
+                      onSelectUnit={(uid) => {
+                        setSelectedUnitId(uid);
+                        inspection.selectFlat(uid);
+                      }}
                       linked={towerLinkedToDb}
                       selectedLevel={selectedLevel}
                       mode={floorMode}
                       onModeChange={handleFloorMode}
                       onSelectLevel={handleSelectLevel}
-                      className="absolute bottom-[188px] left-3 z-30 hidden w-[248px] lg:block"
+                      className="absolute bottom-[188px] left-3 z-30 hidden w-[258px] lg:block"
                     />
                   )}
                 </AnimatePresence>
 
-                {/* Phase 15C — selected-tower building information panel */}
+                {/* Phase 7 — Inspection Workbench Panel */}
                 <AnimatePresence>
                   {selectedTower && showTowerPanel && (
-                    <TownshipBuildingPanel
-                      tower={selectedTower}
-                      linkedBuilding={linkedTowerData.building}
-                      linkedFloors={linkedTowerData.floors}
-                      property={routeProperty}
+                    <InspectionPanel
+                      building={linkedTowerData.building}
+                      floors={linkedTowerData.floors}
+                      units={linkedTowerData.units}
+                      parcel={linkedTowerData.parcel}
                       onClose={handleCloseTowerPanel}
                       className="absolute right-3 top-[150px] z-30 hidden max-h-[calc(100%-170px)] overflow-y-auto lg:block"
                     />
@@ -305,7 +504,7 @@ function BuildingDigitalTwinPageContent() {
                   onFullscreen={handleFullscreen}
                 />
 
-                {/* selected building chip — honest about DB linkage */}
+                {/* selected building chip */}
                 <AnimatePresence>
                   {selectedTower && (
                     <TownshipSelectedChip
@@ -317,7 +516,7 @@ function BuildingDigitalTwinPageContent() {
                   )}
                 </AnimatePresence>
 
-                {/* bottom camera preset bar — TOP / FRONT / SIDE / ISOMETRIC / PROPERTY */}
+                {/* bottom camera preset bar */}
                 <TownshipCameraBar
                   className="absolute bottom-3 left-1/2 z-20 -translate-x-1/2"
                   preset={cameraPreset}
@@ -327,7 +526,8 @@ function BuildingDigitalTwinPageContent() {
                   onZoomOut={handleZoomOut}
                 />
               </div>
-{/* viewer footer telemetry */}
+
+              {/* viewer footer telemetry */}
               <div className="flex h-8 items-center justify-between border-t border-[#164E73]/60 bg-[#061426]/70 px-4 backdrop-blur">
                 <span className="flex items-center gap-2 font-mono text-[8px] text-[#64748B]">
                   <span className="dt-blink h-1.5 w-1.5 rounded-full bg-[#00D9FF]" />
@@ -473,10 +673,18 @@ function BuildingDigitalTwinPageContent() {
         {/* ============ ANALYTICS ============ */}
         <BuildingAnalytics />
 
-        {/* Footer tag */}
-        <p className="pt-2 text-center font-mono text-[9px] uppercase tracking-[0.25em] text-[#64748B]">
-          Smart Property Verification Platform · Building Digital Twin · National Cadastre Engine v3.4
-        </p>
+        {/* Phase 7 — Structured Inspection Summary Modal */}
+        <InspectionSummary
+          isOpen={showInspectionSummary}
+          onClose={() => setShowInspectionSummary(false)}
+          parcel={linkedTowerData.parcel}
+          building={linkedTowerData.building}
+          floors={linkedTowerData.floors}
+          units={linkedTowerData.units}
+          conflicts={conflicts}
+          selectedFloorNumber={selectedLevel}
+          selectedFlatId={selectedUnitId}
+        />
       </div>
     </div>
   );

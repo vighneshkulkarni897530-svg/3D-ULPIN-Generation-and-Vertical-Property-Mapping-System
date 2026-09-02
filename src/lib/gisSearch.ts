@@ -27,14 +27,23 @@ export interface GisSearchOutput {
   total: number;
 }
 
-/** 0 → starts-with, 1 → contains, Infinity → no match. */
+/** 0 → starts-with/exact, 1 → contains, Infinity → no match. */
 function scoreFor(q: string, ...fields: Array<string | number | undefined | null>): number {
   let best = Infinity;
+  const cleanQ = q.replace(/[^a-zA-Z0-9]/g, '');
   for (const field of fields) {
     if (field === undefined || field === null) continue;
     const s = String(field).toLowerCase();
-    if (s.startsWith(q)) best = 0;
-    else if (s.includes(q)) best = Math.min(best, 1);
+    const cleanS = s.replace(/[^a-zA-Z0-9]/g, '');
+
+    if (s === q || (cleanQ.length >= 4 && cleanS === cleanQ)) {
+      return 0; // exact match
+    }
+    if (s.startsWith(q) || (cleanQ.length >= 4 && cleanS.startsWith(cleanQ))) {
+      best = Math.min(best, 0);
+    } else if (s.includes(q) || (cleanQ.length >= 4 && cleanS.includes(cleanQ))) {
+      best = Math.min(best, 1);
+    }
   }
   return best;
 }

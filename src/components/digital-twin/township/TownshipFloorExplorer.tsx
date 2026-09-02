@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Building, Layers } from "lucide-react";
+import type { PropertyUnit } from "@/types/gis";
 import type { ExplicitFloor, TownshipFloorMode } from "./townshipData";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +32,10 @@ export function floorLevelLabel(level: number): string {
 interface TownshipFloorExplorerProps {
   towerLabel: string;
   floors: ExplicitFloor[];
+  /** Real property units linked to this building. */
+  units?: PropertyUnit[];
+  selectedUnitId?: string | null;
+  onSelectUnit?: (unitId: string | null) => void;
   /** True when the selected tower is linked to a real database building. */
   linked: boolean;
   selectedLevel: number | null;
@@ -43,6 +48,9 @@ interface TownshipFloorExplorerProps {
 export function TownshipFloorExplorer({
   towerLabel,
   floors,
+  units = [],
+  selectedUnitId = null,
+  onSelectUnit,
   linked,
   selectedLevel,
   mode,
@@ -53,9 +61,14 @@ export function TownshipFloorExplorer({
   const sorted = [...floors].sort((a, b) => b.floorNumber - a.floorNumber);
   const hasFloors = linked && floors.length > 0;
 
+  // Filter units for the selected level if selected
+  const activeFloor = floors.find((f) => f.floorNumber === selectedLevel);
+  const floorUnits = activeFloor
+    ? units.filter((u) => u.floorId === activeFloor.id)
+    : [];
+
   React.useEffect(() => {
     // Keep the selected level valid when data changes.
-
     if (hasFloors) {
       const max = Math.max(...floors.map((f) => f.floorNumber));
       if (selectedLevel === null || selectedLevel > max) onSelectLevel(max);
@@ -66,7 +79,7 @@ export function TownshipFloorExplorer({
   }, [linked, hasFloors, floors.length]);
 
   return (
-    <div className={cn("dt-hud dt-card-accent rounded-2xl shadow-[0_18px_50px_-20px_rgba(0,0,0,0.9)]", className)}>
+    <div className={cn("dt-hud dt-card-accent rounded-2xl p-3 shadow-[0_18px_50px_-20px_rgba(0,0,0,0.9)]", className)}>
       <div className="mb-2 flex items-center justify-between gap-2 border-b border-[#164E73]/70 pb-1.5">
         <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.2em] text-[#00D9FF]">
           <Building className="h-3 w-3" /> Floors — {towerLabel}
@@ -106,11 +119,11 @@ export function TownshipFloorExplorer({
 
       {/* floor list */}
       {hasFloors ? (
-        <div className="flex max-h-[34vh] flex-col gap-1 overflow-y-auto pr-1 lg:max-h-[40vh]">
+        <div className="flex max-h-[30vh] flex-col gap-1 overflow-y-auto pr-1 lg:max-h-[34vh]">
           <button
             onClick={() => onSelectLevel(null)}
             className={cn(
-              "rounded-lg border px-2.5 py-1.5 text-left text-[10px] font-black transition-colors",
+              "rounded-lg border px-2.5 py-1 text-left text-[9.5px] font-black transition-colors",
               selectedLevel === null
                 ? "border-[#00D9FF]/70 bg-[#00D9FF]/10 text-[#00D9FF]"
                 : "border-[#164E73] bg-[#061426] text-[#94A3B8] hover:text-[#F8FAFC]"
@@ -123,14 +136,14 @@ export function TownshipFloorExplorer({
               key={f.id}
               onClick={() => onSelectLevel(f.floorNumber)}
               className={cn(
-                "rounded-lg border px-2.5 py-1.5 text-left transition-colors",
+                "rounded-lg border px-2.5 py-1 text-left transition-colors",
                 selectedLevel === f.floorNumber
                   ? "border-[#00D9FF]/70 bg-[#00D9FF]/10 text-[#00D9FF]"
                   : "border-[#164E73] bg-[#061426] text-[#94A3B8] hover:text-[#F8FAFC]"
               )}
             >
-              <span className="font-mono text-[10px] font-black">{floorLevelLabel(f.floorNumber)}</span>
-              <span className="mt-0.5 block truncate text-[8.5px] font-semibold text-[#64748B]">{f.name}</span>
+              <span className="font-mono text-[9.5px] font-black">{floorLevelLabel(f.floorNumber)}</span>
+              <span className="mt-0.5 block truncate text-[8px] font-semibold text-[#64748B]">{f.name}</span>
             </button>
           ))}
         </div>
@@ -140,10 +153,39 @@ export function TownshipFloorExplorer({
             <Layers className="h-3 w-3" /> Floor data unavailable
           </p>
           <p className="mt-1 text-[9px] font-semibold leading-relaxed text-[#64748B]">
-            No real floor records exist for this illustrative tower in the database. The 3D scene keeps its illustrative building volumes by design — no hard-coded
-            floor counts are invented. Enable the Floors layer in Layers to see illustrative slicing when a tower is selected.
-
+            No real floor records exist for this illustrative tower in the database. The 3D scene keeps its illustrative building volumes by design.
           </p>
+        </div>
+      )}
+
+      {/* Units subsection when floor has registered units */}
+      {hasFloors && selectedLevel !== null && floorUnits.length > 0 && (
+        <div className="mt-2.5 border-t border-[#164E73]/50 pt-2">
+          <div className="mb-1.5 flex items-center justify-between">
+            <span className="text-[8px] font-black uppercase tracking-wider text-[#00D9FF]">
+              Floor {selectedLevel} Units ({floorUnits.length})
+            </span>
+          </div>
+          <div className="flex max-h-[16vh] flex-col gap-1 overflow-y-auto pr-1">
+            {floorUnits.map((u) => (
+              <button
+                key={u.id}
+                onClick={() => onSelectUnit?.(selectedUnitId === u.id ? null : u.id)}
+                className={cn(
+                  "flex items-center justify-between rounded-md border px-2 py-1 text-left text-[9px] transition-colors",
+                  selectedUnitId === u.id
+                    ? "border-[#00D9FF] bg-[#00D9FF]/20 text-[#00D9FF]"
+                    : "border-[#164E73]/60 bg-[#061426] text-[#94A3B8] hover:border-[#00D9FF]/40 hover:text-[#F8FAFC]"
+                )}
+              >
+                <div>
+                  <span className="font-bold text-[#F8FAFC]">Unit {u.unitNumber}</span>
+                  <span className="ml-1 text-[8px] text-[#64748B]">({u.propertyType})</span>
+                </div>
+                <span className="font-mono text-[7.5px] text-[#00D9FF]">{u.demoSpatialId?.slice(-7) ?? "—"}</span>
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>

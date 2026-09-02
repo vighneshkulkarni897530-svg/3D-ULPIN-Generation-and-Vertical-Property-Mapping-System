@@ -3,7 +3,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Building2, CheckCircle2, Layers, Maximize2, RotateCcw, Scan, TriangleAlert, X, ZoomIn, ZoomOut, type LucideIcon } from "lucide-react";
-import { CAMERA_PRESET_DEFS, type CameraPresetId, type TowerDef } from "./townshipConfig";
+import { CAMERA_PRESET_DEFS, PLACE_VISUALIZATION_STATUS, TOWNSHIP_SITE, type CameraPresetId, type TowerDef } from "./townshipConfig";
 import { cn } from "@/lib/utils";
 
 /* ======================================================================
@@ -11,7 +11,13 @@ import { cn } from "@/lib/utils";
  * HUD styling (dt-hud / #0A1B31 panels / cyan accents).
  * ==================================================================== */
 
-/** Top-left scene identity header. */
+/**
+ * Top-left scene identity header — Phase 16A (Part 1).
+ * Text is driven entirely by the Place 1 config (townshipConfig.ts) so the
+ * scene identity always matches the place registry. Rendering is deterministic
+ * (config constants only — no random values, timestamps or browser APIs), so
+ * server and client output stay identical.
+ */
 export function TownshipSceneHeader({ className }: { className?: string }) {
   return (
     <div className={cn("dt-hud dt-card-accent rounded-2xl px-3.5 py-2.5 shadow-[0_18px_50px_-20px_rgba(0,0,0,0.9)]", className)}>
@@ -20,11 +26,11 @@ export function TownshipSceneHeader({ className }: { className?: string }) {
           <Building2 className="h-3 w-3" /> 3D Digital Twin
         </span>
         <span className="hidden rounded-lg border border-[#FACC15]/40 bg-[#FACC15]/10 px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.16em] text-[#FACC15] sm:inline">
-          Illustrative 3D Visualization
+          {PLACE_VISUALIZATION_STATUS}
         </span>
       </div>
-      <h2 className="mt-1.5 text-base font-black tracking-tight text-[#F8FAFC] sm:text-lg">LIFE REPUBLIC</h2>
-      <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-[#94A3B8]">MARUNJI • PUNE</p>
+      <h2 className="mt-1.5 text-base font-black tracking-tight text-[#F8FAFC] sm:text-lg">{TOWNSHIP_SITE.name}</h2>
+      <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-[#94A3B8]">{TOWNSHIP_SITE.subtitle}</p>
     </div>
   );
 }

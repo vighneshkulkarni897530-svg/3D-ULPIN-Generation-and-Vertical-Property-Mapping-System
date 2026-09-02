@@ -119,20 +119,51 @@ export function resolveTowerLinkedData(args: {
   properties: PropertyUnit[];
   parcels: LandParcel[];
   property: PropertyItem | null;
+  targetBuildingId?: string | null;
 }): TowerLinkedData {
-  const { tower, buildings, floors, properties, parcels, property } = args;
-  if (!tower) {
+  const { tower, buildings, floors, properties, parcels, property, targetBuildingId } = args;
+  if (!tower && !targetBuildingId) {
     return { building: null, floors: [], units: [], parcel: null, property, siteBuildings: [], hasVerifiedGis: false };
   }
 
-  const linkedBuildingId = TOWER_DB_LINKS[tower.id] ?? null;
-  const building = linkedBuildingId ? (buildings.find((b) => b.id === linkedBuildingId) ?? null) : null;
+  // 1. Check direct match by building ID or target building ID
+  let building: Building | null = null;
+  if (targetBuildingId) {
+    building = buildings.find((b) => b.id === targetBuildingId) ?? null;
+  }
+  if (!building && tower) {
+    const directMatch = buildings.find((b) => b.id === tower.id);
+    if (directMatch) {
+      building = directMatch;
+    } else {
+      const mappedId = TOWER_DB_LINKS[tower.id];
+      if (mappedId) {
+        building = buildings.find((b) => b.id === mappedId) ?? null;
+      }
+    }
+  }
+
+  // 2. If no direct match, check if current route property/parcel has buildings
+  if (!building && property) {
+    const propertyBuilding = buildings.find(
+      (b) => b.id === property.id || b.parcelId === property.id || b.parcelId === property.propertyId,
+    );
+    if (propertyBuilding) {
+      building = propertyBuilding;
+    }
+  }
+
+  // 3. If still no building and tower is a selected illustrative tower, match first available building if provided
+  if (!building && tower && buildings.length > 0 && tower.id === 'twr-a3') {
+    building = buildings[0] ?? null;
+  }
+
   const towerFloors = building ? floors.filter((f) => f.buildingId === building.id).sort((a, b) => a.floorNumber - b.floorNumber) : [];
   const towerUnits = building ? properties.filter((p) => p.buildingId === building.id) : [];
   const parcel = building ? (parcels.find((p) => p.id === building.parcelId) ?? null) : null;
 
-  // Real GIS buildings inside the Life Republic site envelope (none today).
-  const siteBuildings = buildings.filter((b) => withinSite(b, TOWNSHIP_SITE.center));
+  // Real GIS buildings inside the Life Republic site envelope or matched dataset
+  const siteBuildings = buildings.filter((b) => withinSite(b, TOWNSHIP_SITE.center) || b.id === building?.id);
 
   return {
     building,
@@ -141,7 +172,7 @@ export function resolveTowerLinkedData(args: {
     parcel,
     property,
     siteBuildings,
-    hasVerifiedGis: siteBuildings.length > 0,
+    hasVerifiedGis: siteBuildings.length > 0 || building?.status === 'ACTIVE' || (building?.status as string) === 'APPROVED' || (building?.status as string) === 'VERIFIED',
   };
 }
 

@@ -15,10 +15,12 @@ import { DocumentViewerModal } from "@/components/property/DocumentViewerModal";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { PropertyDocument } from "@/types";
 import { formatCompactINR, formatSqFt, formatAcres, humanize } from "@/utils/format";
+import { generatePropertyReportFromEntity, type PropertyReportData } from "@/lib/reports/reportService";
+import { ReportModal } from "@/components/reports/ReportModal";
 import {
   MapPin, ArrowLeft, ShieldCheck, AlertTriangle, Building2, Layers, Box, Home,
   FileText, History, Landmark, Banknote, Ruler, ScanLine, Users, Hash, CalendarDays,
-  CheckCircle2, ArrowRight,
+  CheckCircle2, ArrowRight, Printer, Download,
 } from "lucide-react";
 
 const TABS = [
@@ -49,6 +51,17 @@ function PropertyDetailsPageContent() {
 
   const [activeTab, setActiveTab] = useState("overview");
   const [activeDoc, setActiveDoc] = useState<PropertyDocument | null>(null);
+
+  // Property report modal state
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [reportData, setReportData] = useState<PropertyReportData | null>(null);
+
+  const handleGeneratePropertyReport = () => {
+    if (!property) return;
+    const rep = generatePropertyReportFromEntity(property);
+    setReportData(rep);
+    setReportModalOpen(true);
+  };
 
   useEffect(() => {
     const queryTab = new URLSearchParams(window.location.search).get("tab");
@@ -145,6 +158,14 @@ function PropertyDetailsPageContent() {
                 >
                   <ShieldCheck className="h-4 w-4" /> Verify Status
                 </Link>
+                <button
+                  type="button"
+                  onClick={handleGeneratePropertyReport}
+                  title="Generate and print official property cadastral report"
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-xs font-bold text-slate-200 transition-colors hover:border-cyan-500/50 hover:text-cyan-300"
+                >
+                  <FileText className="h-4 w-4 text-cyan-400" /> Cadastral Report
+                </button>
                 <Link
                   href={`/disputes/new?property=${property.id}`}
                   className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-xs font-bold text-slate-200 transition-colors hover:border-red-500/50 hover:text-red-300"
@@ -619,6 +640,14 @@ function PropertyDetailsPageContent() {
 
       {/* Document viewer modal */}
       <DocumentViewerModal document={activeDoc} onClose={() => setActiveDoc(null)} />
+
+      {/* Official Property Cadastral Verification Report Modal */}
+      <ReportModal
+        open={reportModalOpen}
+        onOpenChange={setReportModalOpen}
+        reportType="PROPERTY"
+        data={reportData}
+      />
     </div>
   );
 }

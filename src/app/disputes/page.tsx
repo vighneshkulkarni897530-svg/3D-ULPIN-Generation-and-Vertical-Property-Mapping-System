@@ -1,6 +1,5 @@
 "use client";
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useProperty } from "@/context/PropertyContext";
 import { useAuth } from "@/context/AuthContext";
@@ -11,7 +10,10 @@ import { Badge } from "@/components/ui/badge";
 import { DataTable, type ColumnDef } from "@/components/dashboard/DataTable";
 import { DisputeRecord } from "@/types";
 import { humanize } from "@/utils/format";
-import { AlertTriangle, Plus, Scale } from "lucide-react";
+import { AlertTriangle, Plus, Scale, ShieldCheck } from "lucide-react";
+import { getAllVerificationCases } from "@/lib/society/verificationWorkflowService";
+import { type VerificationCase } from "@/types/verificationCase";
+import { CaseStatusBadge, CaseSeverityBadge } from "@/components/verification/CaseStatusBadge";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
@@ -26,6 +28,11 @@ export default function DisputesRegistryPage() {
 function DisputesRegistryPageContent() {
   const { disputes } = useProperty();
   const { role } = useAuth();
+  const [liveCases, setLiveCases] = useState<VerificationCase[]>([]);
+
+  useEffect(() => {
+    void getAllVerificationCases().then(setLiveCases).catch(console.error);
+  }, []);
 
   // Officers & admins see all; citizens see their own
   const visible = role === "CITIZEN" ? disputes.filter((d) => d.raisedByUserId === "usr-cit-101") : disputes;
@@ -121,7 +128,43 @@ function DisputesRegistryPageContent() {
           ))}
         </div>
 
-        {visible.length === 0 ? (
+        {/* Live Firestore Verification & Dispute Cases (Phase 8) */}
+        {liveCases.length > 0 && (
+          <div className="space-y-3 pt-2">
+            <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-cyan-600" /> Active Cadastral Verification Cases ({liveCases.length})
+            </h3>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {liveCases.map((c) => (
+                <div key={c.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-tech flex flex-col justify-between space-y-2.5">
+                  <div>
+                    <div className="flex items-start justify-between gap-1">
+                      <span className="font-mono text-xs font-black text-cyan-700">{c.caseNumber}</span>
+                      <CaseStatusBadge status={c.status} className="text-[8px]" />
+                    </div>
+                    <h4 className="mt-1 font-bold text-slate-900 text-xs line-clamp-1">{c.title}</h4>
+                    <p className="mt-1 text-[10px] text-slate-500">
+                      Target: {c.buildingId ? `Building ${c.buildingId}` : 'Society Level'}
+                      {c.flatId ? ` • Flat ${c.flatId}` : ''}
+                    </p>
+                  </div>
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-[10px] font-mono text-slate-400">
+                      {c.createdAt ? c.createdAt.toLocaleDateString('en-IN') : '—'}
+                    </span>
+                    <Link href={`/government/cases/${c.id}`}>
+                      <Button size="sm" variant="outline" className="h-6 text-[10px] px-2 font-bold">
+                        Inspect Case
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {visible.length === 0 && liveCases.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-slate-300 bg-white/60 p-14 text-center">
             <Scale className="mx-auto h-10 w-10 text-slate-300" />
             <h3 className="mt-3 text-sm font-extrabold text-slate-900">No disputes filed</h3>
@@ -135,14 +178,19 @@ function DisputesRegistryPageContent() {
             </Link>
           </div>
         ) : (
-          <DataTable
-            columns={columns}
-            data={visible}
-            rowKey={(d) => d.id}
-            searchableKeys={["disputeTicketNumber", "propertyTitle", "ulpin", "category"]}
-            searchPlaceholder="Search by ticket, ULPIN or title..."
-            defaultPageSize={8}
-          />
+          <div className="space-y-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              Property Dispute Records ({visible.length})
+            </h3>
+            <DataTable
+              columns={columns}
+              data={visible}
+              rowKey={(d) => d.id}
+              searchableKeys={["disputeTicketNumber", "propertyTitle", "ulpin", "category"]}
+              searchPlaceholder="Search by ticket, ULPIN or title..."
+              defaultPageSize={8}
+            />
+          </div>
         )}
       </div>
     </div>

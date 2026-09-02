@@ -228,3 +228,73 @@ input[type="range"] {
   background: #1e293b;
   border-radius: 4px;
 }
+
+/* =====================================================================
+   PRINT MEDIA STYLES (Phase 9 Reports & Decision Support)
+   Hides navigation, sidebars, buttons and interactive controls during print.
+   ===================================================================== */
+@media print {
+  @page {
+    margin: 1.5cm;
+    size: A4 portrait;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-size: 11pt !important;
+  }
+
+  /* Hide navigation, sidebars, header controls and interactive buttons */
+  nav,
+  aside,
+  header,
+  footer,
+  button,
+  .no-print,
+  [data-radix-portal] > div:first-child,
+  .fixed,
+  .sticky {
+    display: none !important;
+  }
+
+  /* Optimize container and modal print views */
+  .page-container,
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+  }
+
+  /* Ensure card backgrounds and borders print clearly */
+  .border {
+    border-color: #cbd5e1 !important;
+  }
+
+  .bg-slate-900,
+  .bg-slate-950 {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  .text-white,
+  .text-slate-100,
+  .text-slate-200 {
+    color: #0f172a !important;
+  }
+
+  .text-slate-400,
+  .text-slate-500 {
+    color: #475569 !important;
+  }
+
+  /* Prevent page breaks inside cards, tables and sections */
+  table,
+  tr,
+  .rounded-xl,
+  .rounded-2xl {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+

@@ -22,6 +22,7 @@ import { MOCK_ACTIVITIES } from '@/data/activities';
 import { MOCK_DEMO_SPATIAL_IDS } from '@/data/demoSpatialIds';
 import { reportAudit } from '@/lib/auth/client';
 import { fetchRegistryBootstrap } from '@/lib/data/registryClient';
+import { fetchAllRealSocietiesGisData } from '@/lib/society/gisIntegrationService';
 import type { RegistryDataSource, RegistryStatus } from '@/types/registry';
 
 // ── Context shape ───────────────────────────────────────────────────────────
@@ -133,22 +134,69 @@ export const GISProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => {
     let cancelled = false;
-    fetchRegistryBootstrap().then((payload) => {
+    Promise.all([
+      fetchRegistryBootstrap(),
+      fetchAllRealSocietiesGisData().catch(() => null),
+    ]).then(([payload, realData]) => {
       if (cancelled) return;
-      if (!payload) {
-        // Network/server failure — keep serving the demo dataset.
-        setRegistryStatus('ready');
-        return;
+
+      const baseParcels = payload ? payload.parcels : MOCK_PARCELS;
+      const baseBuildings = payload ? payload.buildings : MOCK_BUILDINGS;
+      const baseFloors = payload ? payload.floors : MOCK_FLOORS;
+      const baseProperties = payload ? payload.properties : MOCK_PROPERTIES;
+      const baseVerifications = payload ? payload.verifications : MOCK_VERIFICATIONS;
+      const baseConflicts = payload ? payload.conflicts : MOCK_CONFLICTS;
+      const baseActivities = payload ? payload.activities : MOCK_ACTIVITIES;
+      const baseDemoSpatialIds = payload ? payload.demoSpatialIds : MOCK_DEMO_SPATIAL_IDS;
+
+      if (realData && realData.parcels.length > 0) {
+        const realParcelIds = new Set(realData.parcels.map((p) => p.id));
+        const mergedParcels = [
+          ...realData.parcels,
+          ...baseParcels.filter((p) => !realParcelIds.has(p.id)),
+        ];
+
+        const realBuildingIds = new Set(realData.buildings.map((b) => b.id));
+        const mergedBuildings = [
+          ...realData.buildings,
+          ...baseBuildings.filter((b) => !realBuildingIds.has(b.id)),
+        ];
+
+        const realFloorIds = new Set(realData.floors.map((f) => f.id));
+        const mergedFloors = [
+          ...realData.floors,
+          ...baseFloors.filter((f) => !realFloorIds.has(f.id)),
+        ];
+
+        const realPropertyIds = new Set(realData.properties.map((p) => p.id));
+        const mergedProperties = [
+          ...realData.properties,
+          ...baseProperties.filter((p) => !realPropertyIds.has(p.id)),
+        ];
+
+        const realDemoIdIds = new Set(realData.demoSpatialIds.map((d) => d.id));
+        const mergedDemoIds = [
+          ...realData.demoSpatialIds,
+          ...baseDemoSpatialIds.filter((d) => !realDemoIdIds.has(d.id)),
+        ];
+
+        setParcels(mergedParcels);
+        setBuildings(mergedBuildings);
+        setFloors(mergedFloors);
+        setProperties(mergedProperties);
+        setDemoSpatialIds(mergedDemoIds);
+      } else {
+        setParcels(baseParcels);
+        setBuildings(baseBuildings);
+        setFloors(baseFloors);
+        setProperties(baseProperties);
+        setDemoSpatialIds(baseDemoSpatialIds);
       }
-      setParcels(payload.parcels);
-      setBuildings(payload.buildings);
-      setFloors(payload.floors);
-      setProperties(payload.properties);
-      setVerifications(payload.verifications);
-      setConflicts(payload.conflicts);
-      setActivities(payload.activities);
-      setDemoSpatialIds(payload.demoSpatialIds);
-      setRegistrySource(payload.source);
+
+      setVerifications(baseVerifications);
+      setConflicts(baseConflicts);
+      setActivities(baseActivities);
+      setRegistrySource(payload ? payload.source : 'mock');
       setRegistryStatus('ready');
     });
     return () => {

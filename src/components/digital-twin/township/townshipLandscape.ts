@@ -103,10 +103,12 @@ function bezierBeads(a: [number, number], c: [number, number], b: [number, numbe
 
 /** Curved garden paths — plaza↔pond, plaza↔east connector, north lawn arc, pond↔south ring. */
 export const CURVED_PATHS: Bead[] = [
-  ...bezierBeads([-36, 10], [-62, 44], [-32, 88], 2.4),
+  // plaza → water feature (right/lower-right composition)
+  ...bezierBeads([-36, 10], [2, 30], [66, 96], 2.4),
   ...bezierBeads([36, 10], [64, -2], [96, 20], 2.4),
   ...bezierBeads([-30, -80], [0, -108], [30, -80], 2.2),
-  ...bezierBeads([-24, 90], [-20, 74], [-8, 60.5], 2.2),
+  // water feature → south avenue connector
+  ...bezierBeads([68, 98], [46, 92], [26, 62], 2.2),
 ];
 
 /** Straight pedestrian connectors from each tower pad to the nearest avenue. */
@@ -632,8 +634,8 @@ export const BENCHES: BenchInstance[] = (() => {
     [60, 118],
   ].forEach(([x, z]) => out.push({ x, z, rot: Math.atan2(-z, -x) + Math.PI }));
   [
-    [-38, 88],
-    [-10, 88],
+    [58, 98],
+    [94, 92],
   ].forEach(([x, z]) => out.push({ x, z, rot: 0 }));
   return out;
 })();

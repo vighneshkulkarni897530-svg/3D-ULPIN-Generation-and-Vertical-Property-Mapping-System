@@ -304,3 +304,5 @@ export type {
   ActivityEntityType,
   ActivityStatus,
 } from './activity';
+
+export * from './verificationCase';
