@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { validateOtpRecord } from '@/lib/auth/otpStore';
+import { validateOtpRecord, getPendingOtpRecord } from '@/lib/auth/otpStore';
 
 const OTP_SERVICE_URL =
   process.env.NEXT_PUBLIC_OTP_SERVICE_URL ||
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const rawEmail = body.email;
     const rawOtp = body.otp;
-    const challengeId = body.challengeId;
+    let challengeId = body.challengeId;
     const token = body.token;
 
     if (!rawEmail || typeof rawEmail !== 'string') {
@@ -33,6 +33,13 @@ export async function POST(req: NextRequest) {
 
     const email = rawEmail.trim().toLowerCase();
     const submittedOtp = rawOtp.trim();
+
+    if (!challengeId) {
+      const pending = await getPendingOtpRecord(email);
+      if (pending?.challengeId) {
+        challengeId = pending.challengeId;
+      }
+    }
 
     // 1. Try Google Apps Script verifyOTP first if challengeId is present
     if (OTP_SERVICE_URL && challengeId) {

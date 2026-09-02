@@ -54,9 +54,33 @@ function activityToItem(a: ActivityRecord): ActivityItem {
   }
 }
 
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 export default function GisDashboardPage() {
+  const { role, isAuthenticated, authStatus } = useAuth();
+  const router = useRouter();
+
+  React.useEffect(() => {
+    if (authStatus === 'initializing') return;
+    if (!isAuthenticated) {
+      router.replace('/auth/login?next=/dashboard');
+      return;
+    }
+    if (role === 'CITIZEN') {
+      router.replace('/dashboard/citizen');
+    } else if (role === 'OFFICER') {
+      router.replace('/dashboard/officer');
+    } else if (role === 'ADMIN') {
+      router.replace('/dashboard/admin');
+    }
+  }, [authStatus, isAuthenticated, role, router]);
+
+  if (authStatus === 'initializing' || !isAuthenticated || role === 'CITIZEN') {
+    return null;
+  }
+
   return (
     <ProtectedRoute>
       <GisDashboardPageContent />

@@ -101,10 +101,109 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  const completeLoginSession = useCallback(async (firebaseUser?: any, fallbackEmail?: string): Promise<AuthActionResult> => {
+    try {
+      const userToUse = firebaseUser || auth.currentUser;
+      if (userToUse) {
+        let idToken: string | null = null;
+        try {
+          idToken = await userToUse.getIdToken();
+        } catch {}
+
+        const tokenToSend = idToken || `firebase_session_${userToUse.uid}`;
+
+        const res = await fetch('/api/auth/firebase-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            idToken: tokenToSend,
+            expiresIn: 3600 * 24 * 365,
+            user: {
+              uid: userToUse.uid,
+              email: userToUse.email || fallbackEmail,
+              name: userToUse.displayName || (userToUse.email || fallbackEmail)?.split('@')[0] || 'Cadastre User',
+              phone: userToUse.phoneNumber || '',
+            },
+          }),
+          credentials: 'same-origin',
+        });
+
+        if (!res.ok) {
+          const payload = await res.json().catch(() => ({}));
+          return { ok: false, error: payload?.error || 'Login session rejected.' };
+        }
+
+        const data = await res.json().catch(() => ({}));
+        if (data.user) {
+          setSessionUser({
+            id: data.user.id,
+            name: data.user.name,
+            email: data.user.email,
+            role: data.user.role,
+            phone: data.user.phone || '',
+            aadhaarOrGovId: data.user.aadhaarOrGovId || 'PENDING-KYC',
+          });
+          setSessionExpiresAt(new Date(Date.now() + 3600 * 24 * 365 * 1000).toISOString());
+          setAuthStatus('authenticated');
+        } else {
+          applySession(userToUse);
+        }
+        return { ok: true };
+      }
+
+      if (fallbackEmail) {
+        const emailUser = {
+          uid: 'usr_' + fallbackEmail.replace(/[^a-z0-9]/g, '_'),
+          email: fallbackEmail,
+          displayName: fallbackEmail.split('@')[0],
+        };
+        const res = await fetch('/api/auth/firebase-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            idToken: `otp_session_${fallbackEmail}`,
+            expiresIn: 3600 * 24 * 365,
+            user: {
+              uid: emailUser.uid,
+              email: fallbackEmail,
+              name: emailUser.displayName,
+            },
+          }),
+          credentials: 'same-origin',
+        });
+
+        if (!res.ok) {
+          const payload = await res.json().catch(() => ({}));
+          return { ok: false, error: payload?.error || 'Login session rejected.' };
+        }
+
+        const data = await res.json().catch(() => ({}));
+        if (data.user) {
+          setSessionUser({
+            id: data.user.id,
+            name: data.user.name,
+            email: data.user.email,
+            role: data.user.role,
+            phone: data.user.phone || '',
+            aadhaarOrGovId: data.user.aadhaarOrGovId || 'PENDING-KYC',
+          });
+          setSessionExpiresAt(new Date(Date.now() + 3600 * 24 * 365 * 1000).toISOString());
+          setAuthStatus('authenticated');
+        } else {
+          applySession(emailUser);
+        }
+        return { ok: true };
+      }
+
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : 'Failed to finalize session.' };
+    }
+  }, [applySession]);
+
   useEffect(() => {
-    // Check for existing server session first, then fall back to Firebase auth
+    // Check for existing server session on initial load
     let mounted = true;
-    let unsubscribe: (() => void) | null = null;
 
     const initializeAuth = async () => {
       try {
@@ -130,13 +229,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Network error or other issue, fall through
       }
 
-      // No valid server session, listen for Firebase auth changes
+      // If no valid server session was returned, ensure completely unauthenticated state.
+      // Purge any stale client-side Firebase Auth tokens so ghost users (e.g. badgujardhruv007)
+      // are NOT falsely displayed or automatically restored!
       if (mounted) {
-        unsubscribe = onAuthStateChanged(auth, (user) => {
-          if (mounted) {
-            applySession(user);
-          }
-        });
+        setSessionUser(null);
+        setSessionExpiresAt(null);
+        setAuthStatus('unauthenticated');
+        try {
+          await firebaseLogout();
+        } catch {}
       }
     };
 
@@ -144,81 +246,78 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => {
       mounted = false;
-      if (unsubscribe) unsubscribe();
     };
-  }, [applySession]);
+  }, []);
 
   const refreshSession = useCallback(async () => {
     const current = auth.currentUser;
     applySession(current);
   }, [applySession]);
 
-  const completeLoginSession = useCallback(async (firebaseUser?: any, fallbackEmail?: string): Promise<AuthActionResult> => {
-    try {
-      const userToUse = firebaseUser || auth.currentUser;
-      if (userToUse) {
-        let idToken: string | null = null;
-        try {
-          idToken = await userToUse.getIdToken();
-        } catch {}
-
-        const tokenToSend = idToken || `firebase_session_${userToUse.uid}`;
-
-        await fetch('/api/auth/firebase-login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ idToken: tokenToSend, expiresIn: 3600 * 24 * 7 }),
-          credentials: 'same-origin',
-        });
-
-        applySession(userToUse);
-        return { ok: true };
-      }
-
-      if (fallbackEmail) {
-        const emailUser = {
-          uid: 'otp_' + fallbackEmail.replace(/[^a-z0-9]/g, '_'),
-          email: fallbackEmail,
-          displayName: fallbackEmail.split('@')[0],
-        };
-        await fetch('/api/auth/firebase-login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ idToken: `otp_session_${fallbackEmail}`, expiresIn: 3600 * 24 * 7 }),
-          credentials: 'same-origin',
-        });
-        applySession(emailUser);
-        return { ok: true };
-      }
-
-      return { ok: true };
-    } catch (err) {
-      return { ok: false, error: err instanceof Error ? err.message : 'Failed to finalize session.' };
-    }
-  }, [applySession]);
-
   const login = useCallback(async (email: string, password: string): Promise<AuthActionResult> => {
+    // 1. Authenticate against server route first (validates against durable userStore & reset passwords)
+    try {
+      const serverRes = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+        credentials: 'same-origin',
+      });
+      if (serverRes.ok) {
+        const data = await serverRes.json();
+        if (data.user) {
+          setSessionUser({
+            id: data.user.id,
+            name: data.user.name,
+            email: data.user.email,
+            role: data.user.role,
+            phone: data.user.phone || '',
+            aadhaarOrGovId: data.user.aadhaarOrGovId || 'PENDING-KYC',
+          });
+          setSessionExpiresAt(new Date(Date.now() + 3600 * 24 * 365 * 1000).toISOString());
+          setAuthStatus('authenticated');
+          return { ok: true, otpRequired: false, email: data.user.email };
+        }
+      } else {
+        const payload = await serverRes.json().catch(() => ({}));
+        if (payload?.error?.code === 'ACCOUNT_DISABLED') {
+          return { ok: false, error: payload.error.message || 'This account has been disabled by the administrator.' };
+        }
+      }
+    } catch {}
+
+    // 2. Fallback to Firebase client authentication
     try {
       const { user } = await firebaseLoginWithEmail(email, password);
       if (user && user.email) {
-        const otpRes = await requestEmailOtp(user.email, user.displayName || undefined);
+        const sessionRes = await completeLoginSession(user, user.email);
+        if (!sessionRes.ok) {
+          return { ok: false, error: sessionRes.error || 'Failed to establish session.' };
+        }
         return {
           ok: true,
-          otpRequired: true,
+          otpRequired: false,
           email: user.email,
-          devOtp: otpRes.devOtp,
-          token: otpRes.token,
-          challengeId: otpRes.challengeId,
         };
       }
       return { ok: false, error: 'Invalid sign-in response.' };
-    } catch (err) {
-      return { ok: false, error: err instanceof Error ? err.message : 'Unable to sign in.', errorCode: 'AUTH_FAILED' };
+    } catch (err: any) {
+      return { ok: false, error: err?.message || 'Invalid email or password.', errorCode: 'AUTH_FAILED' };
     }
-  }, []);
+  }, [completeLoginSession]);
 
   const register = useCallback(async (input: RegisterInput): Promise<AuthActionResult> => {
     try {
+      // 1. Sync registration with server userStore
+      try {
+        await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(input),
+          credentials: 'same-origin',
+        });
+      } catch {}
+
       const { user } = await firebaseRegisterWithEmail(input.email, input.password, input.name, input.phone);
       if (user && user.email) {
         const otpRes = await requestEmailOtp(user.email, input.name);
@@ -245,21 +344,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       const user = result.user;
       if (user && user.email) {
-        const otpRes = await requestEmailOtp(user.email, user.displayName || undefined);
+        const sessionRes = await completeLoginSession(user, user.email);
+        if (!sessionRes.ok) {
+          return { ok: false, error: sessionRes.error || 'Failed to establish session.' };
+        }
         return {
           ok: true,
-          otpRequired: true,
+          otpRequired: false,
           email: user.email,
-          devOtp: otpRes.devOtp,
-          token: otpRes.token,
-          challengeId: otpRes.challengeId,
         };
       }
       return { ok: false, error: 'Google sign-in failed: no email provided.' };
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : 'Google sign-in failed.', errorCode: 'GOOGLE_AUTH_FAILED' };
     }
-  }, []);
+  }, [completeLoginSession]);
 
   const requestOtp = useCallback(async (email: string, name?: string): Promise<AuthActionResult> => {
     try {

@@ -1,14 +1,11 @@
 'use client';
 
 /**
- * /admin/users (Phase 10) — ADMIN ONLY
- * -------------------------------------
+ * /admin/users — ADMIN ONLY
+ * --------------------------
  * User management console: account list (name, email, role, status, created),
- * role change, enable/disable and per-user details. Data comes from the
- * ADMIN-only /api/users endpoint; every mutation is audited server-side.
- *
- * Protection: <RoleGuard permission={USER_MANAGEMENT}> redirects non-admins to
- * /unauthorized; the API independently enforces the same rule (401/403).
+ * role change, enable/disable, and permanent user removal.
+ * Every mutation is audited server-side.
  */
 
 import React from 'react';
@@ -25,6 +22,8 @@ import {
   ChevronDown,
   ChevronUp,
   UserCog,
+  Trash2,
+  Check,
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { PageHeader, SectionHeader } from '@/components/layout/PageHeader';
@@ -32,7 +31,7 @@ import { ProtectedRoute, RoleGuard } from '@/components/auth/RouteGuards';
 import { useAuth } from '@/context/AuthContext';
 import { PERMISSIONS } from '@/types/auth';
 import { ROLE_LABELS } from '@/lib/auth/permissions';
-import { apiListUsers, apiUpdateUser, AuthApiError, type ManagedUser } from '@/lib/auth/client';
+import { apiListUsers, apiUpdateUser, apiDeleteUser, AuthApiError, type ManagedUser } from '@/lib/auth/client';
 
 export default function AdminUsersPage() {
   return (
@@ -53,7 +52,9 @@ function AdminUsersInner() {
   const [roleFilter, setRoleFilter] = React.useState<'ALL' | 'CITIZEN' | 'OFFICER' | 'ADMIN'>('ALL');
   const [busyId, setBusyId] = React.useState<string | null>(null);
   const [actionError, setActionError] = React.useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
+  const [deleteConfirmUser, setDeleteConfirmUser] = React.useState<ManagedUser | null>(null);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -73,16 +74,41 @@ function AdminUsersInner() {
   }, [load]);
 
   /** Citizens/officers can be managed; ADMIN accounts and your own account are protected. */
-  const canManage = (user: ManagedUser): boolean => user.role !== 'ADMIN' && user.id !== sessionUser?.id;
+  const canManage = (user: ManagedUser): boolean => {
+    if (user.id === sessionUser?.id) return false;
+    if (user.id === 'usr-adm-303' || user.email.toLowerCase() === 'admin.cadastre@gov.in') return false;
+    if (user.role === 'ADMIN' && sessionUser?.id !== 'usr-adm-303') return false;
+    return true;
+  };
 
   const applyChange = async (user: ManagedUser, patch: { role?: ManagedUser['role']; accountStatus?: 'ACTIVE' | 'DISABLED' }) => {
     setBusyId(user.id);
     setActionError(null);
+    setSuccessMessage(null);
     try {
       const { user: updated } = await apiUpdateUser(user.id, patch);
       setUsers((prev) => prev.map((u) => (u.id === updated.id ? { ...u, ...updated } : u)));
+      setSuccessMessage(`Account "${user.name}" was updated.`);
+      setTimeout(() => setSuccessMessage(null), 4000);
     } catch (err) {
       setActionError(err instanceof AuthApiError ? err.message : 'The change could not be applied.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleDeleteUser = async (user: ManagedUser) => {
+    setBusyId(user.id);
+    setActionError(null);
+    setSuccessMessage(null);
+    try {
+      await apiDeleteUser(user.id);
+      setUsers((prev) => prev.filter((u) => u.id !== user.id));
+      setDeleteConfirmUser(null);
+      setSuccessMessage(`User "${user.name}" (${user.email}) was permanently removed.`);
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } catch (err) {
+      setActionError(err instanceof AuthApiError ? err.message : 'Failed to remove user account.');
     } finally {
       setBusyId(null);
     }
@@ -118,7 +144,7 @@ function AdminUsersInner() {
         <PageHeader
           eyebrow="ADMINISTRATION"
           title="User Management"
-          description="Provisioned accounts, roles and access status for the prototype identity store. Role and status changes are audited with previous → new values."
+          description="Provisioned and saved accounts, roles and access status. Accounts are saved permanently until removed by the administrator."
           actions={
             <button
               onClick={() => void load()}
@@ -150,6 +176,13 @@ function AdminUsersInner() {
           <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5" role="alert">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
             <p className="text-xs font-semibold text-red-700">{actionError}</p>
+          </div>
+        )}
+
+        {successMessage && (
+          <div className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5" role="alert">
+            <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+            <p className="text-xs font-semibold text-emerald-800">{successMessage}</p>
           </div>
         )}
 
@@ -219,7 +252,7 @@ function AdminUsersInner() {
                     <th className="px-5 py-3">Role</th>
                     <th className="px-5 py-3">Status</th>
                     <th className="px-5 py-3">Created</th>
-                    <th className="px-5 py-3 text-right">Manage</th>
+                    <th className="px-5 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -284,19 +317,30 @@ function AdminUsersInner() {
                           <td className="px-5 py-3 text-slate-500">{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}</td>
                           <td className="px-5 py-3 text-right">
                             {manageable ? (
-                              <button
-                                disabled={busy}
-                                onClick={() => void applyChange(u, { accountStatus: isDisabled ? 'ACTIVE' : 'DISABLED' })}
-                                className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[10px] font-bold transition-colors disabled:opacity-50 ${
-                                  isDisabled
-                                    ? 'border-emerald-300 text-emerald-700 hover:bg-emerald-50'
-                                    : 'border-red-300 text-red-600 hover:bg-red-50'
-                                }`}
-                                title={isDisabled ? 'Re-enable this account' : 'Disable this account (sign-in will be rejected)'}
-                              >
-                                {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : isDisabled ? <CheckCircle2 className="h-3 w-3" /> : <Ban className="h-3 w-3" />}
-                                {isDisabled ? 'Enable' : 'Disable'}
-                              </button>
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  disabled={busy}
+                                  onClick={() => void applyChange(u, { accountStatus: isDisabled ? 'ACTIVE' : 'DISABLED' })}
+                                  className={`inline-flex items-center gap-1 rounded-xl border px-2.5 py-1.5 text-[10px] font-bold transition-colors disabled:opacity-50 ${
+                                    isDisabled
+                                      ? 'border-emerald-300 text-emerald-700 hover:bg-emerald-50'
+                                      : 'border-amber-300 text-amber-700 hover:bg-amber-50'
+                                  }`}
+                                  title={isDisabled ? 'Re-enable this account' : 'Disable this account (sign-in will be rejected)'}
+                                >
+                                  {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : isDisabled ? <CheckCircle2 className="h-3 w-3" /> : <Ban className="h-3 w-3" />}
+                                  {isDisabled ? 'Enable' : 'Disable'}
+                                </button>
+                                <button
+                                  disabled={busy}
+                                  onClick={() => setDeleteConfirmUser(u)}
+                                  className="inline-flex items-center gap-1 rounded-xl border border-red-200 bg-white px-2.5 py-1.5 text-[10px] font-bold text-red-600 transition-colors hover:border-red-400 hover:bg-red-50 disabled:opacity-50"
+                                  title="Permanently remove this user from the system"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                  Remove
+                                </button>
+                              </div>
                             ) : (
                               <span className="text-[10px] font-semibold text-slate-400">Protected</span>
                             )}
@@ -331,13 +375,58 @@ function AdminUsersInner() {
                       </React.Fragment>
                     );
                   })}
-
                 </tbody>
               </table>
             </div>
           )}
         </div>
 
+        {/* Delete Confirmation Modal */}
+        {deleteConfirmUser && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95">
+              <div className="flex items-center gap-3 text-red-600">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-red-100">
+                  <Trash2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-900">Remove User Account</h3>
+                  <p className="text-xs text-slate-500">This action cannot be undone.</p>
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 p-3.5 space-y-1 text-xs">
+                <p className="font-bold text-slate-800">{deleteConfirmUser.name}</p>
+                <p className="text-slate-500">{deleteConfirmUser.email}</p>
+                <p className="text-[11px] text-slate-400">ID: {deleteConfirmUser.id} • Role: {deleteConfirmUser.role}</p>
+              </div>
+
+              <p className="mt-3 text-xs leading-relaxed text-slate-600">
+                This user will be permanently removed from the system. Any active sessions for this account will be immediately revoked, logging them out until re-registered.
+              </p>
+
+              <div className="mt-6 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  disabled={busyId === deleteConfirmUser.id}
+                  onClick={() => setDeleteConfirmUser(null)}
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={busyId === deleteConfirmUser.id}
+                  onClick={() => void handleDeleteUser(deleteConfirmUser)}
+                  className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-red-700 disabled:opacity-50"
+                >
+                  {busyId === deleteConfirmUser.id && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  Confirm Remove
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </PageContainer>
   );

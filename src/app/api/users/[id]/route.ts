@@ -1,18 +1,15 @@
 /**
- * GET/PATCH /api/users/:id (Phase 10) — ADMIN ONLY
- * GET  → account details (public projection).
- * PATCH → role change and/or enable/disable, with business rules:
- *   - target must exist (404)
- *   - administrators cannot modify their own account (400)
- *   - other ADMIN accounts are protected (403)
- *   - invalid payloads → 400
- * Every successful change is audited with previous/new values.
+ * GET/PATCH/DELETE /api/users/:id — ADMIN ONLY
+ * GET    → account details (public projection).
+ * PATCH  → role change and/or enable/disable.
+ * DELETE → permanently remove user account and revoke active sessions.
+ * Every successful change is audited.
  */
 import { NextResponse, type NextRequest } from 'next/server';
 import { PERMISSIONS } from '@/types/auth';
 import type { UserRole } from '@/types';
 import { requirePermission, jsonError, readJsonBody } from '@/lib/auth/server/apiAuth';
-import { findUserById, toPublicUser, updateUserAccount } from '@/lib/auth/server/userStore';
+import { findUserById, toPublicUser, updateUserAccount, deleteUserAccount } from '@/lib/auth/server/userStore';
 import { appendAudit } from '@/lib/auth/server/auditStore';
 import { clientIp } from '@/lib/auth/server/apiAuth';
 
@@ -85,4 +82,41 @@ export async function PATCH(req: NextRequest, ctx: RouteContext) {
   }
 
   return NextResponse.json({ user: result.user, changes: result.changes });
+}
+
+export async function DELETE(req: NextRequest, ctx: RouteContext) {
+  const auth = await requirePermission(req, PERMISSIONS.USER_MANAGEMENT);
+  if ('response' in auth) return auth.response;
+  const actor = auth.user;
+
+  const { id } = await ctx.params;
+  const result = deleteUserAccount(id, actor.id);
+  if (!result.ok) {
+    switch (result.error) {
+      case 'NOT_FOUND':
+        return jsonError(404, 'NOT_FOUND', 'No account with that ID exists.');
+      case 'SELF_MODIFICATION':
+        return jsonError(400, 'SELF_MODIFICATION', 'Administrators cannot remove their own account.');
+      case 'ADMIN_PROTECTED':
+        return jsonError(403, 'ADMIN_PROTECTED', 'Root administrator accounts are protected from deletion.');
+      default:
+        return jsonError(400, 'DELETE_FAILED', 'The account could not be removed.');
+    }
+  }
+
+  const ip = clientIp(req);
+  appendAudit({
+    actorId: actor.id,
+    actorName: actor.name,
+    actorRole: actor.role,
+    action: 'USER_DELETED',
+    entityType: 'USER',
+    entityId: id,
+    previousValue: `${result.user.name} (${result.user.email})`,
+    newValue: 'DELETED',
+    details: `Account ${result.user.name} (${result.user.email}) was permanently removed by administrator.`,
+    ipAddress: ip,
+  });
+
+  return NextResponse.json({ ok: true, user: result.user });
 }

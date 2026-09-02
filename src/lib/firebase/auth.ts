@@ -162,7 +162,7 @@ export async function firebaseLoginWithEmail(email: string, password: string) {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const profile = await ensureUserProfile(userCredential.user, 'CITIZEN', 'EMAIL_PASSWORD');
-    return { user: userCredential.user, profile, otpRequired: true };
+    return { user: userCredential.user, profile, otpRequired: false };
   } catch (error: any) {
     console.error('Firebase login error:', {
       code: error?.code,
@@ -179,7 +179,7 @@ export async function firebaseLoginWithEmail(email: string, password: string) {
       try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const profile = await ensureUserProfile(userCredential.user, 'CITIZEN', 'EMAIL_PASSWORD');
-        return { user: userCredential.user, profile, otpRequired: true };
+        return { user: userCredential.user, profile, otpRequired: false };
       } catch (createError: any) {
         if (createError?.code === 'auth/email-already-in-use') {
           throw new Error('Invalid password for this account. Please check your credentials.');
@@ -287,8 +287,32 @@ export async function firebaseLogout() {
   } catch (err) {
     console.warn('Firebase signOut notice:', err);
   }
+
+  if (typeof window !== 'undefined') {
+    try {
+      if (window.indexedDB) {
+        window.indexedDB.deleteDatabase('firebaseLocalStorageDb');
+      }
+    } catch {}
+
+    try {
+      const clearStorage = (storage: Storage) => {
+        const toDelete: string[] = [];
+        for (let i = 0; i < storage.length; i++) {
+          const key = storage.key(i);
+          if (key && (key.startsWith('firebase:') || key.includes('firebase:authUser') || key.includes('firebaseApp'))) {
+            toDelete.push(key);
+          }
+        }
+        toDelete.forEach((k) => storage.removeItem(k));
+      };
+      clearStorage(window.localStorage);
+      clearStorage(window.sessionStorage);
+    } catch {}
+  }
 }
 
+export const clearFirebaseAuthSystem = firebaseLogout;
 export const loginWithEmail = firebaseLoginWithEmail;
 export const loginWithGoogle = firebaseLoginWithGoogle;
 export const registerWithEmail = firebaseRegisterWithEmail;

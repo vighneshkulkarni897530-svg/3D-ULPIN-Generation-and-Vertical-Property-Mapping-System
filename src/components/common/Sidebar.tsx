@@ -24,7 +24,7 @@ import {
 
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
-  const { role, currentUser } = useAuth();
+  const { role, currentUser, isAuthenticated } = useAuth();
 
   const citizenNav = [
     { label: 'Citizen Hub', href: '/dashboard/citizen', icon: LayoutDashboard },
@@ -59,19 +59,21 @@ export const Sidebar: React.FC = () => {
     <aside className="w-64 bg-slate-950 border-r border-slate-800 text-slate-300 min-h-[calc(100vh-5rem)] flex flex-col justify-between p-4 shrink-0 hidden md:flex">
       <div className="space-y-6">
         {/* User Identity Mini Card */}
-        <div className="p-3.5 bg-slate-900/80 rounded-2xl border border-slate-800 flex items-center gap-3">
-          <SafeImage
-            src={currentUser.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
-            alt={currentUser.name}
-            className="w-10 h-10 rounded-xl object-cover ring-2 ring-cyan-500/40"
-          />
-          <div className="overflow-hidden">
-            <h5 className="text-xs font-bold text-white truncate">{currentUser.name}</h5>
-            <span className="text-[10px] font-semibold text-cyan-400 block truncate">
-              {role === 'OFFICER' ? 'Revenue Officer' : role === 'ADMIN' ? 'Cadastre Admin' : 'Verified Citizen'}
-            </span>
+        {isAuthenticated && currentUser && currentUser.name !== 'Guest' && (
+          <div className="p-3.5 bg-slate-900/80 rounded-2xl border border-slate-800 flex items-center gap-3">
+            <SafeImage
+              src={currentUser.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
+              alt={currentUser.name}
+              className="w-10 h-10 rounded-xl object-cover ring-2 ring-cyan-500/40"
+            />
+            <div className="overflow-hidden">
+              <h5 className="text-xs font-bold text-white truncate">{currentUser.name}</h5>
+              <span className="text-[10px] font-semibold text-cyan-400 block truncate">
+                {role === 'OFFICER' ? 'Revenue Officer' : role === 'ADMIN' ? 'Cadastre Admin' : 'Verified Citizen'}
+              </span>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Navigation Items */}
         <nav className="space-y-1">
