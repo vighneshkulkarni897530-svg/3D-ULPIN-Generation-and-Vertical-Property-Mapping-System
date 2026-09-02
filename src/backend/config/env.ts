@@ -26,7 +26,7 @@ export const backendConfig = {
   otpService: {
     gasUrl:
       process.env.NEXT_PUBLIC_OTP_SERVICE_URL ||
-      'https://script.google.com/macros/s/AKfycbxK2-eCWcKGZhDLx8_67RX-sakrifRt7xmfTFVjEbT4GPGlu5aDKepTYHPfeaXO2e6wrQ/exec',
+      'https://script.google.com/macros/s/AKfycbzrd1cEyGrar-OW_nGZMbKo9p7T2JZK0a9L5oiKcR6hyYiIjfu-2d1APB5eOCDswxrs/exec',
     ttlSeconds: 300, // 5 minutes
     maxAttempts: 5,
   },
