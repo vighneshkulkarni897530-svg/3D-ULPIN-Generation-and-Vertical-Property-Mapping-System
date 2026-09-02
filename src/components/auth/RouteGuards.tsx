@@ -54,7 +54,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }, [redirectKey, pathname, router]);
 
   if (authStatus === 'initializing') return <AuthLoadingState label="Checking your session…" />;
-  if (!isAuthenticated) return <AuthLoadingState label="Redirecting to sign-in…" />;
+  if (!isAuthenticated) return null;
   return <>{children}</>;
 }
 
@@ -97,7 +97,7 @@ export function RoleGuard({
     return <>{fallback}</>;
   }
   if (decision === 'unauthorized') return <AuthLoadingState label="Redirecting…" />;
-  if (decision === 'unauthenticated') return <AuthLoadingState label="Redirecting to sign-in…" />;
+  if (decision === 'unauthenticated') return null;
   return <>{children}</>;
 }
 

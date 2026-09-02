@@ -126,6 +126,10 @@ export function apiUpdateUser(
   return request(`/api/users/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(patch) });
 }
 
+export function apiDeleteUser(id: string): Promise<{ ok: boolean; user: ManagedUser }> {
+  return request(`/api/users/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
 // ── Admin: audit log + client-side audit reporting ──────────────────────────
 
 export function apiGetAuditLog(params?: { action?: string; entityType?: string; limit?: number }): Promise<{ records: AuditRecordClient[]; count: number }> {

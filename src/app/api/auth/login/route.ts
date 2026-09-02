@@ -1,16 +1,13 @@
 /**
- * POST /api/auth/login (Phase 14)
- * Real Supabase Auth sign-in. Verifies credentials with Supabase
- * (`signInWithPassword`), loads the application profile (role + account
- * status) and establishes the session in the httpOnly `spv_session` cookie.
- * Brute-force rate limiting and audit logging are preserved from Phase 10.
- * Server-side only — no secrets are exposed and role/permissions are always
- * derived from the server-side profile record.
+ * POST /api/auth/login
+ * Real sign-in endpoint. Authenticates against Supabase Auth when configured,
+ * and falls back to the durable userStore with scrypt hash checking.
+ * Establishes a persistent 365-day session cookie.
  */
 import { NextResponse, type NextRequest } from 'next/server';
 import { authenticateWithPassword } from '@/lib/auth/server/authService';
 import { appendAudit } from '@/lib/auth/server/auditStore';
-import { setSessionCookie } from '@/lib/auth/server/sessionStore';
+import { setSessionCookie, SESSION_MAX_AGE_SEC } from '@/lib/auth/server/sessionStore';
 import {
   checkLoginRateLimit,
   clearLoginRateLimit,
@@ -19,6 +16,8 @@ import {
   readJsonBody,
   requireString,
 } from '@/lib/auth/server/apiAuth';
+import { isSupabaseAuthConfigured } from '@/lib/supabase/env';
+import { checkCredentials, toPublicUser } from '@/lib/auth/server/userStore';
 
 export async function POST(req: NextRequest) {
   const body = await readJsonBody(req);
@@ -35,6 +34,62 @@ export async function POST(req: NextRequest) {
     return jsonError(429, 'RATE_LIMITED', `Too many sign-in attempts. Try again in ${rate.retryAfterSec}s.`);
   }
 
+  // 1) When Supabase Auth is NOT configured, authenticate against durable userStore
+  if (!isSupabaseAuthConfigured()) {
+    const credCheck = checkCredentials(emailCheck.value, passwordCheck.value);
+    if (!credCheck.ok) {
+      appendAudit({
+        actorId: 'anonymous',
+        actorName: emailCheck.value,
+        actorRole: 'CITIZEN',
+        action: 'LOGIN_FAILED',
+        entityType: 'SESSION',
+        entityId: emailCheck.value,
+        details: credCheck.error === 'ACCOUNT_DISABLED' ? 'Attempt on a disabled account.' : 'Invalid credentials.',
+        ipAddress: ip,
+      });
+
+      if (credCheck.error === 'ACCOUNT_DISABLED') {
+        return jsonError(403, 'ACCOUNT_DISABLED', 'This account has been disabled. Contact the administrator.');
+      }
+      return jsonError(401, 'INVALID_CREDENTIALS', 'Invalid email or password.');
+    }
+
+    clearLoginRateLimit(ip, emailCheck.value);
+    const pubUser = toPublicUser(credCheck.user);
+    const expiresAt = Math.floor(Date.now() / 1000) + SESSION_MAX_AGE_SEC;
+    const session = {
+      access_token: `pwd_session_${pubUser.id}`,
+      refresh_token: 'pwd-session-token',
+      expires_at: expiresAt,
+      userId: pubUser.id,
+      email: pubUser.email,
+    };
+
+    appendAudit({
+      actorId: pubUser.id,
+      actorName: pubUser.name,
+      actorRole: pubUser.role,
+      action: 'LOGIN',
+      entityType: 'SESSION',
+      entityId: pubUser.id,
+      newValue: 'signed-in',
+      details: `Signed in as ${pubUser.role} (persistent session).`,
+      ipAddress: ip,
+    });
+
+    const res = NextResponse.json({
+      user: {
+        ...pubUser,
+        sessionExpiresAt: expiresAt * 1000,
+        authMethod: 'PASSWORD',
+      },
+    });
+    setSessionCookie(res, session);
+    return res;
+  }
+
+  // 2) When Supabase Auth is configured
   const result = await authenticateWithPassword(emailCheck.value, passwordCheck.value);
   if (!result.ok) {
     appendAudit({
@@ -49,14 +104,10 @@ export async function POST(req: NextRequest) {
           ? 'Attempt on a disabled account.'
           : result.error === 'EMAIL_NOT_CONFIRMED'
             ? 'Attempt before email confirmation.'
-            : result.error === 'NOT_CONFIGURED'
-              ? 'Sign-in attempted while Supabase Auth is not configured.'
-              : 'Invalid credentials.',
+            : 'Invalid credentials.',
       ipAddress: ip,
     });
     switch (result.error) {
-      case 'NOT_CONFIGURED':
-        return jsonError(503, 'AUTH_NOT_CONFIGURED', result.message ?? 'Authentication service is not configured.');
       case 'ACCOUNT_DISABLED':
         return jsonError(403, 'ACCOUNT_DISABLED', result.message ?? 'This account has been disabled.');
       case 'EMAIL_NOT_CONFIRMED':
@@ -89,4 +140,3 @@ export async function POST(req: NextRequest) {
   setSessionCookie(res, result.session);
   return res;
 }
-

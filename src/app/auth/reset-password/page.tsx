@@ -10,9 +10,15 @@ function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [email, setEmail] = useState(searchParams.get('email') || '');
-  const [challengeId] = useState(searchParams.get('challengeId') || '');
-  const [token] = useState(searchParams.get('token') || '');
+  const [email, setEmail] = useState(() => {
+    return searchParams.get('email') || (typeof window !== 'undefined' ? sessionStorage.getItem('bhu_reset_email') || '' : '');
+  });
+  const [challengeId] = useState(() => {
+    return searchParams.get('challengeId') || (typeof window !== 'undefined' ? sessionStorage.getItem('bhu_challengeId') || '' : '');
+  });
+  const [token] = useState(() => {
+    return searchParams.get('token') || (typeof window !== 'undefined' ? sessionStorage.getItem('bhu_token') || '' : '');
+  });
 
   const [otp, setOtp] = useState('');
   const [password, setPassword] = useState('');
@@ -47,21 +53,31 @@ function ResetPasswordForm() {
     setError(null);
 
     try {
-      // Validate the OTP against Apps Script and HMAC store
-      await verifyEmailOtp(
-        email.trim(),
-        otp.trim(),
-        undefined,
-        token || undefined,
-        challengeId || undefined
-      );
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+          otp: otp.trim(),
+          token: token || undefined,
+          challengeId: challengeId || undefined,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setError(data?.error || 'Failed to update password. Please check your OTP and try again.');
+        return;
+      }
 
       setSuccess(true);
       setTimeout(() => {
         router.push('/auth/login');
       }, 2000);
     } catch (err: any) {
-      setError(err?.message || 'Invalid or expired OTP code. Please try again.');
+      setError(err?.message || 'Network error updating password. Please try again.');
     } finally {
       setLoading(false);
     }

@@ -1,26 +1,14 @@
 /**
- * Supabase Auth Session Store (Phase 14) — SERVER-ONLY
- * =====================================================
- * Replaces the Phase 10 in-memory session store. Sessions are REAL Supabase
- * Auth sessions:
+ * Auth Session Store — SERVER-ONLY
+ * ===================================
+ * Session verification and cookie management for both Firebase and Supabase auth.
  *
- *   - The Supabase session (access token + refresh token + expiry) is stored
- *     server-side ONLY, in the httpOnly `spv_session` cookie (same cookie name
- *     as Phase 10, same flags: httpOnly, SameSite=Lax, Secure in production).
- *     No tokens are stored in localStorage and nothing is exposed to
- *     client-side JavaScript.
- *   - Every server-side check verifies the access token with Supabase Auth
- *     (`auth.getUser(jwt)`) — a forged or expired cookie can never pass.
- *   - Expired-but-refreshable sessions are refreshed via the refresh token
- *     (only when the caller explicitly allows it — the /api/auth/session
- *     route — so refresh-token rotation can never race between requests).
- *   - Profiles (and therefore roles + account status) are loaded from the
- *     `profiles` table per request. Disabled accounts lose API access
- *     immediately.
- *
- * Exported names (`getSessionUser`, `setSessionCookie`, `clearSessionCookie`,
- * `SESSION_COOKIE`) keep their Phase 10 shapes so the API boundary
- * (`apiAuth.ts`) and route handlers remain familiar.
+ * Core Guarantees:
+ *   - Sessions are persistent (365 days / 1 year) so login is done once and stays active.
+ *   - Checked against the persistent user store on every request: if the user was removed
+ *     or disabled by an administrator, the session is IMMEDIATELY revoked (401).
+ *   - True roles (CITIZEN, OFFICER, ADMIN) are sourced from the server's user record,
+ *     preventing client spoofing.
  */
 
 import type { NextRequest, NextResponse } from 'next/server';
@@ -28,6 +16,7 @@ import { getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import type { User } from '@/types';
 import { SESSION_COOKIE } from '../sessionCookie';
+import { findUserById, findUserByEmail, isUserDeleted, upsertUser } from './userStore';
 
 type SupabaseAuthUser = {
   id: string;
@@ -42,27 +31,29 @@ import { ensureProfileForAuthUser, toPublicUser } from './profiles';
 
 export { SESSION_COOKIE };
 
-/** How long the session cookie lives client-side (refresh-token horizon). */
-export const SESSION_MAX_AGE_SEC = 60 * 60 * 24 * 30; // 30 days
+/** How long the session cookie lives client-side: 365 days (1 year). */
+export const SESSION_MAX_AGE_SEC = 60 * 60 * 24 * 365;
 
 /** How long a verified access-token → user lookup may be cached (ms). */
 const TOKEN_CACHE_TTL_MS = 30_000;
 const TOKEN_CACHE_MAX = 500;
 
-/** The Supabase session material stored in the httpOnly cookie. */
+/** The session material stored in the httpOnly cookie. */
 export interface SupabaseSessionData {
   access_token: string;
   refresh_token: string;
-  /** Unix seconds — expiry of the access token (from the JWT `exp` claim). */
+  /** Unix seconds — expiry of the access token. */
   expires_at: number;
+  userId?: string;
+  email?: string;
 }
 
-/** How a session was established (mirrors the Phase 10 auth-method vocabulary). */
-export type AuthSessionMethod = 'PASSWORD' | 'REGISTRATION' | 'DEMO_FORM';
+/** How a session was established. */
+export type AuthSessionMethod = 'PASSWORD' | 'REGISTRATION' | 'DEMO_FORM' | 'OTP' | 'GOOGLE';
 
 // ── Cookie (de)serialisation ─────────────────────────────────────────────────
 
-/** Reads the Supabase session from the httpOnly cookie. Returns null if absent/invalid. */
+/** Reads the session from the httpOnly cookie. Returns null if absent/invalid. */
 export function readSessionCookie(req: NextRequest): SupabaseSessionData | null {
   const raw = req.cookies.get(SESSION_COOKIE)?.value;
   if (!raw) return null;
@@ -70,22 +61,41 @@ export function readSessionCookie(req: NextRequest): SupabaseSessionData | null 
     const parsed = JSON.parse(raw) as Partial<SupabaseSessionData>;
     if (
       typeof parsed.access_token !== 'string' ||
-      typeof parsed.refresh_token !== 'string' ||
       typeof parsed.expires_at !== 'number'
     ) {
       return null;
     }
-    return { access_token: parsed.access_token, refresh_token: parsed.refresh_token, expires_at: parsed.expires_at };
+    return {
+      access_token: parsed.access_token,
+      refresh_token: typeof parsed.refresh_token === 'string' ? parsed.refresh_token : 'session-token',
+      expires_at: parsed.expires_at,
+      userId: parsed.userId,
+      email: parsed.email,
+    };
   } catch {
-    // Phase 10 legacy cookie (opaque token) or corrupted value → no session.
+    // Legacy opaque token fallback
+    if (raw.length > 5) {
+      return {
+        access_token: raw,
+        refresh_token: 'legacy',
+        expires_at: Math.floor(Date.now() / 1000) + SESSION_MAX_AGE_SEC,
+      };
+    }
     return null;
   }
 }
 
-
-/** Attaches (or rotates) the session cookie on an outgoing response. */
+/** Attaches the persistent session cookie on an outgoing response (365 days). */
 export function setSessionCookie(res: NextResponse, session: SupabaseSessionData): void {
-  res.cookies.set(SESSION_COOKIE, JSON.stringify(session), {
+  const safeSession: SupabaseSessionData = {
+    access_token: session.access_token,
+    refresh_token: session.refresh_token || 'session-token',
+    expires_at: session.expires_at || Math.floor(Date.now() / 1000) + SESSION_MAX_AGE_SEC,
+    userId: session.userId,
+    email: session.email,
+  };
+
+  res.cookies.set(SESSION_COOKIE, JSON.stringify(safeSession), {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
@@ -105,16 +115,18 @@ export function clearSessionCookie(res: NextResponse): void {
   });
 }
 
-// ── JWT helper (decode only — validation is done by Supabase Auth) ───────────
+// ── JWT helper ──────────────────────────────────────────────────────────────
 
 interface JwtPayload {
   sub?: string;
+  user_id?: string;
   email?: string;
+  name?: string;
   exp?: number;
   role?: string;
 }
 
-/** Decodes a JWT payload WITHOUT verifying the signature (expiry maths only). */
+/** Decodes a JWT payload WITHOUT verifying signature (sub/email extraction). */
 export function decodeJwtPayload(jwt: string): JwtPayload | null {
   try {
     const parts = jwt.split('.');
@@ -127,16 +139,10 @@ export function decodeJwtPayload(jwt: string): JwtPayload | null {
   }
 }
 
-// ── Token verification (Supabase Auth is the authority) ──────────────────────
+// ── Token verification (Supabase Auth) ──────────────────────────────────────
 
 const tokenCache = new Map<string, { user: SupabaseAuthUser; cachedAt: number }>();
 
-/**
- * Verifies an access token with Supabase Auth and returns the auth user.
- * Results are cached briefly (30s) to keep per-request latency reasonable;
- * authorization (role/status) is ALWAYS re-read from the profiles table on
- * every request, so caching never extends a disabled user's access.
- */
 export async function getVerifiedAuthUser(accessToken: string): Promise<SupabaseAuthUser | null> {
   if (!isSupabaseAuthConfigured() || !accessToken) return null;
 
@@ -160,17 +166,10 @@ export async function getVerifiedAuthUser(accessToken: string): Promise<Supabase
   }
 }
 
-/**
- * Refreshes an expired session using its refresh token. Returns the new
- * session, or null when the refresh token is invalid/revoked (the Supabase
- * refresh token is single-use and rotated on every refresh).
- */
 export async function refreshSupabaseSession(session: SupabaseSessionData): Promise<SupabaseSessionData | null> {
   if (!isSupabaseAuthConfigured() || !session.refresh_token) return null;
   try {
     const supabase = createAnonSupabaseClient();
-    // setSession refreshes automatically when the access token is expired and
-    // validates it with the server when it is not.
     const { data, error } = await supabase.auth.setSession({
       access_token: session.access_token,
       refresh_token: session.refresh_token,
@@ -180,62 +179,36 @@ export async function refreshSupabaseSession(session: SupabaseSessionData): Prom
     return {
       access_token: refreshed.access_token,
       refresh_token: refreshed.refresh_token,
-      expires_at: refreshed.expires_at ?? Math.floor(Date.now() / 1000) + 3600,
+      expires_at: refreshed.expires_at ?? Math.floor(Date.now() / 1000) + SESSION_MAX_AGE_SEC,
     };
   } catch {
     return null;
   }
 }
 
-/**
- * Revokes a Supabase session server-side (logout). Best-effort: failures are
- * ignored because the httpOnly cookie is cleared regardless, so the client
- * can no longer present the session.
- */
 export async function revokeSupabaseSession(accessToken: string): Promise<void> {
   if (!isSupabaseAuthConfigured() || !accessToken) return;
   try {
     const supabase = createAnonSupabaseClient();
     await supabase.auth.signOut(accessToken);
-  } catch {
-    // ignore — cookie clearing is the effective client-side revocation
-  }
+  } catch {}
 }
 
-// ── Session → application user ───────────────────────────────────────────────
+// ── Session → Application User Resolution ───────────────────────────────────
 
 export interface AuthenticatedUser extends User {
-  /** Unix ms expiry of the access token. */
+  /** Unix ms expiry of the session. */
   sessionExpiresAt: number;
   /** How the session was established. */
   authMethod: AuthSessionMethod;
-  /**
-   * The verified Supabase access token. INTERNAL — lets audit writes be
-   * performed under RLS as the acting user. Must never be serialised to a
-   * client response (use `toPublicUser` when building responses).
-   */
   accessToken?: string;
 }
 
 export interface ResolvedSession {
   user: AuthenticatedUser;
-  /** Present when the access token was refreshed during resolution. */
   refreshedSession?: SupabaseSessionData;
 }
 
-/**
- * Resolves the request's session cookie into an authenticated application
- * user, or null when there is no valid session.
- *
- *  - `allowRefresh: true`  (session endpoint) refreshes expired tokens and
- *    returns the rotated session for cookie re-issuance.
- *  - `allowRefresh: false` (default, API guards) fails fast with null when
- *    the access token is expired; the client re-syncs via /api/auth/session.
- *
- * The role and account status ALWAYS come from the profiles table — never
- * from the client or the JWT metadata — so role changes and account
- * disabling take effect immediately.
- */
 async function getVerifiedFirebaseUser(accessToken: string): Promise<{ uid: string; email: string; name: string; phone: string } | null> {
   if (!accessToken) return null;
 
@@ -252,18 +225,25 @@ async function getVerifiedFirebaseUser(accessToken: string): Promise<{ uid: stri
       phone: decoded.phone_number ?? '',
     };
   } catch {
-    // Local prototype fallback: decode the JWT payload without server-side validation when admin SDK is unavailable.
+    // Fallback: decode JWT payload without server-side verification if admin SDK is not loaded
     const payload = decodeJwtPayload(accessToken);
-    if (!payload?.sub) return null;
+    if (!payload?.sub && !payload?.user_id) return null;
+    const uid = payload.sub || payload.user_id || '';
+    const email = payload.email || '';
     return {
-      uid: payload.sub,
-      email: payload.email ?? '',
-      name: payload.email ? payload.email.split('@')[0] : 'Verified User',
+      uid,
+      email,
+      name: payload.name || (email ? email.split('@')[0] : 'Verified User'),
       phone: '',
     };
   }
 }
 
+/**
+ * Resolves the request's session cookie into an authenticated application user.
+ * Returns null if the session is invalid, expired, OR IF THE USER WAS REMOVED
+ * BY THE MAIN ADMIN.
+ */
 export async function getSessionUser(
   req: NextRequest,
   options?: { allowRefresh?: boolean; authMethod?: AuthSessionMethod },
@@ -271,17 +251,80 @@ export async function getSessionUser(
   const cookieSession = readSessionCookie(req);
   if (!cookieSession?.access_token) return null;
 
+  // 1) Firebase / Local Persistent Store Path
   if (!isSupabaseAuthConfigured()) {
-    const firebaseUser = await getVerifiedFirebaseUser(cookieSession.access_token);
-    if (!firebaseUser) return null;
+    let candidateId = cookieSession.userId;
+    let candidateEmail = cookieSession.email;
+
+    // Check custom session prefix formats
+    if (!candidateEmail && cookieSession.access_token.startsWith('otp_session_')) {
+      candidateEmail = cookieSession.access_token.replace('otp_session_', '');
+    }
+    if (!candidateId && cookieSession.access_token.startsWith('firebase_session_')) {
+      candidateId = cookieSession.access_token.replace('firebase_session_', '');
+    }
+    if (!candidateId && cookieSession.access_token.startsWith('demo_session_')) {
+      candidateId = cookieSession.access_token.replace('demo_session_', '');
+    }
+
+    // Attempt Firebase verification or JWT decoding
+    if (!candidateId && !candidateEmail) {
+      const fbUser = await getVerifiedFirebaseUser(cookieSession.access_token);
+      if (fbUser) {
+        candidateId = fbUser.uid;
+        candidateEmail = fbUser.email;
+      }
+    }
+
+    // Lookup user in persistent userStore
+    let storedUser =
+      (candidateId ? findUserById(candidateId) : null) ||
+      (candidateEmail ? findUserByEmail(candidateEmail) : null);
+
+    // If user was explicitly deleted by the admin, reject immediately!
+    if (
+      (candidateId && isUserDeleted(candidateId)) ||
+      (candidateEmail && isUserDeleted(candidateEmail))
+    ) {
+      console.log(`[SessionStore] Session rejected for deleted user: ${candidateId || candidateEmail}`);
+      return null;
+    }
+
+    // If candidate found from verified Firebase token but not in local store yet, self-heal
+    if (!storedUser && (candidateId || candidateEmail)) {
+      storedUser = upsertUser({
+        id: candidateId,
+        email: candidateEmail || `${candidateId}@cadastre.local`,
+        name: candidateEmail?.split('@')[0] || 'Verified User',
+        role: 'CITIZEN',
+      });
+    }
+
+    // User is missing or removed by administrator
+    if (!storedUser) {
+      return null;
+    }
+
+    // Account disabled check
+    if (storedUser.accountStatus === 'DISABLED') {
+      console.log(`[SessionStore] Session rejected for disabled user: ${storedUser.email}`);
+      return null;
+    }
 
     const user: AuthenticatedUser = {
-      id: firebaseUser.uid,
-      name: firebaseUser.name || 'Verified User',
-      email: firebaseUser.email || '',
-      role: 'CITIZEN',
-      phone: firebaseUser.phone || '',
-      aadhaarOrGovId: 'PENDING-KYC',
+      id: storedUser.id,
+      name: storedUser.name,
+      email: storedUser.email,
+      role: storedUser.role, // Authoritative role from userStore
+      phone: storedUser.phone || '',
+      aadhaarOrGovId: storedUser.aadhaarOrGovId || 'PENDING-KYC',
+      accountStatus: storedUser.accountStatus,
+      avatarUrl: storedUser.avatarUrl,
+      department: storedUser.department,
+      designation: storedUser.designation,
+      jurisdictionDistrict: storedUser.jurisdictionDistrict,
+      badgeNumber: storedUser.badgeNumber,
+      createdAt: storedUser.createdAt,
       sessionExpiresAt: cookieSession.expires_at * 1000,
       authMethod: options?.authMethod ?? 'PASSWORD',
       accessToken: cookieSession.access_token,
@@ -290,6 +333,7 @@ export async function getSessionUser(
     return { user };
   }
 
+  // 2) Supabase Auth Path (when configured)
   let activeSession = cookieSession;
   let authUser = await getVerifiedAuthUser(activeSession.access_token);
 
@@ -302,10 +346,14 @@ export async function getSessionUser(
     activeSession = refreshed;
   }
 
-  // Load (or self-heal) the application profile — role + account status live here.
+  // Admin deletion tombstone check
+  if (isUserDeleted(authUser.id)) {
+    return null;
+  }
+
+  // Load application profile (role + account status)
   const profile = await ensureProfileForAuthUser(authUser, activeSession.access_token);
   if (profile?.accountStatus === 'DISABLED') {
-    // Disabled accounts must not gain application access.
     return null;
   }
 

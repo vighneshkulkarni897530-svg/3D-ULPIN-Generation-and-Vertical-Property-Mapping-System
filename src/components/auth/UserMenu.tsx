@@ -9,7 +9,7 @@
  */
 import React from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { LogOut, User as UserIcon, ShieldCheck, Users, ScrollText, Settings } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { hasPermission } from '@/lib/auth/permissions';
@@ -32,8 +32,14 @@ function initials(name: string): string {
 }
 
 export const UserMenu: React.FC = () => {
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const { currentUser, isAuthenticated, authStatus, role, logout, hasPermission: checkPermission } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const [busy, setBusy] = React.useState(false);
 
   const handleLogout = async () => {
@@ -43,11 +49,14 @@ export const UserMenu: React.FC = () => {
     router.push('/auth/login');
   };
 
-  if (authStatus === 'initializing') {
+  const isAuthPage = pathname?.startsWith('/auth');
+
+  if (!mounted || authStatus === 'initializing') {
     return <div className="h-8 w-8 rounded-full bg-slate-800 animate-pulse" aria-label="Loading session" />;
   }
 
-  if (!isAuthenticated) {
+  // If not logged in OR currently on an authentication page, NEVER display the user's name or avatar
+  if (!isAuthenticated || isAuthPage || !currentUser) {
     return (
       <div className="flex items-center gap-2">
         <Link

@@ -11,6 +11,7 @@ export interface OtpRecord {
   attempts: number;
   createdAt: number;
   hash: string;
+  challengeId?: string;
 }
 
 const OTP_SECRET = process.env.SESSION_SECRET || 'bhu-verify-cadastre-otp-hmac-secret-2024';
@@ -86,7 +87,8 @@ export function generateStatelessToken(email: string, otp: string, expiresAt: nu
 export async function saveOtpRecord(
   email: string,
   otp: string,
-  ttlMs = 10 * 60 * 1000
+  ttlMs = 10 * 60 * 1000,
+  challengeId?: string
 ): Promise<{ record: OtpRecord; token: string }> {
   const normEmail = normalizeEmail(email);
   const cleanOtp = otp.trim();
@@ -101,6 +103,7 @@ export async function saveOtpRecord(
     attempts: 0,
     createdAt: now,
     hash,
+    challengeId,
   };
 
   // 1. Save in memory
@@ -294,4 +297,38 @@ export async function validateOtpRecord(
   cleanup();
 
   return { valid: true };
+}
+
+/**
+ * Retrieve the pending OTP record (including challengeId) for an email.
+ */
+export async function getPendingOtpRecord(email: string): Promise<OtpRecord | null> {
+  const normEmail = normalizeEmail(email);
+
+  // 1. Memory store
+  const mem = memoryStore.get(normEmail);
+  if (mem && Date.now() <= mem.expiresAt) return mem;
+
+  // 2. Disk cache
+  const disk = readDiskCache();
+  if (disk[normEmail] && Date.now() <= disk[normEmail].expiresAt) {
+    memoryStore.set(normEmail, disk[normEmail]);
+    return disk[normEmail];
+  }
+
+  // 3. Realtime Database
+  try {
+    const rtdbKey = sanitizeRtdbKey(normEmail);
+    const cleanUrl = RTDB_URL.replace(/\/+$/, '');
+    const rtdbRes = await fetch(`${cleanUrl}/otps/${rtdbKey}.json`);
+    if (rtdbRes.ok) {
+      const rtdbData = await rtdbRes.json();
+      if (rtdbData && rtdbData.otp && Date.now() <= rtdbData.expiresAt) {
+        memoryStore.set(normEmail, rtdbData);
+        return rtdbData as OtpRecord;
+      }
+    }
+  } catch {}
+
+  return null;
 }

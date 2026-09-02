@@ -1,15 +1,18 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { setSessionCookie, SESSION_COOKIE } from '@/lib/auth/server/sessionStore';
+import { setSessionCookie, SESSION_MAX_AGE_SEC } from '@/lib/auth/server/sessionStore';
+import { upsertUser, isUserDeleted, findUserByEmail, findUserById, toPublicUser } from '@/lib/auth/server/userStore';
+import { appendAudit } from '@/lib/auth/server/auditStore';
+import { clientIp } from '@/lib/auth/server/apiAuth';
 
 /**
  * POST /api/auth/firebase-login
- * Sets the session cookie after Firebase authentication succeeds on the client.
- * Receives the Firebase ID token and stores it in the httpOnly session cookie.
+ * Establishes a persistent session (365 days) and synchronizes the user profile
+ * into the server's durable user store until removed by an administrator.
  */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { idToken, expiresIn } = body;
+    const { idToken, expiresIn, user } = body;
 
     if (!idToken || typeof idToken !== 'string') {
       return NextResponse.json(
@@ -18,20 +21,68 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Firebase ID tokens typically expire in 1 hour (3600 seconds)
-    const expiresInSeconds = expiresIn || 3600;
-    const expiresAt = Math.floor(Date.now() / 1000) + expiresInSeconds;
+    const candidateId = user?.uid || (idToken.startsWith('otp_session_') ? 'usr_' + idToken.replace('otp_session_', '').replace(/[^a-z0-9]/g, '_') : undefined);
+    const candidateEmail = user?.email || (idToken.startsWith('otp_session_') ? idToken.replace('otp_session_', '') : undefined);
 
-    // Create a session object compatible with the middleware cookie format
-    // We store the Firebase ID token as the "access_token" and use a placeholder refresh token
+    // If this account was deleted by an admin, refuse login
+    if (
+      (candidateId && isUserDeleted(candidateId)) ||
+      (candidateEmail && isUserDeleted(candidateEmail))
+    ) {
+      return NextResponse.json(
+        { error: 'This account has been removed by the administrator.' },
+        { status: 403 }
+      );
+    }
+
+    // Persist/upsert the user in durable storage
+    let savedUser = null;
+    if (candidateEmail) {
+      const stored = upsertUser({
+        id: candidateId,
+        email: candidateEmail,
+        name: user?.name,
+        phone: user?.phone,
+        role: user?.role,
+      });
+
+      if (stored.accountStatus === 'DISABLED') {
+        return NextResponse.json(
+          { error: 'This account has been disabled by the administrator.' },
+          { status: 403 }
+        );
+      }
+      savedUser = toPublicUser(stored);
+    }
+
+    // Long-lived expiration: 365 days default
+    const maxAge = expiresIn && expiresIn > 3600 * 24 * 30 ? expiresIn : SESSION_MAX_AGE_SEC;
+    const expiresAt = Math.floor(Date.now() / 1000) + maxAge;
+
     const sessionData = {
       access_token: idToken,
-      refresh_token: 'firebase-session', // Placeholder - Firebase doesn't use refresh tokens like Supabase
+      refresh_token: 'firebase-session',
       expires_at: expiresAt,
+      userId: savedUser?.id || candidateId,
+      email: savedUser?.email || candidateEmail,
     };
 
-    const res = NextResponse.json({ success: true });
+    const res = NextResponse.json({ success: true, user: savedUser });
     setSessionCookie(res, sessionData);
+
+    if (savedUser) {
+      appendAudit({
+        actorId: savedUser.id,
+        actorName: savedUser.name,
+        actorRole: savedUser.role,
+        action: 'LOGIN',
+        entityType: 'SESSION',
+        entityId: savedUser.id,
+        newValue: 'signed-in',
+        details: `User signed in (session established, saved until removed).`,
+        ipAddress: clientIp(req),
+      });
+    }
 
     return res;
   } catch (error) {

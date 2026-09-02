@@ -34,6 +34,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
 
   const isShell = variant === 'shell';
+  const isAuthPage = pathname?.startsWith('/auth');
+  const isActuallyLoggedIn = isAuthenticated && !isAuthPage && !!role;
 
   const getDashboardLink = () => {
     if (role === 'OFFICER') return '/dashboard/officer';
@@ -47,7 +49,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { label: '3D & 2D Cadastre', href: '/properties/prop-blr-001', icon: Layers },
     { label: 'Report Dispute', href: '/disputes/new', icon: AlertCircle },
     { label: 'Field Verification', href: '/field-verification/request', icon: FileCheck2 },
-    { label: 'My Dashboard', href: getDashboardLink(), icon: LayoutDashboard },
+    ...(isActuallyLoggedIn ? [{ label: 'My Dashboard', href: getDashboardLink(), icon: LayoutDashboard }] : []),
   ];
 
   const handleMenuToggle = () => {
@@ -113,23 +115,24 @@ export const Navbar: React.FC<NavbarProps> = ({
             {isShell && <SystemStatus />}
 
             <div className="hidden md:flex items-center gap-2.5">
-              {isAuthenticated && <RoleSwitcher />}
+              {isActuallyLoggedIn && <RoleSwitcher />}
             </div>
 
             {/* Notifications */}
-            <div className="relative">
-              <button
-                onClick={() => setNotifDropdownOpen(!notifDropdownOpen)}
-                className="relative p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-cyan-300 hover:border-slate-700 transition-colors"
-                title="Notifications"
-              >
-                <Bell className="w-4 h-4" />
-                {unreadNotificationsCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-slate-950 animate-bounce">
-                    {unreadNotificationsCount}
-                  </span>
-                )}
-              </button>
+            {isActuallyLoggedIn && (
+              <div className="relative">
+                <button
+                  onClick={() => setNotifDropdownOpen(!notifDropdownOpen)}
+                  className="relative p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-cyan-300 hover:border-slate-700 transition-colors"
+                  title="Notifications"
+                >
+                  <Bell className="w-4 h-4" />
+                  {unreadNotificationsCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-slate-950 animate-bounce">
+                      {unreadNotificationsCount}
+                    </span>
+                  )}
+                </button>
 
               {notifDropdownOpen && (
                 <div className="absolute right-0 top-12 z-50 w-[21rem] sm:w-96 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden animate-slide-in-top">
@@ -179,6 +182,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
               )}
             </div>
+          )}
 
             {/* User menu (Phase 10): profile, admin links, sign out — or sign-in/register when signed out */}
             <div className="flex items-center gap-2.5 pl-2 border-l border-slate-800">

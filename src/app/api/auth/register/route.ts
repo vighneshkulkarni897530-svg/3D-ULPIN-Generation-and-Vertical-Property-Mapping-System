@@ -40,27 +40,50 @@ export async function POST(req: NextRequest) {
   if ('error' in name) return jsonError(400, 'INVALID_FIELD', name.error);
   const email = requireString(body, 'email', 3, 120);
   if ('error' in email) return jsonError(400, 'INVALID_FIELD', email.error);
-  const phone = requireString(body, 'phone', 6, 20);
-  if ('error' in phone) return jsonError(400, 'INVALID_FIELD', phone.error);
-  const password = requireString(body, 'password', 8, 128);
+  const phoneRaw = typeof (body as any)?.phone === 'string' ? (body as any).phone.trim() : '';
+  const password = requireString(body, 'password', 6, 128);
   if ('error' in password) return jsonError(400, 'INVALID_FIELD', password.error);
 
   if (!EMAIL_PATTERN.test(email.value)) {
     return jsonError(400, 'INVALID_INPUT', 'Please provide a valid email address.');
   }
-  if (!PHONE_PATTERN.test(phone.value)) {
+  if (phoneRaw && !PHONE_PATTERN.test(phoneRaw)) {
     return jsonError(400, 'INVALID_INPUT', 'Please provide a valid phone number.');
   }
 
+  const aadhaarRaw = typeof (body as any)?.aadhaarOrGovId === 'string' ? (body as any).aadhaarOrGovId.trim() : '';
+
   if (!isSupabaseAuthConfigured()) {
-    return jsonError(
-      503,
-      'AUTH_NOT_CONFIGURED',
-      'Authentication service is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.',
-    );
+    const result = registerUser({
+      name: name.value,
+      email: email.value,
+      phone: phoneRaw,
+      password: password.value,
+      aadhaarOrGovId: aadhaarRaw,
+    });
+    if (!result.ok) {
+      if (result.error === 'EMAIL_TAKEN') {
+        return jsonError(400, 'EMAIL_TAKEN', 'An account with this email already exists. Try signing in instead.');
+      }
+      return jsonError(400, 'INVALID_INPUT', 'Registration failed validation. Check the provided details.');
+    }
+
+    const pubUser = result.user;
+    const expiresAt = Math.floor(Date.now() / 1000) + 31536000;
+    const res = NextResponse.json({
+      user: { ...pubUser, sessionExpiresAt: expiresAt * 1000, authMethod: 'REGISTRATION' },
+    });
+    setSessionCookie(res, {
+      access_token: `reg_session_${pubUser.id}`,
+      refresh_token: 'reg-session-token',
+      expires_at: expiresAt,
+      userId: pubUser.id,
+      email: pubUser.email,
+    });
+    return res;
   }
 
-  const result = registerUser({ name: name.value, email: email.value, phone: phone.value, password: password.value });
+  const result = registerUser({ name: name.value, email: email.value, phone: phoneRaw, password: password.value });
   if (!result.ok) {
     if (result.error === 'EMAIL_TAKEN') {
       return jsonError(400, 'EMAIL_TAKEN', 'An account with this email already exists. Try signing in instead.');
@@ -83,7 +106,7 @@ export async function POST(req: NextRequest) {
         data: {
           full_name: name.value,
           name: name.value,
-          phone: phone.value,
+          phone: phoneRaw,
           aadhaar_or_gov_id: 'PENDING-KYC',
         },
       },
