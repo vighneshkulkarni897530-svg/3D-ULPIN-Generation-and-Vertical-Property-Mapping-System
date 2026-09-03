@@ -85,7 +85,7 @@ export default function LandingPage() {
               <div className="p-3.5 bg-slate-900/80 border border-slate-800 rounded-2xl">
                 <span className="text-slate-400 text-xs font-medium">Verified Parcels</span>
                 <p className="text-xl sm:text-2xl font-bold text-white font-mono mt-0.5">9.42M+</p>
-                <span className="text-[10px] text-emerald-400 font-semibold">â†‘ 100% Geo-Referenced</span>
+                <span className="text-[10px] text-emerald-400 font-semibold">↑ 100% Geo-Referenced</span>
               </div>
               <div className="p-3.5 bg-slate-900/80 border border-slate-800 rounded-2xl">
                 <span className="text-slate-400 text-xs font-medium">3D Digital Twins</span>

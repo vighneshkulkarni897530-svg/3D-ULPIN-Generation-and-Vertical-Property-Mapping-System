@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { validateOtpRecord, getPendingOtpRecord } from '@/lib/auth/otpStore';
+import { createOtpSessionClaim } from '@/lib/auth/server/cookieSigner';
 
 const OTP_SERVICE_URL =
   process.env.NEXT_PUBLIC_OTP_SERVICE_URL ||
@@ -67,11 +68,12 @@ export async function POST(req: NextRequest) {
         if (gasRes.ok) {
           const gasData = await gasRes.json().catch(() => ({}));
           if (gasData.success) {
-            console.log(`[Google Apps Script] OTP verified successfully for ${email}`);
+                        console.log(`[Google Apps Script] OTP verified successfully for ${email}`);
             return NextResponse.json({
               success: true,
               verified: true,
               email,
+              sessionClaim: createOtpSessionClaim(email),
               message: gasData.message || 'OTP verified successfully.',
             });
           } else {
@@ -99,10 +101,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({
+        return NextResponse.json({
       success: true,
       verified: true,
       email,
+      sessionClaim: createOtpSessionClaim(email),
       message: 'OTP verification successful.',
     });
   } catch (error: any) {

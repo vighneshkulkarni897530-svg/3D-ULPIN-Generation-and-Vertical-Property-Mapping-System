@@ -1,0 +1,73 @@
+rules_version = '2';
+
+// Storage Security Rules — Phase 1 (society images)
+// ==================================================
+// NEW file — no storage rules previously shipped in this repo. They take
+// effect only when deployed explicitly:
+//
+//     firebase deploy --only storage
+//
+// Society images live under `societies/{societyId}/main-image/`. Reads
+// require an authenticated client (the returned getDownloadURL token keeps
+// <img> rendering working afterwards). Writes require an active
+// `society-admin` membership (cross-service Firestore check) and are
+// constrained to JPEG/PNG/WEBP images of at most 5 MB. All other paths:
+// denied.
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function membershipPath(societyId) {
+      return /databases/(default)/documents/societyMembers/$(societyId + '_' + request.auth.uid);
+    }
+
+    function isSocietyAdmin(societyId) {
+      return isAuthenticated()
+        && firestore.exists(membershipPath(societyId))
+        && firestore.get(membershipPath(societyId)).data.status == 'active'
+        && firestore.get(membershipPath(societyId)).data.role == 'society-admin';
+    }
+
+    match /societies/{societyId}/main-image/{fileName} {
+      allow read: if isAuthenticated();
+
+      allow create, update: if isSocietyAdmin(societyId)
+        && request.resource.size <= 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|jpg|png|webp)');
+
+      allow delete: if isSocietyAdmin(societyId);
+    }
+
+    // ── Phase 8 — Verification Evidence Files ───────────────────────
+    match /verification-evidence/{societyId}/{targetId}/{fileName} {
+      allow read: if isAuthenticated();
+
+      // Officers and authenticated users can upload evidence (photos, PDFs, documents up to 15MB)
+      allow create: if isAuthenticated()
+        && request.resource.size <= 15 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|jpg|png|webp)|application/pdf');
+
+      allow delete: if false;
+    }
+
+    // ── Phase 11 — AI Analysis Documents & Blueprints ─────────────────
+    match /analysis-documents/{societyId}/{documentId}/{fileName} {
+      allow read: if isAuthenticated();
+
+      allow create: if isAuthenticated()
+        && request.resource.size <= 25 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|jpg|png|webp)|application/pdf');
+
+      allow delete: if false;
+    }
+
+    // Deny everything else.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

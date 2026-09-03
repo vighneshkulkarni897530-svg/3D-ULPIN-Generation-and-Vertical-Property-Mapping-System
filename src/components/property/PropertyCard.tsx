@@ -81,7 +81,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
           <div>
             <span className="text-slate-400 text-[11px]">Govt Valuation</span>
             <p className="font-bold text-slate-900 font-mono">
-              â‚¹{(property.governmentValuationINR / 10000000).toFixed(2)} Cr
+              {"\u20B9"}{(property.governmentValuationINR / 10000000).toFixed(2)} Cr
             </p>
           </div>
           <div>

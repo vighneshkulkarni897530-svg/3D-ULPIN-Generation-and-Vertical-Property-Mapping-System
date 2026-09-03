@@ -64,6 +64,7 @@ export const ROUTE_RULES: RouteRule[] = [
   { prefix: '/dashboard/admin', permission: PERMISSIONS.ACCESS_DASHBOARD_ADMIN, reason: 'The admin dashboard is restricted to system administrators.' },
 
   // ── Officer operations ──
+  { prefix: '/government', permission: PERMISSIONS.VIEW_VERIFICATION_QUEUE, reason: 'The Government Officer portal is restricted to verification officers.' },
   { prefix: '/verification/field', permission: PERMISSIONS.VIEW_FIELDSHEET, reason: 'Field verification sheets are restricted to verification officers.' },
   { prefix: '/verification', permission: PERMISSIONS.VIEW_VERIFICATION_QUEUE, reason: 'The verification queue is restricted to verification officers.' },
   { prefix: '/ai-extraction', permission: PERMISSIONS.RUN_SPATIAL_VALIDATION, reason: 'AI spatial extraction is restricted to verification officers.' },
@@ -85,6 +86,8 @@ export const ROUTE_RULES: RouteRule[] = [
   { prefix: '/workflow', permission: PERMISSIONS.BROWSE_REGISTRY, reason: 'Sign in to view workflow tasks.' },
   { prefix: '/disputes', permission: null, reason: 'Sign in to access dispute services.' },
   { prefix: '/field-verification', permission: null, reason: 'Sign in to access field verification services.' },
+  { prefix: '/resident', permission: null, reason: 'Sign in to access resident and property services.' },
+  { prefix: '/society', permission: null, reason: 'Sign in to access society services.' },
 ];
 
 /** Paths that never require authentication. */

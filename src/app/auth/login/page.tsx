@@ -24,12 +24,29 @@ const DEMO_ACCOUNTS: Record<'citizen' | 'officer' | 'admin', { email: string; da
   admin: { email: 'secretary@greenvalley.soc.in', dashboard: '/dashboard/admin' },
 };
 
+/**
+ * Phase 15 — canonical role → dashboard mapping.
+ * The post-login redirect is derived from the SERVER-verified role returned by
+ * the login session (never from the selected tab or the typed email alone), so
+ * a real officer/admin signing in while another tab is selected still lands on
+ * their own dashboard.
+ */
+const ROLE_DASHBOARDS: Record<string, string> = {
+  CITIZEN: '/dashboard/citizen',
+  OFFICER: '/dashboard/officer',
+  ADMIN: '/dashboard/admin',
+};
+
+/** Safe `?next=` handling: same-origin relative paths only. */
+function safeNextPath(): string | null {
+  if (typeof window === 'undefined') return null;
+  const next = new URLSearchParams(window.location.search).get('next');
+  if (next && next.startsWith('/') && !next.startsWith('//')) return next;
+  return null;
+}
+
 function destinationAfterLogin(roleKey: 'citizen' | 'officer' | 'admin'): string {
-  if (typeof window !== 'undefined') {
-    const next = new URLSearchParams(window.location.search).get('next');
-    if (next && next.startsWith('/') && !next.startsWith('//')) return next;
-  }
-  return DEMO_ACCOUNTS[roleKey].dashboard;
+  return safeNextPath() ?? DEMO_ACCOUNTS[roleKey].dashboard;
 }
 
 export default function LoginPage() {
@@ -60,7 +77,7 @@ export default function LoginPage() {
       return;
     }
 
-    window.location.href = destinationAfterLogin('citizen');
+    window.location.href = safeNextPath() ?? destinationAfterLogin('citizen');
   };
 
   return (

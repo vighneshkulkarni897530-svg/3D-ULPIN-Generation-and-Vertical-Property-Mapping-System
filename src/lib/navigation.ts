@@ -27,6 +27,10 @@ import {
   Users,
   History,
   Clock,
+  Home,
+  Landmark,
+  Scale,
+  FileSearch,
   type LucideIcon,
 } from 'lucide-react';
 import { PERMISSIONS, type Permission } from '@/types/auth';
@@ -40,7 +44,7 @@ export interface NavItem {
   /** Custom matcher for hierarchically tricky routes (e.g. floors). */
   customActive?: (pathname: string) => boolean;
   /** Sidebar renders a live count badge for this item. */
-  badge?: 'conflicts' | 'verification';
+  badge?: 'conflicts' | 'verification' | 'notifications';
   /** Permission required to see this item (Phase 10 RBAC-aware nav). */
   permission?: Permission;
 }
@@ -61,6 +65,10 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, match: ['/dashboard'] },
       { label: '3D Map', href: '/map', icon: Box, match: ['#/map', '/map'] },
       { label: 'Properties', href: '/properties', icon: Building2, match: ['/properties'] },
+      { label: 'Society', href: '/society/register', icon: Landmark, match: ['/society'] },
+      { label: 'My Residency', href: '/resident/dashboard', icon: Home, match: ['/resident/dashboard'] },
+      { label: 'My Property', href: '/resident/property', icon: Building2, match: ['/resident/property'] },
+      { label: 'My Cases', href: '/resident/cases', icon: Scale, match: ['/resident/cases'] },
       { label: 'Buildings', href: '/buildings', icon: Building, match: ['/buildings'] },
       {
         label: 'Floor Explorer',
@@ -83,11 +91,25 @@ export const NAV_SECTIONS: NavSection[] = [
         permission: PERMISSIONS.MANAGE_SOCIETY_RENEWALS,
       },
       {
+        label: 'Gov Portal',
+        href: '/government/dashboard',
+        icon: Landmark,
+        match: ['/government'],
+        permission: PERMISSIONS.VIEW_VERIFICATION_QUEUE,
+      },
+      {
         label: 'AI Extraction',
         href: '/ai-extraction',
         icon: ScanLine,
         match: ['/ai-extraction'],
         permission: PERMISSIONS.RUN_SPATIAL_VALIDATION,
+      },
+      {
+        label: 'AI Document Analysis',
+        href: '/government/ai-analysis',
+        icon: FileSearch,
+        match: ['/government/ai-analysis'],
+        permission: PERMISSIONS.VIEW_VERIFICATION_QUEUE,
       },
       {
         label: 'Verification',
@@ -133,6 +155,13 @@ export const NAV_SECTIONS: NavSection[] = [
     id: 'analytics',
     label: 'Analytics',
     items: [
+      {
+        label: 'Gov Analytics',
+        href: '/government/analytics',
+        icon: Landmark,
+        match: ['/government/analytics'],
+        permission: PERMISSIONS.VIEW_VERIFICATION_QUEUE,
+      },
       { label: 'Reports', href: '/reports', icon: BarChart3, match: ['/reports'] },
     ],
   },

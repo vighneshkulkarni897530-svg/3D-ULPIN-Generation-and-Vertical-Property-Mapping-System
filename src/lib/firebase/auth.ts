@@ -169,23 +169,16 @@ export async function firebaseLoginWithEmail(email: string, password: string) {
       message: error?.message,
     });
 
-    // Auto-create account for demo/prototype credentials
+    // Phase 15 security: do NOT auto-provision accounts from a wrong-password
+    // lookup. Previously this branch created a brand-new Firebase account with
+    // the attacker-supplied password whenever the email was unknown — a trivial
+    // account-creation + role-escalation vector. We now fail closed instead.
     if (
       error?.code === 'auth/user-not-found' ||
       error?.code === 'auth/invalid-login-credentials' ||
       error?.code === 'auth/invalid-credential'
     ) {
-      console.log('Account not found in Firebase Auth, provisioning:', email);
-      try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const profile = await ensureUserProfile(userCredential.user, 'CITIZEN', 'EMAIL_PASSWORD');
-        return { user: userCredential.user, profile, otpRequired: false };
-      } catch (createError: any) {
-        if (createError?.code === 'auth/email-already-in-use') {
-          throw new Error('Invalid password for this account. Please check your credentials.');
-        }
-        throw createError;
-      }
+      throw new Error('Incorrect email or password.');
     }
 
     if (error?.code === 'auth/wrong-password') {
@@ -195,7 +188,8 @@ export async function firebaseLoginWithEmail(email: string, password: string) {
       throw new Error('Too many sign-in attempts. Please wait a few moments before trying again.');
     }
 
-    throw error;
+    // Surface only a generic, user-friendly message; never the raw Firebase code.
+    throw new Error('Incorrect email or password.');
   }
 }
 
@@ -355,7 +349,7 @@ export async function verifyEmailOtp(
   uid?: string,
   token?: string,
   challengeId?: string
-): Promise<boolean> {
+): Promise<string | boolean> {
   const res = await fetch('/api/auth/otp/verify', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -372,5 +366,7 @@ export async function verifyEmailOtp(
     await markUserOtpVerifiedInFirestore(auth.currentUser.uid, email);
   }
 
-  return true;
+  // Return the signed session claim so the caller can pass it to the login
+  // route, where it is verified server-side before minting a session.
+  return (payload as any).sessionClaim || true;
 }

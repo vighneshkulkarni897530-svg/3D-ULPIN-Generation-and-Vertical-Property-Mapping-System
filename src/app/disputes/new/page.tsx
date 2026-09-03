@@ -5,6 +5,7 @@ import React, { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useProperty } from "@/context/PropertyContext";
+import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useSimulatedLoading } from "@/hooks/use-simulated-loading";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -18,6 +19,8 @@ import {
 } from "lucide-react";
 import { generateTicketNumber } from "@/utils/format";
 import { reportAudit } from "@/lib/auth/client";
+import { createNotification } from "@/lib/citizen/notificationService";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 const CATEGORIES: { value: DisputeCategory; label: string; icon: string }[] = [
   { value: "BOUNDARY_MISMATCH", label: "Boundary Mismatch / Encroachment", icon: "📍" },
@@ -39,8 +42,6 @@ const INCORRECT_FIELDS = [
   "Khata / Mutation Extract",
   "Building Sanction Plan",
 ];
-
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 export default function RaiseDisputePage() {
   return (
@@ -69,6 +70,7 @@ function RaiseDisputePageInner() {
   const prefilledPropertyId = searchParams.get("property") ?? "";
 
   const { properties, getPropertyByUlpinOrId, addDispute } = useProperty();
+  const { sessionUser } = useAuth();
   const { toast } = useToast();
   const { isLoading, run } = useSimulatedLoading(1400);
 
@@ -87,7 +89,8 @@ function RaiseDisputePageInner() {
   const toggleField = (field: string) => {
     setIncorrectFields((prev) => (prev.includes(field) ? prev.filter((f) => f !== field) : [...prev, field]));
   };
-const handleLookup = () => {
+
+  const handleLookup = () => {
     if (!query.trim()) return;
     setSearching(true);
     setTimeout(() => {
@@ -137,8 +140,8 @@ const handleLookup = () => {
         ulpin: selectedProperty.ulpin,
         propertyTitle: selectedProperty.title,
         propertyAddress: selectedProperty.address,
-        raisedByUserId: "usr-cit-101",
-        raisedByUserName: "Rajesh V. Sharma",
+        raisedByUserId: sessionUser?.id || "usr-cit-101",
+        raisedByUserName: sessionUser?.name || "Citizen Resident",
         raisedByUserContact: "+91 98450 12345",
         category,
         title: title || `${category.replace(/_/g, " ")} — ${selectedProperty.title}`,
@@ -154,6 +157,7 @@ const handleLookup = () => {
         })),
       });
       setSubmitted({ ticket: created.disputeTicketNumber });
+
       // Phase 10: record the real submission in the server-side audit trail.
       reportAudit({
         action: "DISPUTE_SUBMITTED",
@@ -162,6 +166,20 @@ const handleLookup = () => {
         newValue: "SUBMITTED",
         details: `${category} dispute filed on ${selectedProperty.ulpin} (${selectedProperty.title}).`,
       });
+
+      if (sessionUser?.id) {
+        createNotification({
+          recipientUid: sessionUser.id,
+          type: 'DISPUTE_CREATED',
+          title: `Dispute Filed: ${created.disputeTicketNumber}`,
+          message: `Your property dispute report for "${selectedProperty.title}" has been registered for official verification review.`,
+          relatedEntityType: 'property',
+          relatedEntityId: selectedProperty.id,
+          severity: 'INFO',
+          linkUrl: '/resident/cases',
+        }).catch((err) => console.warn('Dispute notification warning:', err));
+      }
+
       toast({
         variant: "success",
         title: "Dispute report submitted",
@@ -169,7 +187,8 @@ const handleLookup = () => {
       });
     });
   };
-if (submitted) {
+
+  if (submitted) {
     return (
       <div className="flex-1 bg-slate-50 animate-fade-in">
         <div className="mx-auto max-w-2xl px-4 py-14 sm:px-6">
@@ -213,7 +232,7 @@ if (submitted) {
                   <Button variant="gradient">Track Verification Status</Button>
                 </Link>
               )}
-              <Link href="/dashboard/citizen">
+              <Link href="/resident/dashboard">
                 <Button variant="secondary">Open Citizen Dashboard</Button>
               </Link>
               <Link href="/disputes/new">
@@ -227,7 +246,7 @@ if (submitted) {
   }
 
   return (
-<div className="flex-1 bg-slate-50 animate-fade-in">
+    <div className="flex-1 bg-slate-50 animate-fade-in">
       <div className="mx-auto max-w-6xl space-y-6 px-4 py-10 sm:px-6 lg:px-8">
         <Link href="/properties" className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-500 hover:text-cyan-700 transition-colors">
           <ArrowLeft className="h-3.5 w-3.5" /> Back to Registry
@@ -262,179 +281,147 @@ if (submitted) {
                 <ClipboardCheck className="h-4 w-4 text-cyan-600" /> Error Category
               </h3>
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                {CATEGORIES.map((c) => (
-                  <button
-                    key={c.value}
-                    type="button"
-                    onClick={() => setCategory(c.value)}
-                    className={`flex items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-left text-xs font-bold transition-all ${
-                      category === c.value
-                        ? "border-cyan-500 bg-cyan-50 text-cyan-900 ring-2 ring-cyan-500/20"
-                        : "border-slate-200 bg-white text-slate-600 hover:border-cyan-300 hover:bg-cyan-50/40"
-                    }`}
-                  >
-                    <span className="text-base">{c.icon}</span>
-                    {c.label}
-                  </button>
-                ))}
+                {CATEGORIES.map((cat) => {
+                  const active = category === cat.value;
+                  return (
+                    <button
+                      key={cat.value}
+                      type="button"
+                      onClick={() => setCategory(cat.value)}
+                      className={`flex items-center gap-3 rounded-xl border p-3.5 text-left text-xs font-semibold transition-all ${
+                        active
+                          ? "border-cyan-500 bg-cyan-50 text-cyan-950 ring-2 ring-cyan-500/20 shadow-2xs font-extrabold"
+                          : "border-slate-200 bg-slate-50/50 text-slate-700 hover:border-slate-300 hover:bg-slate-100"
+                      }`}
+                    >
+                      <span className="text-lg">{cat.icon}</span>
+                      <span className="leading-tight">{cat.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Property lookup */}
+            {/* Disputed Fields */}
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-tech">
-              <h3 className="mb-3 flex items-center gap-2 text-sm font-extrabold text-slate-900">
-                <Search className="h-4 w-4 text-cyan-600" /> Linked Property
-              </h3>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <input
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search ULPIN, Property ID or Survey No. (e.g. 14092837482910)"
-                    className="input-tech h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-xs font-medium outline-none"
-                  />
-                </div>
-                <Button type="button" variant="blue" onClick={handleLookup} loading={searching}>
-                  {!searching && <Search className="h-3.5 w-3.5" />} Lookup
-                </Button>
+              <h3 className="mb-2 text-sm font-extrabold text-slate-900">Incorrect / Contested Attributes</h3>
+              <p className="mb-4 text-xs text-slate-500">Select all fields in the cadastral record that you believe contain inaccuracies.</p>
+              <div className="flex flex-wrap gap-2">
+                {INCORRECT_FIELDS.map((field) => {
+                  const selected = incorrectFields.includes(field);
+                  return (
+                    <button
+                      key={field}
+                      type="button"
+                      onClick={() => toggleField(field)}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
+                        selected
+                          ? "bg-rose-50 text-rose-700 border border-rose-300 ring-2 ring-rose-500/20"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200 border border-transparent"
+                      }`}
+                    >
+                      {field}
+                    </button>
+                  );
+                })}
               </div>
-
-              {selectedProperty ? (
-                <div className="mt-3 flex items-start gap-3 rounded-xl border border-green-200 bg-green-50/60 p-3.5 animate-fade-in">
-                  <div className="h-14 w-20 shrink-0 overflow-hidden rounded-lg bg-slate-900">
-                    <SafeImage src={selectedProperty.featuredImageUrl} alt="" className="h-full w-full object-cover" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-extrabold text-slate-900">{selectedProperty.title}</p>
-                    <p className="mt-0.5 font-mono text-[10px] text-slate-500">
-                      ULPIN {selectedProperty.ulpin} • Survey {selectedProperty.landDetails.surveyNumber}
-                    </p>
-                    <p className="mt-0.5 line-clamp-1 text-[10px] text-slate-500">{selectedProperty.address}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedProperty(null)}
-                    className="shrink-0 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold text-slate-500 hover:text-red-600"
-                  >
-                    Change
-                  </button>
-                </div>
-              ) : (
-                <p className="mt-2 text-[11px] text-slate-400">
-                  Select the property whose cadastral record contains an error. The dispute will be linked to its ULPIN.
-                </p>
-              )}
             </div>
-{/* Description & incorrect fields */}
+
+            {/* Description & Narrative */}
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-tech">
-              <h3 className="mb-4 flex items-center gap-2 text-sm font-extrabold text-slate-900">
-                <FileText className="h-4 w-4 text-cyan-600" /> Dispute Details
-              </h3>
+              <h3 className="mb-4 text-sm font-extrabold text-slate-900">Grievance Narrative &amp; Facts</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                    Short Title <span className="text-slate-400">(optional)</span>
-                  </label>
+                  <label className="block text-xs font-bold text-slate-700">Subject / Headline</label>
                   <input
+                    type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g. Western boundary encroached by 3 ft during road widening"
-                    className="input-tech h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs font-medium outline-none"
+                    placeholder={`e.g., East boundary wall overlaps Survey #42 by 1.8 meters`}
+                    className="mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                    Detailed Description *
-                  </label>
+                  <label className="block text-xs font-bold text-slate-700">Detailed Statement of Facts *</label>
                   <Textarea
+                    rows={4}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Explain the cadastral error, your observations, timestamps and what correction you expect..."
-                    rows={4}
+                    placeholder="Describe what is wrong, when it was noticed, and what official record supports your claim..."
+                    className="mt-1.5 resize-none text-xs"
                   />
                 </div>
-                <div>
-                  <label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                    Incorrect Information (select all that apply)
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {INCORRECT_FIELDS.map((field) => {
-                      const active = incorrectFields.includes(field);
-                      return (
-                        <button
-                          key={field}
-                          type="button"
-                          onClick={() => toggleField(field)}
-                          className={`rounded-lg border px-3 py-1.5 text-[11px] font-bold transition-all ${
-                            active
-                              ? "border-red-400 bg-red-50 text-red-700 ring-2 ring-red-500/15"
-                              : "border-slate-200 bg-white text-slate-600 hover:border-red-300 hover:text-red-600"
-                          }`}
-                        >
-                          {active ? "✓ " : ""}{field}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
               </div>
+            </div>
+
+            {/* Supporting Evidence */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-tech">
+              <h3 className="mb-2 text-sm font-extrabold text-slate-900">Documentary &amp; Geo Evidence</h3>
+              <p className="mb-4 text-xs text-slate-500">Upload geotagged photos, registered deeds, encumbrance certificates or survey sketches.</p>
+              <FileUploadZone onFilesAdded={addFiles} />
+              <EvidencePreviewList
+                items={evidences}
+                onRemove={(id) => setEvidences((prev) => prev.filter((e) => e.id !== id))}
+              />
             </div>
           </div>
 
-          {/* RIGHT COLUMN — Evidence */}
+          {/* RIGHT COLUMN */}
           <div className="space-y-5 lg:col-span-5">
+            {/* Property Selector */}
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-tech">
-              <h3 className="mb-4 flex items-center gap-2 text-sm font-extrabold text-slate-900">
-                <Camera className="h-4 w-4 text-cyan-600" /> Photo Evidence
+              <h3 className="mb-3 flex items-center gap-2 text-sm font-extrabold text-slate-900">
+                <Search className="h-4 w-4 text-cyan-600" /> Target Property
               </h3>
-              <FileUploadZone
-                accept="image/*"
-                label="Upload photos of the discrepancy"
-                hint="JPG, PNG, HEIC • Geotag optional"
-                onFilesAdded={addFiles}
-              />
-            </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-tech">
-              <h3 className="mb-4 flex items-center gap-2 text-sm font-extrabold text-slate-900">
-                <FileText className="h-4 w-4 text-cyan-600" /> Document Evidence
-              </h3>
-              <FileUploadZone
-                accept=".pdf,.jpg,.png"
-                label="Upload supporting documents"
-                hint="Title deed, khata extract, survey map, GNSS export"
-                onFilesAdded={addFiles}
-              />
-            </div>
-
-            {/* Evidence preview */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-tech">
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
-                  <ShieldCheck className="h-4 w-4 text-cyan-600" /> Evidence Preview
-                </h3>
-                <span className="rounded-full bg-slate-100 px-2 py-0.5 font-mono text-[10px] font-bold text-slate-500">
-                  {evidences.length} file{evidences.length !== 1 ? "s" : ""}
-                </span>
-              </div>
-              <EvidencePreviewList items={evidences} onRemove={(id) => setEvidences((prev) => prev.filter((e) => e.id !== id))} />
-              {evidences.length === 0 && (
-                <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50/60 p-4 text-center text-[11px] text-slate-400">
-                  No evidence uploaded yet. Photos and documents are sealed with SHA-256 & geotag before submission.
-                </p>
+              {!selectedProperty ? (
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="Enter ULPIN or property ID..."
+                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-cyan-500 focus:outline-none"
+                    />
+                    <Button type="button" size="sm" onClick={handleLookup} disabled={searching}>
+                      {searching ? "..." : "Lookup"}
+                    </Button>
+                  </div>
+                  <p className="text-[11px] text-slate-400">Search by 14-digit Bhu-Aadhaar ULPIN or property system ID.</p>
+                </div>
+              ) : (
+                <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h4 className="text-xs font-extrabold text-slate-900">{selectedProperty.title}</h4>
+                      <p className="font-mono text-[11px] text-cyan-700 mt-0.5">{selectedProperty.ulpin}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedProperty(null)}
+                      className="text-[11px] font-bold text-rose-600 hover:underline"
+                    >
+                      Change
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed">{selectedProperty.address}</p>
+                </div>
               )}
             </div>
 
-            {/* Submit */}
-            <div className="rounded-2xl border border-slate-800 bg-slate-950 p-6 text-white shadow-tech-lg">
-              <p className="text-xs text-slate-300 leading-relaxed">
-                By submitting, you confirm the information is genuine. False grievances attract penalties under
-                the Indian Penal Code §203 & the Digital Personal Data Protection Act.
-              </p>
-              <Button type="submit" variant="gradient" size="lg" loading={isLoading} className="mt-4 w-full">
-                {isLoading ? "Filing grievance with Revenue Dept..." : <>
-                  <ShieldCheck className="h-4 w-4" /> Submit Dispute Report
-                </>}
+            {/* Declaration & Submit Button */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-tech">
+              <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50/70 p-3.5 text-[11px] text-amber-900 leading-relaxed">
+                <span className="font-extrabold">Legal Notice:</span> Lodging false or frivolous cadastral claims is subject to administrative review under the Revenue Records Act.
+              </div>
+
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 font-extrabold text-white shadow-md hover:from-cyan-500 hover:to-blue-500"
+              >
+                {isLoading ? "Lodging Report..." : "Submit Grievance Dossier"}
               </Button>
             </div>
           </div>

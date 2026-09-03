@@ -112,6 +112,24 @@ export const MOCK_PARCELS: LandParcel[] = [
     createdAt: '2023-06-30T00:00:00Z',
     updatedAt: '2024-03-08T09:10:00Z',
   },
+  {
+    id: 'PARCEL-MH-PUN-074',
+    parcelNumber: 'MH-PUN-SUR-074',
+    location: 'Survey No. 74, Hinjewadi-Marunji-Kasarsai Road, Marunji, Taluka Mulshi',
+    district: 'Pune',
+    state: 'Maharashtra',
+    area: 18500, // ~1.85 ha ≈ 4.57 acres
+    geometry: {
+      type: 'Polygon',
+      coordinates: rectCoords(18.6160, 73.7125, 18.6185, 73.7155),
+    },
+    centroid: { lat: 18.6172, lng: 73.7141 },
+    latitude: 18.6172,
+    longitude: 73.7141,
+    status: 'ACTIVE',
+    createdAt: '2024-01-10T00:00:00Z',
+    updatedAt: '2026-03-01T00:00:00Z',
+  },
 ];
 
 /** Convenience lookup by ID. */
