@@ -38,7 +38,7 @@ export default function UnauthorizedPage() {
               <h1 className="text-xl font-extrabold tracking-tight text-slate-900">You don&apos;t have permission to view this page</h1>
               <p className="text-xs leading-relaxed text-slate-500">
                 Your account is signed in as <span className="font-bold text-slate-700">{ROLE_LABELS[role]}</span>, which is not
-                authorized for this resource. If you believe this is a mistake, contact the cadastre administrator to review your role assignment.
+                authorized for this resource. If you believe this is a mistake, contact your society secretary or revenue authority to review your role assignment.
               </p>
               {reason && (
                 <p className="mx-auto mt-2 max-w-md rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-500">

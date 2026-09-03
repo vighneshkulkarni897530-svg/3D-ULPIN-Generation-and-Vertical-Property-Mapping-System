@@ -26,6 +26,7 @@ import {
   Workflow,
   Users,
   History,
+  Clock,
   type LucideIcon,
 } from 'lucide-react';
 import { PERMISSIONS, type Permission } from '@/types/auth';
@@ -72,8 +73,15 @@ export const NAV_SECTIONS: NavSection[] = [
   },
   {
     id: 'verification',
-    label: 'Verification',
+    label: 'Verification & Renewal',
     items: [
+      {
+        label: 'Periodic Verification',
+        href: '/renewals',
+        icon: Clock,
+        match: ['/renewals'],
+        permission: PERMISSIONS.MANAGE_SOCIETY_RENEWALS,
+      },
       {
         label: 'AI Extraction',
         href: '/ai-extraction',
@@ -94,6 +102,7 @@ export const NAV_SECTIONS: NavSection[] = [
         href: '/field-verification/request',
         icon: ClipboardCheck,
         match: ['/field-verification'],
+        permission: PERMISSIONS.SEND_TO_FIELD_VERIFICATION,
       },
       {
         label: 'Conflicts',
@@ -101,6 +110,7 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: AlertTriangle,
         match: ['/conflicts'],
         badge: 'conflicts',
+        permission: PERMISSIONS.MANAGE_CONFLICTS,
       },
     ],
   },
@@ -108,7 +118,13 @@ export const NAV_SECTIONS: NavSection[] = [
     id: 'operations',
     label: 'Operations',
     items: [
-      { label: 'Workflow', href: '/workflow', icon: Workflow, match: ['/workflow'] },
+      {
+        label: 'Workflow',
+        href: '/workflow',
+        icon: Workflow,
+        match: ['/workflow'],
+        permission: PERMISSIONS.MANAGE_WORKFLOW_TASKS,
+      },
       { label: 'Notifications', href: '/notifications', icon: Bell, match: ['/notifications'] },
       { label: 'Report Dispute', href: '/disputes/new', icon: AlertCircle, match: ['/disputes'] },
     ],
@@ -122,7 +138,7 @@ export const NAV_SECTIONS: NavSection[] = [
   },
   {
     id: 'administration',
-    label: 'Administration',
+    label: 'Society Administration',
     permission: PERMISSIONS.SYSTEM_ADMIN,
     items: [
       {

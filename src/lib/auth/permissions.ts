@@ -139,7 +139,7 @@ export function getRouteRuleReason(pathname: string): string | null {
 export const ROLE_LABELS: Record<UserRole, string> = {
   CITIZEN: 'Verified Citizen',
   OFFICER: 'Government Officer',
-  ADMIN: 'Cadastre Administrator',
+  ADMIN: 'Society Secretary',
 };
 
 /**
@@ -151,12 +151,15 @@ export const PERMISSION_MATRIX: { feature: string; citizen: boolean; officer: bo
   { feature: '3D Map', citizen: true, officer: true, admin: true },
   { feature: 'Building & Floor View', citizen: true, officer: true, admin: true },
   { feature: 'Verification Status View', citizen: true, officer: true, admin: true },
-  { feature: 'Verification Update', citizen: false, officer: true, admin: true },
+  { feature: 'Verification Update', citizen: false, officer: true, admin: false },
   { feature: 'Conflict View', citizen: true, officer: true, admin: true },
-  { feature: 'Conflict Management', citizen: false, officer: true, admin: true },
+  { feature: 'Conflict Management', citizen: false, officer: true, admin: false },
   { feature: 'Workflow View', citizen: true, officer: true, admin: true },
-  { feature: 'Workflow Management', citizen: false, officer: true, admin: true },
+  { feature: 'Workflow Management', citizen: false, officer: true, admin: false },
   { feature: 'Reports & Analytics', citizen: true, officer: true, admin: true },
+  { feature: 'Register New Building', citizen: false, officer: false, admin: true },
+  { feature: 'Periodic Society Renewal Filing', citizen: false, officer: false, admin: true },
+  { feature: 'Periodic Renewal Official Review', citizen: false, officer: true, admin: false },
   { feature: 'User Management', citizen: false, officer: false, admin: true },
   { feature: 'Audit Logs', citizen: false, officer: false, admin: true },
   { feature: 'System Administration', citizen: false, officer: false, admin: true },

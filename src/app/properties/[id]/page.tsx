@@ -18,11 +18,16 @@ import { formatCompactINR, formatSqFt, formatAcres, humanize } from "@/utils/for
 import {
   MapPin, ArrowLeft, ShieldCheck, AlertTriangle, Building2, Layers, Box, Home,
   FileText, History, Landmark, Banknote, Ruler, ScanLine, Users, Hash, CalendarDays,
-  CheckCircle2, ArrowRight,
+  CheckCircle2, ArrowRight, Clock,
 } from "lucide-react";
+import { useRenewals } from "@/context/RenewalContext";
+import { RenewalBanner } from "@/components/renewals/RenewalBanner";
+import { PeriodicVerificationSection } from "@/components/renewals/PeriodicVerificationSection";
+import { CreateRenewalReportModal } from "@/components/renewals/CreateRenewalReportModal";
 
 const TABS = [
   { id: "overview", label: "Overview", icon: Home },
+  { id: "renewal", label: "Periodic Verification", icon: Clock },
   { id: "map", label: "2D Map", icon: MapPin },
   { id: "3d", label: "3D View", icon: Box },
   { id: "floors", label: "Floors & Units", icon: Layers },
@@ -45,15 +50,19 @@ function PropertyDetailsPageContent() {
   const id = params?.id ?? "";
   const { properties } = useProperty();
   const { properties: gisUnits, conflicts, activities } = useGIS();
+  const { getRecordByPropertyId } = useRenewals();
   const property = properties.find((p) => p.id === id || p.propertyId.toLowerCase() === id.toLowerCase());
 
   const [activeTab, setActiveTab] = useState("overview");
   const [activeDoc, setActiveDoc] = useState<PropertyDocument | null>(null);
+  const [renewalModalOpen, setRenewalModalOpen] = useState(false);
+
+  const renewalRecord = property ? getRecordByPropertyId(property.id) : undefined;
 
   useEffect(() => {
     const queryTab = new URLSearchParams(window.location.search).get("tab");
     if (queryTab) {
-      const matched = TABS.find((t) => t.id === queryTab || (queryTab === "status" && t.id === "history"));
+      const matched = TABS.find((t) => t.id === queryTab || (queryTab === "status" && t.id === "history") || (queryTab === "renewal" && t.id === "renewal"));
       if (matched) setActiveTab(matched.id);
     }
   }, []);
@@ -225,6 +234,16 @@ function PropertyDetailsPageContent() {
         );
       })()}
 
+      {/* Renewal / Periodic Verification Banner */}
+      {renewalRecord && (
+        <div className="mx-auto max-w-7xl px-4 pt-5 sm:px-6 lg:px-8">
+          <RenewalBanner
+            record={renewalRecord}
+            onCreateReport={() => setRenewalModalOpen(true)}
+          />
+        </div>
+      )}
+
       {/* Tab bar */}
       <div className="sticky top-20 z-30 border-b border-slate-200 bg-white/90 backdrop-blur-md">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -256,6 +275,11 @@ function PropertyDetailsPageContent() {
         {activeTab === "overview" && (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 animate-fade-in">
             <div className="lg:col-span-8 space-y-6">
+              {/* Periodic Verification Section */}
+              {renewalRecord && (
+                <PeriodicVerificationSection record={renewalRecord} />
+              )}
+
               {/* Image gallery */}
               <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-tech">
                 <div className="relative h-64 sm:h-80 bg-slate-900">
@@ -489,6 +513,13 @@ function PropertyDetailsPageContent() {
           </div>
         )}
 
+        {/* PERIODIC VERIFICATION TAB */}
+        {activeTab === "renewal" && renewalRecord && (
+          <div className="animate-fade-in space-y-6">
+            <PeriodicVerificationSection record={renewalRecord} />
+          </div>
+        )}
+
         {/* 3D VIEW */}
         {activeTab === "3d" && (
           <div className="animate-fade-in">
@@ -619,6 +650,15 @@ function PropertyDetailsPageContent() {
 
       {/* Document viewer modal */}
       <DocumentViewerModal document={activeDoc} onClose={() => setActiveDoc(null)} />
+
+      {/* Renewal Report Modal */}
+      {renewalRecord && (
+        <CreateRenewalReportModal
+          isOpen={renewalModalOpen}
+          onClose={() => setRenewalModalOpen(false)}
+          initialRecord={renewalRecord}
+        />
+      )}
     </div>
   );
 }

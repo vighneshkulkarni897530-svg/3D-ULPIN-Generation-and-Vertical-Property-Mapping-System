@@ -74,7 +74,7 @@ function SidebarBody({
   };
 
   const roleLabel =
-    role === "OFFICER" ? "Revenue Officer" : role === "ADMIN" ? "Cadastre Admin" : "Verified Citizen";
+    role === "OFFICER" ? "Revenue Officer" : role === "ADMIN" ? "Society Secretary" : "Verified Citizen";
 
   const CollapseControl = () => {
     if (drawer) {
@@ -104,8 +104,8 @@ function SidebarBody({
     <>
       {/* Header — brand + collapse/close */}
       <div className={cn("flex items-center gap-2.5 border-b border-slate-800 px-4 py-4", collapsed && "justify-center px-2")}>
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 text-slate-950 shadow-tech-cyan">
-          <Building className="h-5 w-5" />
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl overflow-hidden border border-cyan-500/40 bg-slate-950 shadow-tech-cyan">
+          <img src="/logo.jpeg" alt="CyberSpark Logo" className="h-full w-full object-cover" />
         </div>
         {!collapsed && (
           <div className="min-w-0 flex-1">
@@ -205,11 +205,6 @@ function SidebarBody({
               </div>
             )}
           </div>
-          {!collapsed && (
-            <p className="mt-2 px-1 text-center font-mono text-[8px] uppercase tracking-widest text-slate-600">
-              Demo persona · role switch in top bar
-            </p>
-          )}
         </div>
       )}
     </>

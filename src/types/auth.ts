@@ -85,12 +85,14 @@ export const PERMISSIONS = {
   VIEW_VERIFICATION_QUEUE: 'view_verification_queue',
   VIEW_FIELDSHEET: 'view_fieldsheet',
 
-  // ── Admin ──
+  // ── Society Secretary / Admin ──
   USER_MANAGEMENT: 'user_management',
   SYSTEM_ADMIN: 'system_admin',
   VIEW_REPORTS: 'view_reports',
   VIEW_ACTIVITY_LOG: 'view_activity_log',
   ACCESS_DASHBOARD_ADMIN: 'access_dashboard_admin',
+  REGISTER_BUILDING: 'register_building',
+  MANAGE_SOCIETY_RENEWALS: 'manage_society_renewals',
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -118,8 +120,10 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   system_admin: 'System Administration',
   view_reports: 'View Reports',
   view_activity_log: 'View Activity Log',
-  access_dashboard_admin: 'Access Admin Dashboard',
+  access_dashboard_admin: 'Access Society Secretary Dashboard',
   access_dashboard_citizen: 'Access Citizen Dashboard',
+  register_building: 'Register Society Building',
+  manage_society_renewals: 'Manage Society Renewals',
 };
 
 /** Permission sets granted to each role. CITIZEN is the baseline. */
@@ -153,13 +157,15 @@ const OFFICER_PERMISSIONS: Permission[] = [
 ];
 
 const ADMIN_PERMISSIONS: Permission[] = [
-  // Inherits all OFFICER permissions
-  ...OFFICER_PERMISSIONS,
-  // Admin-specific
+  ...CITIZEN_PERMISSIONS,
+  // Society Secretary permissions
+  PERMISSIONS.REGISTER_BUILDING,
+  PERMISSIONS.MANAGE_SOCIETY_RENEWALS,
   PERMISSIONS.USER_MANAGEMENT,
   PERMISSIONS.SYSTEM_ADMIN,
   PERMISSIONS.VIEW_ACTIVITY_LOG,
   PERMISSIONS.ACCESS_DASHBOARD_ADMIN,
+  PERMISSIONS.VIEW_REPORTS,
 ];
 
 export const ROLE_PERMISSIONS: Record<import('@/types').UserRole, Permission[]> =

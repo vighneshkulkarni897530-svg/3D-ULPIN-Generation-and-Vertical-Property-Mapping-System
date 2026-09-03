@@ -52,6 +52,16 @@ export async function POST(req: NextRequest) {
   }
 
   const aadhaarRaw = typeof (body as any)?.aadhaarOrGovId === 'string' ? (body as any).aadhaarOrGovId.trim() : '';
+  const roleRaw = typeof (body as any)?.role === 'string' && ['CITIZEN', 'OFFICER', 'ADMIN'].includes((body as any).role)
+    ? ((body as any).role as any)
+    : 'CITIZEN';
+  const badgeNumber = typeof (body as any)?.badgeNumber === 'string' ? (body as any).badgeNumber.trim() : undefined;
+  const societyName = typeof (body as any)?.societyName === 'string' ? (body as any).societyName.trim() : undefined;
+  const societyRegNo = typeof (body as any)?.societyRegNo === 'string' ? (body as any).societyRegNo.trim() : undefined;
+  const department = typeof (body as any)?.department === 'string' ? (body as any).department.trim() : undefined;
+  const designation = typeof (body as any)?.designation === 'string' ? (body as any).designation.trim() : undefined;
+  const jurisdictionDistrict = typeof (body as any)?.jurisdictionDistrict === 'string' ? (body as any).jurisdictionDistrict.trim() : undefined;
+  const avatarUrl = typeof (body as any)?.avatarUrl === 'string' ? (body as any).avatarUrl : undefined;
 
   if (!isSupabaseAuthConfigured()) {
     const result = registerUser({
@@ -60,6 +70,14 @@ export async function POST(req: NextRequest) {
       phone: phoneRaw,
       password: password.value,
       aadhaarOrGovId: aadhaarRaw,
+      role: roleRaw,
+      badgeNumber,
+      societyName,
+      societyRegNo,
+      department,
+      designation,
+      jurisdictionDistrict,
+      avatarUrl,
     });
     if (!result.ok) {
       if (result.error === 'EMAIL_TAKEN') {
@@ -83,7 +101,20 @@ export async function POST(req: NextRequest) {
     return res;
   }
 
-  const result = registerUser({ name: name.value, email: email.value, phone: phoneRaw, password: password.value });
+  const result = registerUser({
+    name: name.value,
+    email: email.value,
+    phone: phoneRaw,
+    password: password.value,
+    role: roleRaw,
+    badgeNumber,
+    societyName,
+    societyRegNo,
+    department,
+    designation,
+    jurisdictionDistrict,
+    avatarUrl,
+  });
   if (!result.ok) {
     if (result.error === 'EMAIL_TAKEN') {
       return jsonError(400, 'EMAIL_TAKEN', 'An account with this email already exists. Try signing in instead.');

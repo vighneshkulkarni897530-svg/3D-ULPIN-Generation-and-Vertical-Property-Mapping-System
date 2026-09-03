@@ -22,6 +22,7 @@ import {
   CheckCircle2, XCircle, RefreshCcw, Eye, FileText, CalendarDays, ArrowRight,
   Search, Layers, Landmark,
 } from "lucide-react";
+import { RenewalDashboardCard } from "@/components/renewals/RenewalDashboardCard";
 
 type ActionTone = "approve" | "reject" | "correction" | "status";
 
@@ -103,17 +104,51 @@ const executeAction = () => {
 return (
     <PageContainer>
       <div className="space-y-7">
+        {/* Officer Identity Card with Profile Photo */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-3xl bg-slate-900/60 border border-emerald-500/20 backdrop-blur-md">
+          <div className="flex items-center gap-4">
+            <div className="relative h-14 w-14 shrink-0 rounded-2xl overflow-hidden border-2 border-emerald-500/50 bg-slate-950 shadow-md">
+              {currentUser.avatarUrl ? (
+                <img src={currentUser.avatarUrl} alt={currentUser.name} className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-emerald-500 to-teal-700 text-sm font-extrabold text-slate-950">
+                  {currentUser.name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()}
+                </div>
+              )}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Official Revenue Command</span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold text-emerald-300 border border-emerald-500/30">
+                  <ShieldCheck className="h-2.5 w-2.5" /> {currentUser.badgeNumber || 'KA-REV-OFFICER'}
+                </span>
+              </div>
+              <h2 className="text-lg font-black text-white">{currentUser.name}</h2>
+              <p className="text-xs text-slate-400">
+                {currentUser.designation || 'Tahsildar / Assistant Revenue Officer'} • {currentUser.jurisdictionDistrict || 'Bengaluru Urban'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link href="/profile">
+              <Button variant="secondary" className="text-xs">
+                Edit Profile &amp; Photo
+              </Button>
+            </Link>
+            <Link href="/disputes">
+              <Button variant="outline" className="text-xs">
+                <AlertTriangle className="h-3.5 w-3.5 text-amber-400" /> Disputes ({stats.openDisputes})
+              </Button>
+            </Link>
+          </div>
+        </div>
+
         <PageHeader
           eyebrow="REVENUE OFFICER PORTAL"
-          title={`Field Operations, ${currentUser.name.split(",")[0]}`}
-          description={`${currentUser.designation ?? "Cadastral Revenue Officer"} • ${currentUser.badgeNumber ?? ""} • ${currentUser.jurisdictionDistrict ?? ""}`}
+          title={`Field Operations Command`}
+          description={`${currentUser.designation ?? "Cadastral Revenue Officer"} • Service ID ${currentUser.badgeNumber ?? ""} • ${currentUser.jurisdictionDistrict ?? ""}`}
           actions={
             <div className="flex items-center gap-2">
-              <Link href="/disputes">
-                <Button variant="secondary">
-                  <AlertTriangle className="h-3.5 w-3.5" /> Dispute Cases ({stats.openDisputes})
-                </Button>
-              </Link>
               <Link href="/properties">
                 <Button variant="outline">
                   <Search className="h-3.5 w-3.5" /> Registry Search
@@ -130,6 +165,9 @@ return (
           <DashboardCard label="Completed Verifications" value={String(stats.completed)} sub="Reports submitted digitally" icon={<CheckCircle2 className="h-5 w-5" />} tone="green" trend={{ direction: "up", value: "90%" }} />
           <DashboardCard label="High Priority Cases" value={String(stats.highPriority)} sub="Require action within 48 hrs" icon={<AlertTriangle className="h-5 w-5" />} tone="red" />
         </div>
+
+        {/* Periodic Property Verification & Renewal Section */}
+        <RenewalDashboardCard />
 
         {/* Work queue */}
         <DataTable

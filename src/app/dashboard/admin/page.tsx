@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { useProperty } from "@/context/PropertyContext";
+import { useAuth } from "@/context/AuthContext";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { DashboardCard } from "@/components/dashboard/DashboardCard";
@@ -36,6 +37,7 @@ export default function AdminDashboardPage() {
 
 function AdminDashboardPageContent() {
   const { properties, disputes, fieldRequests, activityLogs } = useProperty();
+  const { currentUser } = useAuth();
   const [tab, setTab] = useState<AdminTab>("dashboard");
 
   const stats = useMemo(() => {
@@ -115,18 +117,54 @@ const tabs: { id: AdminTab; label: string; icon: React.ReactNode }[] = [
   return (
     <PageContainer>
       <div className="space-y-7">
+        {/* Society Secretary Identity Banner with Profile Photo */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-3xl bg-slate-900/60 border border-indigo-500/20 backdrop-blur-md">
+          <div className="flex items-center gap-4">
+            <div className="relative h-14 w-14 shrink-0 rounded-2xl overflow-hidden border-2 border-indigo-500/50 bg-slate-950 shadow-md">
+              {currentUser.avatarUrl ? (
+                <img src={currentUser.avatarUrl} alt={currentUser.name} className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-700 text-sm font-extrabold text-white">
+                  {currentUser.name.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()}
+                </div>
+              )}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">Society Secretary Command</span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-indigo-500/10 px-2 py-0.5 text-[9px] font-bold text-indigo-300 border border-indigo-500/30">
+                  <ShieldCheck className="h-2.5 w-2.5" /> {currentUser.societyRegNo || 'PUN/HSG/CERT'}
+                </span>
+              </div>
+              <h2 className="text-lg font-black text-white">{currentUser.name}</h2>
+              <p className="text-xs text-slate-400">
+                {currentUser.societyName || 'Green Valley Co-operative Housing Society'} • Authorized Secretary
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link href="/profile">
+              <button className="rounded-xl border border-slate-700 bg-slate-800 px-3.5 py-2 text-xs font-bold text-slate-200 transition-colors hover:bg-slate-700">
+                Edit Profile &amp; Photo
+              </button>
+            </Link>
+            <Link href="/buildings">
+              <button className="rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-3.5 py-2 text-xs font-bold text-white transition-all shadow-sm hover:from-indigo-400 hover:to-purple-500">
+                Register Building
+              </button>
+            </Link>
+          </div>
+        </div>
+
         <PageHeader
-          eyebrow="CADASTRE ADMINISTRATION"
-          title="Platform Command Centre"
-          description="State-wide registry supervision, officer management, dispute analytics and system audit."
+          eyebrow="SOCIETY SECRETARY PORTAL"
+          title="Society Administration & Cadastre Hub"
+          description="Housing society building registry, floor units, periodic verification renewals, and resident records."
           actions={
             <div className="flex items-center gap-2">
-              <span className="hidden items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-bold text-slate-600 sm:flex">
-                <Activity className="h-3.5 w-3.5 text-green-500" /> All systems nominal
-              </span>
-              <Link href="/properties">
+              <Link href="/renewals">
                 <button className="rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-bold text-cyan-300 transition-colors hover:bg-slate-800">
-                  Registry
+                  Periodic Renewals Hub &rarr;
                 </button>
               </Link>
             </div>
