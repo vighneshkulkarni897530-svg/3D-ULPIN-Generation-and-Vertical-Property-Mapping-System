@@ -77,21 +77,55 @@ export function UnitDetailsSheet({ unit, onClose, className }: UnitDetailsSheetP
               </p>
             </div>
 
-            <div className="mt-3 rounded-xl border border-[#164E73]/60 bg-[#061426] p-3">
-              <span className="flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest text-[#64748B]">
-                <FileText className="h-2.5 w-2.5 text-[#008CFF]" /> Cadastral Records
-              </span>
-              <div className="mt-2 space-y-1.5">
-                {["Title deed", "Khata extract", "Tax receipts"].map((doc, i) => (
-                  <div key={doc} className="flex items-center justify-between text-[10px]">
-                    <span className="text-[#94A3B8]">{doc}</span>
-                    <span className="flex items-center gap-1 font-black uppercase tracking-wide text-[#22C55E]">
-                      <Hash className="h-2.5 w-2.5" /> Sealed
-                    </span>
+            {unit.fromRegistry ? (
+              /* ── Phase 19 — canonical registry unit panel (honest data) ── */
+              <>
+                <div className="mt-3 rounded-xl border border-[#00D9FF]/40 bg-[#00D9FF]/5 p-3">
+                  <span className="flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest text-[#00D9FF]">
+                    <Fingerprint className="h-2.5 w-2.5" /> Demo Spatial Identifier
+                  </span>
+                  <p className="mt-1 break-all font-mono text-[11px] font-black text-[#F8FAFC]">
+                    {unit.demoSpatialId ?? "—"}
+                  </p>
+                  <p className="mt-0.5 break-all font-mono text-[9px] text-[#64748B]">
+                    Registry ID: {unit.propertyRecordId ?? unit.id}
+                  </p>
+                </div>
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  <div className="rounded-xl border border-[#FACC15]/40 bg-[#FACC15]/5 p-2.5 text-center">
+                    <p className="text-[8px] font-bold uppercase tracking-widest text-[#64748B]">Data Status</p>
+                    <p className="mt-1 text-[11px] font-black text-[#FACC15]">DEMO</p>
                   </div>
-                ))}
+                  <div className="rounded-xl border border-[#FACC15]/40 bg-[#FACC15]/5 p-2.5 text-center">
+                    <p className="text-[8px] font-bold uppercase tracking-widest text-[#64748B]">Official ULPIN</p>
+                    <p className="mt-1 text-[11px] font-black text-[#FACC15]">NO</p>
+                  </div>
+                  <div className="rounded-xl border border-[#164E73]/60 bg-[#061426] p-2.5 text-center">
+                    <p className="text-[8px] font-bold uppercase tracking-widest text-[#64748B]">Source</p>
+                    <p className="mt-1 text-[11px] font-black text-[#F8FAFC]">Illustrative</p>
+                  </div>
+                </div>
+                <p className="mt-3 rounded-xl border border-[#FACC15]/30 bg-[#FACC15]/5 px-3 py-2 text-[9px] font-semibold leading-relaxed text-[#FACC15]">
+                  DEMO DATA — NOT AN OFFICIAL GOVERNMENT CADASTRAL RECORD
+                </p>
+              </>
+            ) : (
+              <div className="mt-3 rounded-xl border border-[#164E73]/60 bg-[#061426] p-3">
+                <span className="flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest text-[#64748B]">
+                  <FileText className="h-2.5 w-2.5 text-[#008CFF]" /> Cadastral Records
+                </span>
+                <div className="mt-2 space-y-1.5">
+                  {["Title deed", "Khata extract", "Tax receipts"].map((doc, i) => (
+                    <div key={doc} className="flex items-center justify-between text-[10px]">
+                      <span className="text-[#94A3B8]">{doc}</span>
+                      <span className="flex items-center gap-1 font-black uppercase tracking-wide text-[#22C55E]">
+                        <Hash className="h-2.5 w-2.5" /> Sealed
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </motion.div>
       )}

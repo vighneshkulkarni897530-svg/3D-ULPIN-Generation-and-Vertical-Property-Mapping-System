@@ -758,6 +758,44 @@ Full reports: `phase17_deployment_blocker_report.md`,
   nested project copy `3D-ULPIN-Generation.../` left for owner decision (not
   removed — not confirmed unused and no removal authorization given).
 
+### Phase 19 — 3D Digital Twin Correction, Data Consistency & Validation (2026-09)
+
+Full report: `phase19_3d_digital_twin_correction_report.md`.
+
+Real browser/video review of Phase 18 exposed a critical data mismatch: the
+Digital Twin panels displayed the legacy **"Green Valley Residency"** mock
+(12 floors / 42 m / 48 units / 3.5 m floor formula) instead of the canonical
+**Tower B · Kolte Patil Life Republic Penthouses** records (20 floors / 62.0 m /
+3.1 m floor height / Floor 4 = 12.4 m).
+
+**Root cause & fix (single source of truth):**
+- Created `src/lib/twinView.ts` — the canonical adapter that derives ALL
+  Digital-Twin presentation models (`TwinBuildingInfo` / `TwinFloor[]` /
+  `TwinUnit[]`) from the resolved registry data. Every panel on the digital
+  twin page now renders from this one derived view; the Green Valley mock
+  survives only as an illustrative fallback for unlinked townships.
+- Unified floor selection: the bottom workbench now drives BOTH the panels and
+  the 3D scene (`inspection.selectFloor`), so slicing/isolation/explode visibly
+  respond to floor clicks.
+- Deep links fully wired: `?building=&floor=&flat=` progressively select
+  Tower B / Floor 4 / Flat 402; bare deep links fall back to the canonical
+  featured registry unit; invalid ids fail gracefully ("Place not found").
+- Unit details sheet upgraded for registry units: Demo Spatial Identifier,
+  `Data Status: DEMO`, `Official ULPIN: NO`, `Source: Illustrative` +
+  "DEMO DATA — NOT AN OFFICIAL GOVERNMENT CADASTRAL RECORD"; fabricated
+  Aadhaar masks / "sealed documents" removed (`PROTECTED` placeholder).
+- Dishonest "Cadastral Base ULPIN" header label corrected to
+  "Cadastral Parcel" + compact `Demo Data` badges (no large overlays).
+- Canonical demo spatial identifier `3D-MH-PUN-LR-B-0402` applied to the
+  featured unit via a surgical registry override.
+
+**Verification:** `npx tsc --noEmit` 0 errors; `npm run build` exit 0;
+all 10 deep-link/route variants HTTP 200 against the production build
+(`next start`); `/api/gis-selftest` integrity all-true (zero orphans,
+all demo IDs non-official, existing Greenfield/Pune 001–005 data preserved).
+Browser-level visual confirmation, FPS measurement and deployed verification:
+**NOT VERIFIED — REQUIRES LIVE ENVIRONMENT / MANUAL BROWSER TEST.**
+
 ---
 
 ## 36. Phase 18 — Full Realistic Township 3D Digital Twin + Demo Property + Building Management (2026-09)

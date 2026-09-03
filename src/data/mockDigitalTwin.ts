@@ -1,5 +1,13 @@
 /**
- * Mock data for the Building Digital Twin page.
+ * Illustrative fallback dataset for the Building Digital Twin page.
+ *
+ * ⚠ Phase 19 scope reduction: this Green Valley Residency dataset is NO
+ * LONGER used to render panels for registry-linked buildings. The canonical
+ * adapter (`@/lib/twinView`) derives all Digital-Twin presentation data from
+ * the real cadastral records (e.g. Tower B · Kolte Patil Life Republic
+ * Penthouses). These constants are consumed ONLY when no registry building
+ * is linked (generic illustrative townships).
+ *
  * Self-contained demo dataset — Green Valley Residency, Pune.
  * 12 floors (Ground + 01..11) × 4 units = 48 units.
  */
@@ -18,15 +26,27 @@ export interface TwinUnit {
   status: TwinVerificationStatus;
   taxAssessment: string;
   healthScore: number;
+  // ── Phase 19 — canonical registry linkage (optional, additive) ──────────
+  /** Canonical registry unit id, e.g. `PROP-LR-B-0402`. */
+  propertyRecordId?: string;
+  /** Demo Spatial Identifier — NEVER an official ULPIN. */
+  demoSpatialId?: string;
+  /** True when this unit was derived from the real cadastral registry. */
+  fromRegistry?: boolean;
+  /** Data-status marker for honest labelling. */
+  sourceType?: "ILLUSTRATIVE" | "REGISTRY";
 }
 
 export interface TwinFloor {
-  level: number; // 0 = ground .. 11
+  level: number; // 0 = ground .. N
   label: string; // "Ground Floor", "Floor 01" ...
   elevationM: number;
   areaSqFt: number;
   units: TwinUnit[];
   status: TwinVerificationStatus;
+  // ── Phase 19 — canonical registry linkage (optional, additive) ──────────
+  /** Canonical registry floor id, e.g. `FLOOR-LR-B-04`. */
+  floorId?: string;
 }
 
 export interface TwinActivity {
@@ -58,6 +78,23 @@ export interface TwinBuildingInfo {
   systemStatus: "ACTIVE";
   latitude: number;
   longitude: number;
+  // ── Phase 19 — canonical registry linkage (optional, additive) ──────────
+  /** Canonical registry building id, e.g. `B-LR-B`. */
+  buildingId?: string;
+  /** Canonical registry building code, e.g. `BLDG-LR-B`. */
+  buildingCode?: string;
+  /** Canonical parcel id, e.g. `PARCEL-MH-PUN-074`. */
+  parcelId?: string;
+  /** Society name, e.g. `Kolte Patil Life Republic Penthouses`. */
+  societyName?: string;
+  /** Land survey number, e.g. `74`. */
+  surveyNumber?: string;
+  /** `DEMO` for illustrative datasets — always shown alongside the record. */
+  dataStatus?: "DEMO" | "REGISTRY";
+  /** `ILLUSTRATIVE` for demo datasets; `REGISTRY` for verified records. */
+  sourceType?: "ILLUSTRATIVE" | "REGISTRY";
+  /** Always `false` — demo spatial identifiers are never official ULPINs. */
+  isOfficialUlpin?: boolean;
 }
 
 export const TWIN_BUILDING: TwinBuildingInfo = {

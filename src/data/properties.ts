@@ -81,13 +81,15 @@ interface UnitInput {
   dataSource: DataSource;
   confidence: number;
   generatedAt: string;
+  /** Optional explicit demo spatial ID (overrides the generated pattern). */
+  spatialIdOverride?: string;
 }
 
 function makeUnit(u: UnitInput): PropertyUnit {
   return {
     id: u.id,
     propertyId: u.propertyId,
-    demoSpatialId: demoSpatialId(u.buildingId, u.unitNumber),
+    demoSpatialId: u.spatialIdOverride ?? demoSpatialId(u.buildingId, u.unitNumber),
     officialUlpinReference: null,
     buildingId: u.buildingId,
     floorId: u.floorId,
@@ -323,6 +325,8 @@ MOCK_PROPERTIES.push(
     dataSource: 'AI_EXTRACTION',
     confidence: 0.98,
     generatedAt: GENERATED_AT,
+    // Canonical Phase 18/19 demo spatial identifier for the featured unit.
+    spatialIdOverride: '3D-MH-PUN-LR-B-0402',
   }),
   makeUnit({
     id: 'PROP-LR-B-0401',

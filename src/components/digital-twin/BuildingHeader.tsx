@@ -28,6 +28,14 @@ export function BuildingHeader({ building, onFullscreen }: BuildingHeaderProps) 
           <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#94A3B8]">
             Real-time Property Visualization
           </span>
+          {building.dataStatus === "DEMO" && (
+            <span
+              className="rounded-md border border-[#FACC15]/50 bg-[#FACC15]/10 px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.14em] text-[#FACC15]"
+              title="Illustrative demo dataset — not an official government cadastral record"
+            >
+              Demo · Not Official ULPIN
+            </span>
+          )}
         </div>
         <h1 className="mt-2.5 text-xl font-black tracking-tight text-[#F8FAFC] sm:text-2xl">
           {building.name}

@@ -53,7 +53,8 @@ import { UnitDetailsSheet } from "@/components/digital-twin/UnitDetailsSheet";
 import { BuildingAnalytics } from "@/components/digital-twin/BuildingAnalytics";
 import { DigitalTwinActivityTimeline } from "@/components/digital-twin/ActivityTimeline";
 import { DigitalTwinMiniMap } from "@/components/digital-twin/MiniMap";
-import { TWIN_BUILDING, TWIN_FLOORS, TwinUnit } from "@/data/mockDigitalTwin";
+import { TwinUnit } from "@/data/mockDigitalTwin";
+import { buildTwinView, findTwinUnit } from "@/lib/twinView";
 import { fadeIn, slideInLeft, slideInRight } from "@/components/digital-twin/motion";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
@@ -103,30 +104,49 @@ function BuildingDigitalTwinPageContent() {
   const { getPropertyByUlpinOrId } = useProperty();
   const routeProperty = useMemo(() => getPropertyByUlpinOrId(routeId) ?? null, [getPropertyByUlpinOrId, routeId]);
 
-  // Deep-link auto-selection
+  // Phase 19 — resolve the canonical registry unit for this route
+  // (e.g. PROP-LR-B-0402 → building B-LR-B, floor FLOOR-LR-B-04). Used to
+  // auto-select the correct tower/floor/flat even when query params are absent.
+  const featuredUnitRecord = useMemo(
+    () => gisUnits.find((u) => u.id === routeId || u.propertyId === routeId) ?? null,
+    [gisUnits, routeId],
+  );
+  const featuredFloorLevel = useMemo(() => {
+    if (!featuredUnitRecord) return null;
+    return floors.find((f) => f.id === featuredUnitRecord.floorId)?.floorNumber ?? null;
+  }, [featuredUnitRecord, floors]);
+
+  // Deep-link auto-selection (?building=…&floor=…&flat=…). When a parameter is
+  // absent, fall back to the canonical featured registry unit so that opening
+  // /properties/PROP-LR-B-0402/digital-twin still lands on Tower B · Floor 4 ·
+  // Flat 402 — never on an unrelated mock building.
   useEffect(() => {
-    if (queryBuilding) {
-      const match = buildings.find((b) => b.id === queryBuilding || b.buildingCode === queryBuilding);
+    const buildingParam = queryBuilding ?? featuredUnitRecord?.buildingId ?? null;
+    if (buildingParam) {
+      const match = buildings.find((b) => b.id === buildingParam || b.buildingCode === buildingParam);
       if (match) {
-        setSelectedTowerId(match.id);
+        setSelectedTowerId((prev) => (prev === match.id ? prev : match.id));
         inspection.selectBuilding(match.id);
       } else {
-        setSelectedTowerId(queryBuilding);
-        inspection.selectBuilding(queryBuilding);
+        setSelectedTowerId(buildingParam);
+        inspection.selectBuilding(buildingParam);
       }
     }
-    if (queryFloor) {
-      const fNum = parseInt(queryFloor, 10);
+    const floorParam = queryFloor ?? (featuredFloorLevel !== null ? String(featuredFloorLevel) : null);
+    if (floorParam) {
+      const fNum = parseInt(floorParam, 10);
       if (!isNaN(fNum)) {
-        setSelectedLevel(fNum);
+        setSelectedLevel((prev) => (prev === fNum ? prev : fNum));
         inspection.selectFloor(fNum);
       }
     }
-    if (queryFlat) {
-      setSelectedUnitId(queryFlat);
-      inspection.selectFlat(queryFlat);
+    const flatParam = queryFlat ?? featuredUnitRecord?.id ?? null;
+    if (flatParam) {
+      setSelectedUnitId((prev) => (prev === flatParam ? prev : flatParam));
+      inspection.selectFlat(flatParam);
     }
-  }, [queryBuilding, queryFloor, queryFlat, buildings]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryBuilding, queryFloor, queryFlat, buildings, featuredUnitRecord, featuredFloorLevel]);
 
   const place = resolvePlace(PLACE_ID);
 
@@ -144,8 +164,11 @@ function BuildingDigitalTwinPageContent() {
     }
   }, [inspection.floorMode]);
 
-  const selectedFloor = useMemo(
-    () => TWIN_FLOORS.find((f) => f.level === selectedFloorLevel) ?? TWIN_FLOORS[0],
+  const selectedFloorLabel = useMemo(
+    () =>
+      selectedFloorLevel === 0
+        ? "Ground Floor"
+        : `Floor ${String(selectedFloorLevel).padStart(2, "0")}`,
     [selectedFloorLevel]
   );
 
@@ -221,6 +244,54 @@ function BuildingDigitalTwinPageContent() {
     inspection.selectFloor(level);
   }, [inspection]);
   const handleCloseTowerPanel = useCallback(() => setShowTowerPanel(false), []);
+
+  // ── Phase 19 — canonical twin view (single source of truth) ────────────────
+  // Derives ALL presentation data (header / info panel / floor explorer /
+  // units / minimap) from the REAL registry records of the selected building.
+  // The legacy Green Valley illustration mock is only used when no registry
+  // building is linked. This removes the Green-Valley/12-floor/42m data
+  // mismatch observed in the Phase 18 review.
+  const twinView = useMemo(
+    () =>
+      buildTwinView({
+        building: linkedTowerData.building,
+        floors: linkedTowerData.floors,
+        units: linkedTowerData.units,
+        parcel: linkedTowerData.parcel,
+        featured: routeProperty,
+      }),
+    [linkedTowerData, routeProperty]
+  );
+
+  // Unified floor state for the bottom workbench: registry-linked selection
+  // drives BOTH the panels and the 3D scene (inspection.selectFloor), so the
+  // geometry visibly responds to floor changes.
+  const activeLevel = twinView.linked ? selectedLevel ?? selectedFloorLevel : selectedFloorLevel;
+  const bottomFloors = twinView.floors;
+  const activeFloor = useMemo(
+    () => bottomFloors.find((f) => f.level === activeLevel) ?? bottomFloors[0],
+    [bottomFloors, activeLevel]
+  );
+  const handleSelectBottomFloor = useCallback(
+    (level: number) => {
+      if (twinView.linked) {
+        handleSelectLevel(level);
+      } else {
+        handleSelectFloor(level);
+      }
+    },
+    [twinView.linked, handleSelectLevel, handleSelectFloor]
+  );
+
+  // Sync the selected TwinUnit from the canonical registry when a flat id is
+  // chosen via deep link (?flat=402), the in-scene explorer, or a conflict.
+  useEffect(() => {
+    if (!selectedUnitId) return;
+    const unit = findTwinUnit(bottomFloors, selectedUnitId);
+    if (unit && unit.id !== selectedUnit?.id) {
+      setSelectedUnit(unit);
+    }
+  }, [selectedUnitId, bottomFloors, selectedUnit?.id]);
 
   const handleFullscreen = useCallback(() => {
     const shell = viewerShellRef.current;
@@ -317,7 +388,7 @@ function BuildingDigitalTwinPageContent() {
           </div>
         </div>
 
-        <BuildingHeader building={TWIN_BUILDING} onFullscreen={handleFullscreen} />
+        <BuildingHeader building={twinView.building} onFullscreen={handleFullscreen} />
 
         {/* ============ MAIN GRID: left info | 3D viewer | right info ============ */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[250px_minmax(0,1fr)_300px]">
@@ -328,7 +399,14 @@ function BuildingDigitalTwinPageContent() {
             animate="show"
             className="order-2 lg:order-1"
           >
-            <BuildingInfoPanel building={TWIN_BUILDING} />
+            <BuildingInfoPanel
+              building={twinView.building}
+              selectedFloorLabel={
+                twinView.linked
+                  ? activeFloor?.label
+                  : selectedFloorLabel
+              }
+            />
           </motion.aside>
 
           {/* CENTER — 3D Viewer */}
@@ -350,7 +428,13 @@ function BuildingDigitalTwinPageContent() {
                   <span className="h-1.5 w-1.5 rounded-full bg-[#00D9FF] shadow-[0_0_8px_rgba(0,217,255,0.8)]" />
                   3D Property Inspection Workbench
                   <span className="hidden font-mono normal-case tracking-normal text-[#64748B] sm:inline">
-                    · {linkedTowerData.parcel?.parcelNumber ? `Parcel ${linkedTowerData.parcel.parcelNumber}` : place.name} · Cadastral Base ULPIN: {linkedTowerData.parcel?.parcelNumber ?? "27412104101A8F"}
+                    · {linkedTowerData.parcel?.parcelNumber ? `Parcel ${linkedTowerData.parcel.parcelNumber}` : place.name} · Cadastral Parcel: {linkedTowerData.parcel?.parcelNumber ?? linkedTowerData.parcel?.id ?? "—"}
+                  </span>
+                  <span
+                    className="rounded border border-[#FACC15]/50 bg-[#FACC15]/10 px-1.5 py-0.5 font-bold uppercase text-[#FACC15]"
+                    title="Illustrative demo dataset — not an official government cadastral record"
+                  >
+                    Demo Data
                   </span>
                 </div>
                 <div className="flex items-center gap-2 font-mono text-[9px] text-[#64748B]">
@@ -562,16 +646,23 @@ function BuildingDigitalTwinPageContent() {
                 </div>
                 <dl className="space-y-2 text-[11px]">
                   {[
-                    { k: "Construction Year", v: TWIN_BUILDING.constructionYear },
-                    { k: "Building Height", v: `${TWIN_BUILDING.heightM} m` },
-                    { k: "Total Floors", v: TWIN_BUILDING.totalFloors },
-                    { k: "Occupied Units", v: TWIN_BUILDING.occupiedUnits },
-                    { k: "Vacant Units", v: TWIN_BUILDING.vacantUnits },
-                    { k: "Property Health", v: `${TWIN_BUILDING.propertyHealth}%` },
+                    { k: "Society", v: twinView.building.societyName ?? "—" },
+                    { k: "Survey No.", v: twinView.building.surveyNumber ?? "—" },
+                    { k: "Building Code", v: twinView.building.buildingCode ?? twinView.building.buildingId ?? "—" },
+                    { k: "Construction Year", v: twinView.building.constructionYear },
+                    { k: "Building Height", v: `${twinView.building.heightM} m` },
+                    { k: "Total Floors", v: twinView.building.totalFloors },
+                    { k: "Occupied Units", v: twinView.building.occupiedUnits },
+                    { k: "Vacant Units", v: twinView.building.vacantUnits },
+                    { k: "Property Health", v: `${twinView.building.propertyHealth}%` },
+                    { k: "Data Status", v: "DEMO — ILLUSTRATIVE" },
+                    { k: "Official ULPIN", v: "NO" },
                   ].map((r) => (
                     <div key={r.k} className="flex items-center justify-between border-b border-[#164E73]/40 pb-1.5 last:border-0 last:pb-0">
                       <dt className="font-semibold text-[#94A3B8]">{r.k}</dt>
-                      <dd className="font-mono font-black tabular-nums text-[#F8FAFC]">{r.v}</dd>
+                      <dd className={`font-mono font-black tabular-nums ${
+                        r.k === "Data Status" ? "text-[#FACC15]" : r.k === "Official ULPIN" ? "text-[#FACC15]" : "text-[#F8FAFC]"
+                      }`}>{r.v}</dd>
                     </div>
                   ))}
                 </dl>
@@ -579,7 +670,7 @@ function BuildingDigitalTwinPageContent() {
 
               <div className="dt-hud dt-card-accent rounded-2xl p-4">
                 <div className="flex items-center justify-center">
-                  <VerificationScore score={TWIN_BUILDING.verificationScore} />
+                  <VerificationScore score={twinView.building.verificationScore} />
                 </div>
               </div>
 
@@ -596,40 +687,42 @@ function BuildingDigitalTwinPageContent() {
             animate="show"
             className="dt-hud dt-card-accent rounded-2xl p-4"
           >
-            <FloorExplorer floors={TWIN_FLOORS} selectedLevel={selectedFloorLevel} onSelect={handleSelectFloor} />
+            <FloorExplorer floors={bottomFloors} selectedLevel={activeLevel} onSelect={handleSelectBottomFloor} />
 
             {/* Selected floor summary */}
-            <div className="mt-3 rounded-xl border border-[#00D9FF]/40 bg-[#00D9FF]/5 p-3">
-              <span className="text-[8px] font-black uppercase tracking-widest text-[#00D9FF]">
-                Selected Floor
-              </span>
-              <div className="mt-1.5 flex items-center justify-between">
-                <h4 className="font-mono text-lg font-black text-[#F8FAFC]">
-                  {selectedFloor.level === 0 ? "Ground" : `Floor ${String(selectedFloor.level).padStart(2, "0")}`}
-                </h4>
-                <span className="rounded-md border border-[#164E73] bg-[#0A1B31] px-2 py-1 text-[9px] font-semibold text-[#94A3B8]">
-                  {selectedFloor.elevationM}m elev
+            {activeFloor && (
+              <div className="mt-3 rounded-xl border border-[#00D9FF]/40 bg-[#00D9FF]/5 p-3">
+                <span className="text-[8px] font-black uppercase tracking-widest text-[#00D9FF]">
+                  Selected Floor
                 </span>
+                <div className="mt-1.5 flex items-center justify-between">
+                  <h4 className="font-mono text-lg font-black text-[#F8FAFC]">
+                    {activeFloor.level === 0 ? "Ground" : `Floor ${String(activeFloor.level).padStart(2, "0")}`}
+                  </h4>
+                  <span className="rounded-md border border-[#164E73] bg-[#0A1B31] px-2 py-1 text-[9px] font-semibold text-[#94A3B8]">
+                    {activeFloor.elevationM}m elev
+                  </span>
+                </div>
+                <div className="mt-2 grid grid-cols-3 gap-1.5 text-center">
+                  <div className="rounded-lg border border-[#164E73]/60 bg-[#061426] py-1.5">
+                    <p className="text-[8px] font-bold uppercase tracking-wider text-[#64748B]">Units</p>
+                    <p className="font-mono text-sm font-black text-[#00D9FF]">{activeFloor.units.length}</p>
+                  </div>
+                  <div className="rounded-lg border border-[#164E73]/60 bg-[#061426] py-1.5">
+                    <p className="text-[8px] font-bold uppercase tracking-wider text-[#64748B]">Area</p>
+                    <p className="font-mono text-sm font-black text-[#F8FAFC]">
+                      {activeFloor.areaSqFt.toLocaleString("en-IN")}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-[#164E73]/60 bg-[#061426] py-1.5">
+                    <p className="text-[8px] font-bold uppercase tracking-wider text-[#64748B]">Status</p>
+                    <p className="font-mono text-sm font-black text-[#22C55E]">
+                      {activeFloor.status === "VERIFIED" ? "Verified" : activeFloor.status.replace(/_/g, " ")}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div className="mt-2 grid grid-cols-3 gap-1.5 text-center">
-                <div className="rounded-lg border border-[#164E73]/60 bg-[#061426] py-1.5">
-                  <p className="text-[8px] font-bold uppercase tracking-wider text-[#64748B]">Units</p>
-                  <p className="font-mono text-sm font-black text-[#00D9FF]">{selectedFloor.units.length}</p>
-                </div>
-                <div className="rounded-lg border border-[#164E73]/60 bg-[#061426] py-1.5">
-                  <p className="text-[8px] font-bold uppercase tracking-wider text-[#64748B]">Area</p>
-                  <p className="font-mono text-sm font-black text-[#F8FAFC]">
-                    {selectedFloor.areaSqFt.toLocaleString("en-IN")}
-                  </p>
-                </div>
-                <div className="rounded-lg border border-[#164E73]/60 bg-[#061426] py-1.5">
-                  <p className="text-[8px] font-bold uppercase tracking-wider text-[#64748B]">Status</p>
-                  <p className="font-mono text-sm font-black text-[#22C55E]">
-                    {selectedFloor.status === "VERIFIED" ? "Verified" : selectedFloor.status.replace(/_/g, " ")}
-                  </p>
-                </div>
-              </div>
-            </div>
+            )}
           </motion.div>
 
           {/* UNITS */}
@@ -638,26 +731,39 @@ function BuildingDigitalTwinPageContent() {
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h3 className="text-[11px] font-black uppercase tracking-[0.18em] text-[#F8FAFC]">
-                    Property Units — {selectedFloor.label}
+                    Property Units — {activeFloor?.label ?? selectedFloorLabel}
                   </h3>
                   <p className="mt-0.5 text-[9px] font-semibold text-[#64748B]">
                     Click a unit card to open its cadastral side panel
                   </p>
                 </div>
                 <FloorSelector
-                  floors={TWIN_FLOORS}
-                  selectedLevel={selectedFloorLevel}
-                  onSelect={handleSelectFloor}
+                  floors={bottomFloors}
+                  selectedLevel={activeLevel}
+                  onSelect={handleSelectBottomFloor}
                   className="hidden md:flex"
                 />
               </div>
 
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
-                <PropertyUnitGrid
-                  units={selectedFloor.units}
-                  selectedUnitId={selectedUnit?.id ?? null}
-                  onSelectUnit={setSelectedUnit}
-                />
+                {activeFloor && activeFloor.units.length > 0 ? (
+                  <PropertyUnitGrid
+                    units={activeFloor.units}
+                    selectedUnitId={selectedUnit?.id ?? null}
+                    onSelectUnit={setSelectedUnit}
+                  />
+                ) : (
+                  <div className="dt-hud flex flex-col items-center justify-center rounded-xl border border-dashed border-[#164E73] px-6 py-10 text-center">
+                    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#94A3B8]">
+                      No unit records ingested for this floor yet
+                    </p>
+                    <p className="mt-1.5 max-w-xs text-[10px] leading-relaxed text-[#64748B]">
+                      Floor {activeFloor?.level ?? "—"} has no property units in the
+                      registry. Select Floor 4 to inspect Flat 402
+                      {twinView.linked ? "" : " (illustrative dataset)"}.
+                    </p>
+                  </div>
+                )}
                 <UnitDetailsSheet unit={selectedUnit} onClose={() => setSelectedUnit(null)} />
               </div>
             </div>
@@ -666,7 +772,7 @@ function BuildingDigitalTwinPageContent() {
           {/* RIGHT COLUMN — activity + minimap */}
           <motion.div variants={slideInRight} initial="hidden" animate="show" className="space-y-4">
             <DigitalTwinActivityTimeline />
-            <DigitalTwinMiniMap building={TWIN_BUILDING} />
+            <DigitalTwinMiniMap building={twinView.building} />
           </motion.div>
         </div>
 
