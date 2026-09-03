@@ -16,12 +16,12 @@ import {
   Loader2,
 } from 'lucide-react';
 
-const DEMO_PASSWORD = 'Bhu-Verify#2024';
+import { DEMO_PASSWORD } from '@/lib/auth/authConstants';
 
 const DEMO_ACCOUNTS: Record<'citizen' | 'officer' | 'admin', { email: string; dashboard: string }> = {
   citizen: { email: 'rajesh.sharma@example.com', dashboard: '/dashboard/citizen' },
   officer: { email: 'ananya.iyer@rev.gov.in', dashboard: '/dashboard/officer' },
-  admin: { email: 'admin.cadastre@gov.in', dashboard: '/dashboard/admin' },
+  admin: { email: 'secretary@greenvalley.soc.in', dashboard: '/dashboard/admin' },
 };
 
 /**
@@ -69,7 +69,7 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
 
-    const result = await login(email.trim(), password);
+    const result = await login(email.trim(), password, { portalRole: 'CITIZEN' });
     setLoading(false);
 
     if (!result.ok) {
@@ -77,23 +77,7 @@ export default function LoginPage() {
       return;
     }
 
-    // Phase 15 — redirect by SERVER-verified role first; fall back to the
-    // demo-email lookup and finally the selected tab for legacy flows.
-    const matchedRole = (Object.keys(DEMO_ACCOUNTS) as (keyof typeof DEMO_ACCOUNTS)[]).find(
-      (k) => DEMO_ACCOUNTS[k].email.toLowerCase() === email.trim().toLowerCase(),
-    );
-    const serverDashboard = result.role ? ROLE_DASHBOARDS[result.role] : undefined;
-    const fallbackDashboard =
-      (matchedRole ? DEMO_ACCOUNTS[matchedRole].dashboard : undefined) ??
-      DEMO_ACCOUNTS[selectedRole ?? 'citizen'].dashboard;
-    window.location.href = safeNextPath() ?? serverDashboard ?? fallbackDashboard;
-  };
-
-  const handleFillDemo = (roleKey: 'citizen' | 'officer' | 'admin') => {
-    setSelectedRole(roleKey);
-    setEmail(DEMO_ACCOUNTS[roleKey].email);
-    setPassword(DEMO_PASSWORD);
-    setError(null);
+    window.location.href = safeNextPath() ?? destinationAfterLogin('citizen');
   };
 
   return (
@@ -105,59 +89,43 @@ export default function LoginPage() {
       <div className="max-w-md w-full space-y-6 relative z-10">
         {/* Header Branding */}
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 p-0.5 mx-auto shadow-tech-cyan flex items-center justify-center">
-            <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-              <Building className="w-6 h-6 text-cyan-400" />
-            </div>
+          <div className="w-14 h-14 rounded-2xl overflow-hidden border border-cyan-500/40 bg-slate-950 p-0.5 mx-auto shadow-tech-cyan flex items-center justify-center">
+            <img src="/logo.jpeg" alt="CyberSpark Logo" className="w-full h-full object-cover rounded-[14px]" />
           </div>
           <h2 className="text-2xl font-extrabold tracking-tight text-white">
-            Sign In to Smart Cadastre
+            Citizen Portal Sign In
           </h2>
           <p className="text-xs text-slate-400">
-            Access ULPIN verification, 3D property records &amp; official portals.
+            Access your 3D property records, ULPIN verification &amp; dispute tracking.
           </p>
         </div>
 
-        {/* Role Selector Tabs */}
+        {/* Portal Switching Bar */}
         <div className="p-1 bg-slate-900 border border-slate-800 rounded-2xl grid grid-cols-3 gap-1">
-          <button
-            type="button"
-            onClick={() => handleRoleSelect('citizen')}
-            className={`flex flex-col items-center gap-1 py-2.5 rounded-xl text-xs font-bold transition-all ${
-              selectedRole === 'citizen'
-                ? 'bg-cyan-500 text-slate-950 shadow-tech-cyan'
-                : 'text-slate-400 hover:text-white'
-            }`}
+          <div
+            className="flex flex-col items-center gap-1 py-2 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950 shadow-tech-cyan cursor-default"
           >
             <User className="w-4 h-4" />
-            <span>Citizen</span>
-          </button>
+            <span>Citizen Portal</span>
+          </div>
 
-          <button
-            type="button"
-            onClick={() => handleRoleSelect('officer')}
-            className={`flex flex-col items-center gap-1 py-2.5 rounded-xl text-xs font-bold transition-all ${
-              selectedRole === 'officer'
-                ? 'bg-cyan-500 text-slate-950 shadow-tech-cyan'
-                : 'text-slate-400 hover:text-white'
-            }`}
+          <Link
+            href="/auth/officer-login"
+            className="flex flex-col items-center gap-1 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800/80 transition-all text-center"
+            title="Official login form for Revenue Officers"
           >
-            <Shield className="w-4 h-4" />
+            <Shield className="w-4 h-4 text-emerald-400" />
             <span>Govt Officer</span>
-          </button>
+          </Link>
 
-          <button
-            type="button"
-            onClick={() => handleRoleSelect('admin')}
-            className={`flex flex-col items-center gap-1 py-2.5 rounded-xl text-xs font-bold transition-all ${
-              selectedRole === 'admin'
-                ? 'bg-cyan-500 text-slate-950 shadow-tech-cyan'
-                : 'text-slate-400 hover:text-white'
-            }`}
+          <Link
+            href="/auth/society-login"
+            className="flex flex-col items-center gap-1 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800/80 transition-all text-center"
+            title="Official login form for Society Secretaries"
           >
-            <Building2 className="w-4 h-4" />
-            <span>Director Admin</span>
-          </button>
+            <Building2 className="w-4 h-4 text-indigo-400" />
+            <span>Society Sec.</span>
+          </Link>
         </div>
 
         <div className="bg-slate-900/90 border border-slate-800 p-7 rounded-3xl shadow-2xl backdrop-blur-xl space-y-5">
@@ -249,40 +217,10 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Quick Demo Fill Buttons */}
-          <div className="pt-2 border-t border-slate-800/80">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2 text-center">
-              Quick Test Accounts
-            </p>
-            <div className="grid grid-cols-3 gap-1.5">
-              <button
-                type="button"
-                onClick={() => handleFillDemo('citizen')}
-                className="py-1.5 px-2 rounded-lg bg-slate-950 border border-slate-800 hover:border-cyan-500/40 text-[11px] font-medium text-slate-400 hover:text-cyan-300 transition-all text-center"
-              >
-                Citizen
-              </button>
-              <button
-                type="button"
-                onClick={() => handleFillDemo('officer')}
-                className="py-1.5 px-2 rounded-lg bg-slate-950 border border-slate-800 hover:border-cyan-500/40 text-[11px] font-medium text-slate-400 hover:text-cyan-300 transition-all text-center"
-              >
-                Officer
-              </button>
-              <button
-                type="button"
-                onClick={() => handleFillDemo('admin')}
-                className="py-1.5 px-2 rounded-lg bg-slate-950 border border-slate-800 hover:border-cyan-500/40 text-[11px] font-medium text-slate-400 hover:text-cyan-300 transition-all text-center"
-              >
-                Admin
-              </button>
-            </div>
-          </div>
-
-          <div className="text-center pt-2 text-xs text-slate-400">
-            Don't have an account?{' '}
+          <div className="text-center pt-3 border-t border-slate-800/80 text-xs text-slate-400">
+            Don't have a Citizen account?{' '}
             <Link href="/auth/register" className="text-cyan-400 font-bold hover:underline">
-              Register Bhu-Aadhaar
+              Register Citizen Bhu-Aadhaar &rarr;
             </Link>
           </div>
         </div>

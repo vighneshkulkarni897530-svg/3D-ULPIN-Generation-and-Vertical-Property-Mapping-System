@@ -41,6 +41,8 @@ export interface User {
   designation?: string;
   jurisdictionDistrict?: string;
   badgeNumber?: string;
+  societyName?: string;
+  societyRegNo?: string;
   /** Account lifecycle status (Phase 10). Defaults to ACTIVE when absent. */
   accountStatus?: 'ACTIVE' | 'DISABLED';
   /** ISO timestamp of account creation (Phase 10, prototype store). */

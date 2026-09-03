@@ -18,6 +18,7 @@ import {
   Building2, ShieldCheck, Clock, AlertTriangle, Search, FileCheck2, Plus,
   Bell, ArrowRight, Radio, TrendingUp,
 } from "lucide-react";
+import { RenewalDashboardCard } from "@/components/renewals/RenewalDashboardCard";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { PERMISSIONS } from "@/types/auth";
@@ -76,17 +77,49 @@ function CitizenDashboardPageContent() {
   return (
     <PageContainer>
       <div className="space-y-7">
+        {/* User Identity Banner with Profile Photo */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-3xl bg-slate-900/60 border border-slate-800 backdrop-blur-md">
+          <div className="flex items-center gap-4">
+            <div className="relative h-14 w-14 shrink-0 rounded-2xl overflow-hidden border-2 border-cyan-500/50 bg-slate-950 shadow-md">
+              {currentUser.avatarUrl ? (
+                <img src={currentUser.avatarUrl} alt={currentUser.name} className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-cyan-500 to-blue-600 text-sm font-extrabold text-slate-950">
+                  {currentUser.name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()}
+                </div>
+              )}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">Citizen Property Hub</span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold text-emerald-400 border border-emerald-500/20">
+                  <ShieldCheck className="h-2.5 w-2.5" /> Verified Citizen
+                </span>
+              </div>
+              <h2 className="text-lg font-black text-white">Welcome back, {currentUser.name}</h2>
+              <p className="text-xs text-slate-400">Manage your verified properties, deeds, disputes, and renewal status.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link href="/profile">
+              <Button variant="secondary" className="text-xs">
+                Edit Profile &amp; Photo
+              </Button>
+            </Link>
+            <Link href="/properties">
+              <Button variant="gradient" className="text-xs">
+                <Search className="h-3.5 w-3.5" /> Search Registry
+              </Button>
+            </Link>
+          </div>
+        </div>
+
         <PageHeader
           eyebrow="CITIZEN HUB"
-          title={`Welcome back, ${currentUser.name.split(" ")[0]}`}
+          title={`Property Command Centre`}
           description="Your personal property verification command centre — track verifications, disputes and field surveys in one place."
           actions={
             <div className="flex items-center gap-2">
-              <Link href="/properties">
-                <Button variant="secondary">
-                  <Search className="h-3.5 w-3.5" /> Search Property
-                </Button>
-              </Link>
               <Link href="/disputes/new">
                 <Button variant="gradient">
                   <Plus className="h-3.5 w-3.5" /> Raise Dispute
@@ -131,7 +164,11 @@ function CitizenDashboardPageContent() {
             onClick={() => window.location.assign("/disputes")}
           />
         </div>
-{/* CHARTS ROW */}
+
+        {/* Periodic Property Verification & Renewal Section */}
+        <RenewalDashboardCard />
+
+        {/* CHARTS ROW */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-tech">
             <div className="mb-4 flex items-center justify-between">

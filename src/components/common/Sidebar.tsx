@@ -45,10 +45,10 @@ export const Sidebar: React.FC = () => {
   ];
 
   const adminNav = [
-    { label: 'Admin Command', href: '/dashboard/admin', icon: LayoutDashboard },
+    { label: 'Society Secretary Hub', href: '/dashboard/admin', icon: LayoutDashboard },
+    { label: 'Register Building', href: '/buildings', icon: Building2 },
+    { label: 'Periodic Renewals', href: '/renewals', icon: FileCheck2 },
     { label: 'Cadastre Registry', href: '/properties', icon: Building2 },
-    { label: 'Manage Officers', href: '/dashboard/admin?tab=officers', icon: Users },
-    { label: 'Dispute Analytics', href: '/dashboard/admin?tab=disputes', icon: BarChart3 },
     { label: 'System Audit Logs', href: '/dashboard/admin?tab=audit', icon: History },
     { label: 'Alerts & Broadcasts', href: '/notifications', icon: Bell },
   ];
@@ -69,7 +69,7 @@ export const Sidebar: React.FC = () => {
             <div className="overflow-hidden">
               <h5 className="text-xs font-bold text-white truncate">{currentUser.name}</h5>
               <span className="text-[10px] font-semibold text-cyan-400 block truncate">
-                {role === 'OFFICER' ? 'Revenue Officer' : role === 'ADMIN' ? 'Cadastre Admin' : 'Verified Citizen'}
+                {role === 'OFFICER' ? 'Revenue Officer' : role === 'ADMIN' ? 'Society Secretary' : 'Verified Citizen'}
               </span>
             </div>
           </div>

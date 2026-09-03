@@ -17,7 +17,7 @@ import {
   requireString,
 } from '@/lib/auth/server/apiAuth';
 import { isSupabaseAuthConfigured } from '@/lib/supabase/env';
-import { checkCredentials, toPublicUser } from '@/lib/auth/server/userStore';
+import { checkCredentials, checkRoleCredentials, toPublicUser } from '@/lib/auth/server/userStore';
 
 export async function POST(req: NextRequest) {
   const body = await readJsonBody(req);
@@ -28,6 +28,12 @@ export async function POST(req: NextRequest) {
   const passwordCheck = requireString(body, 'password', 1, 128);
   if ('error' in passwordCheck) return jsonError(400, 'INVALID_FIELD', passwordCheck.error);
 
+  const portalRole = typeof body.portalRole === 'string'
+    ? (body.portalRole.toUpperCase() as 'CITIZEN' | 'OFFICER' | 'ADMIN')
+    : undefined;
+  const badgeNumber = typeof body.badgeNumber === 'string' ? body.badgeNumber : undefined;
+  const societyRegNo = typeof body.societyRegNo === 'string' ? body.societyRegNo : undefined;
+
   const ip = clientIp(req);
   const rate = checkLoginRateLimit(ip, emailCheck.value);
   if (rate.limited) {
@@ -36,23 +42,55 @@ export async function POST(req: NextRequest) {
 
   // 1) When Supabase Auth is NOT configured, authenticate against durable userStore
   if (!isSupabaseAuthConfigured()) {
-    const credCheck = checkCredentials(emailCheck.value, passwordCheck.value);
+    const credCheck = checkRoleCredentials(emailCheck.value, passwordCheck.value, portalRole, {
+      badgeNumber,
+      societyRegNo,
+    });
     if (!credCheck.ok) {
       appendAudit({
         actorId: 'anonymous',
         actorName: emailCheck.value,
-        actorRole: 'CITIZEN',
+        actorRole: portalRole || 'CITIZEN',
         action: 'LOGIN_FAILED',
         entityType: 'SESSION',
         entityId: emailCheck.value,
-        details: credCheck.error === 'ACCOUNT_DISABLED' ? 'Attempt on a disabled account.' : 'Invalid credentials.',
+        details: credCheck.roleMismatch
+          ? `Attempted login to ${portalRole} portal with mismatched role.`
+          : credCheck.idMismatch
+          ? 'Mismatched badge or society registration number.'
+          : credCheck.error === 'ACCOUNT_DISABLED'
+          ? 'Attempt on a disabled account.'
+          : 'Invalid credentials.',
         ipAddress: ip,
       });
+
+      if (credCheck.roleMismatch) {
+        const targetPortal =
+          portalRole === 'OFFICER'
+            ? 'Government Revenue Officer Portal'
+            : portalRole === 'ADMIN'
+            ? 'Society Secretary Portal'
+            : 'Citizen Portal';
+        return jsonError(
+          403,
+          'ROLE_MISMATCH',
+          `Access restricted: this account is not authorized for the ${targetPortal}. Please sign in through your designated portal.`
+        );
+      }
+
+      if (credCheck.idMismatch) {
+        const idLabel = portalRole === 'OFFICER' ? 'Revenue Badge ID' : 'Society Registration Number';
+        return jsonError(
+          401,
+          'INVALID_IDENTIFIER',
+          `The entered ${idLabel} does not match our records for this account.`
+        );
+      }
 
       if (credCheck.error === 'ACCOUNT_DISABLED') {
         return jsonError(403, 'ACCOUNT_DISABLED', 'This account has been disabled. Contact the administrator.');
       }
-      return jsonError(401, 'INVALID_CREDENTIALS', 'Invalid email or password.');
+      return jsonError(401, 'INVALID_CREDENTIALS', 'Invalid email, badge/society ID, or password.');
     }
 
     clearLoginRateLimit(ip, emailCheck.value);

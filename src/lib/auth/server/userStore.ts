@@ -31,10 +31,8 @@ export interface StoredUser extends User {
 /** Public projection of a user — safe to serialize to clients. */
 export type PublicUser = User;
 
-/**
- * Published demo password for the seeded demo personas.
- */
-export const DEMO_PASSWORD = 'Bhu-Verify#2024';
+import { DEMO_PASSWORD } from '@/lib/auth/authConstants';
+export { DEMO_PASSWORD };
 
 const RTDB_URL =
   process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL ||
@@ -286,6 +284,8 @@ export interface UpsertUserInput {
   designation?: string;
   jurisdictionDistrict?: string;
   badgeNumber?: string;
+  societyName?: string;
+  societyRegNo?: string;
 }
 
 /**
@@ -317,6 +317,8 @@ export function upsertUser(input: UpsertUserInput): StoredUser {
       designation: input.designation || existing.designation,
       jurisdictionDistrict: input.jurisdictionDistrict || existing.jurisdictionDistrict,
       badgeNumber: input.badgeNumber || existing.badgeNumber,
+      societyName: input.societyName || existing.societyName,
+      societyRegNo: input.societyRegNo || existing.societyRegNo,
       // Preserve role and status unless explicitly supplied
       role: input.role || existing.role || 'CITIZEN',
       accountStatus: existing.accountStatus || 'ACTIVE',
@@ -347,6 +349,8 @@ export function upsertUser(input: UpsertUserInput): StoredUser {
       designation: input.designation,
       jurisdictionDistrict: input.jurisdictionDistrict,
       badgeNumber: input.badgeNumber,
+      societyName: input.societyName,
+      societyRegNo: input.societyRegNo,
       passwordSalt: salt,
       passwordHash: input.password ? hashPassword(input.password, salt) : hashPassword(DEMO_PASSWORD, salt),
     };
@@ -367,6 +371,14 @@ export interface RegisterInput {
   password: string;
   phone?: string;
   aadhaarOrGovId?: string;
+  role?: UserRole;
+  badgeNumber?: string;
+  department?: string;
+  designation?: string;
+  jurisdictionDistrict?: string;
+  societyName?: string;
+  societyRegNo?: string;
+  avatarUrl?: string;
 }
 
 export type RegisterResult =
@@ -377,7 +389,7 @@ export function registerUser(input: RegisterInput): RegisterResult {
   const name = input.name?.trim() ?? '';
   const email = input.email?.trim().toLowerCase() ?? '';
   const phone = input.phone?.trim() ?? '';
-  const aadhaarOrGovId = input.aadhaarOrGovId?.trim() || 'PENDING-KYC';
+  const aadhaarOrGovId = input.aadhaarOrGovId?.trim() || (input.role === 'OFFICER' ? (input.badgeNumber || 'OFFICER-ID') : 'PENDING-KYC');
 
   if (name.length < 2 || name.length > 80) return { ok: false, error: 'INVALID_INPUT' };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 120) return { ok: false, error: 'INVALID_INPUT' };
@@ -394,10 +406,44 @@ export function registerUser(input: RegisterInput): RegisterResult {
     password: input.password,
     phone,
     aadhaarOrGovId,
-    role: 'CITIZEN',
+    role: input.role || 'CITIZEN',
+    badgeNumber: input.badgeNumber,
+    department: input.department,
+    designation: input.designation,
+    jurisdictionDistrict: input.jurisdictionDistrict,
+    societyName: input.societyName,
+    societyRegNo: input.societyRegNo,
+    avatarUrl: input.avatarUrl,
   });
 
   return { ok: true, user: toPublicUser(storedUser) };
+}
+
+export function updateUserProfile(
+  userId: string,
+  patch: Partial<User>
+): { ok: true; user: PublicUser } | { ok: false; error: string } {
+  const user = inMemoryUsers.get(userId);
+  if (!user || deletedUserIds.has(userId)) {
+    return { ok: false, error: 'User not found' };
+  }
+
+  if (patch.name && patch.name.trim().length >= 2) user.name = patch.name.trim();
+  if (patch.phone !== undefined) user.phone = patch.phone.trim();
+  if (patch.aadhaarOrGovId !== undefined) user.aadhaarOrGovId = patch.aadhaarOrGovId.trim();
+  if (patch.avatarUrl !== undefined) user.avatarUrl = patch.avatarUrl;
+  if (patch.department !== undefined) user.department = patch.department.trim();
+  if (patch.designation !== undefined) user.designation = patch.designation.trim();
+  if (patch.jurisdictionDistrict !== undefined) user.jurisdictionDistrict = patch.jurisdictionDistrict.trim();
+  if (patch.badgeNumber !== undefined) user.badgeNumber = patch.badgeNumber.trim();
+  if (patch.societyName !== undefined) user.societyName = patch.societyName.trim();
+  if (patch.societyRegNo !== undefined) user.societyRegNo = patch.societyRegNo.trim();
+
+  inMemoryUsers.set(user.id, user);
+  writeDiskUsers();
+  void syncUserToRtdbSafe(user);
+
+  return { ok: true, user: toPublicUser(user) };
 }
 
 export type CredentialCheckResult =
@@ -411,16 +457,47 @@ export function checkCredentials(email: string, password: string): CredentialChe
     return { ok: false, error: 'INVALID_CREDENTIALS' };
   }
   if (user.passwordSalt && user.passwordHash) {
-    if (!verifyPassword(password, user.passwordSalt, user.passwordHash)) {
+    const saltCheck = verifyPassword(password, user.passwordSalt, user.passwordHash);
+    if (!saltCheck) {
       return { ok: false, error: 'INVALID_CREDENTIALS' };
     }
   } else {
-    // Demo password fallback
-    if (password !== DEMO_PASSWORD) {
-      return { ok: false, error: 'INVALID_CREDENTIALS' };
-    }
+    return { ok: false, error: 'INVALID_CREDENTIALS' };
   }
   if (user.accountStatus === 'DISABLED') return { ok: false, error: 'ACCOUNT_DISABLED' };
+  return { ok: true, user };
+}
+
+export function checkRoleCredentials(
+  email: string,
+  password: string,
+  expectedRole?: 'CITIZEN' | 'OFFICER' | 'ADMIN',
+  extra?: { badgeNumber?: string; societyRegNo?: string }
+): CredentialCheckResult & { roleMismatch?: boolean; idMismatch?: boolean } {
+  const cred = checkCredentials(email, password);
+  if (!cred.ok) return cred;
+
+  const user = cred.user;
+  if (expectedRole && user.role !== expectedRole) {
+    return { ok: false, error: 'INVALID_CREDENTIALS', roleMismatch: true };
+  }
+
+  if (expectedRole === 'OFFICER' && extra?.badgeNumber) {
+    const normEntered = extra.badgeNumber.trim().toUpperCase();
+    const normStored = (user.badgeNumber || user.aadhaarOrGovId || '').trim().toUpperCase();
+    if (normEntered !== normStored && !normStored.includes(normEntered)) {
+      return { ok: false, error: 'INVALID_CREDENTIALS', idMismatch: true };
+    }
+  }
+
+  if (expectedRole === 'ADMIN' && extra?.societyRegNo) {
+    const normEntered = extra.societyRegNo.trim().toUpperCase();
+    const normStored = (user.societyRegNo || user.badgeNumber || user.aadhaarOrGovId || '').trim().toUpperCase();
+    if (normEntered !== normStored && !normStored.includes(normEntered)) {
+      return { ok: false, error: 'INVALID_CREDENTIALS', idMismatch: true };
+    }
+  }
+
   return { ok: true, user };
 }
 

@@ -1,12 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { Building2, Layers, Search, SlidersHorizontal, X } from "lucide-react";
+import { Building2, Layers, Search, SlidersHorizontal, X, Plus } from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyState } from "@/components/ui/empty-state";
 import { BuildingCard } from "@/components/gis/BuildingCard";
 import { useGIS } from "@/context/GISContext";
+import { useAuth } from "@/context/AuthContext";
+import { RegisterBuildingModal } from "@/components/buildings/RegisterBuildingModal";
 import type { BuildingStatus } from "@/types/gis";
 
 type SortKey = "NAME" | "FLOORS_DESC" | "UNITS_DESC" | "VERIFIED_DESC";
@@ -33,6 +35,8 @@ export default function BuildingsDirectoryPage() {
 
 function BuildingsDirectoryPageContent() {
   const { buildings, floors, properties, parcels, conflicts } = useGIS();
+  const { role } = useAuth();
+  const [registerModalOpen, setRegisterModalOpen] = React.useState(false);
 
   const [query, setQuery] = React.useState("");
   const [parcelFilter, setParcelFilter] = React.useState<string>("ALL");
@@ -102,6 +106,16 @@ function BuildingsDirectoryPageContent() {
           eyebrow="VERTICAL ASSET REGISTRY"
           title="Building Registry"
           description={`${buildings.length} surveyed buildings on ${parcels.length} cadastral parcels — ${totalFloors} floors and ${totalUnits} vertical property units. All counts derive live from the unified GIS registry.`}
+          actions={
+            role === "ADMIN" ? (
+              <button
+                onClick={() => setRegisterModalOpen(true)}
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:from-indigo-400 hover:to-purple-500 transition-all"
+              >
+                <Plus className="h-4 w-4" /> Register New Building
+              </button>
+            ) : undefined
+          }
         />
 
         {/* Search + filters */}
@@ -225,6 +239,12 @@ function BuildingsDirectoryPageContent() {
         <p className="flex items-center justify-center gap-1.5 font-mono text-[9px] uppercase tracking-widest text-slate-400">
           <Layers className="h-3 w-3" /> Building &rarr; Floor &rarr; PropertyUnit hierarchy from the unified GIS model
         </p>
+
+        {/* Society Secretary Register Building Modal */}
+        <RegisterBuildingModal
+          isOpen={registerModalOpen}
+          onClose={() => setRegisterModalOpen(false)}
+        />
       </div>
     </PageContainer>
   );

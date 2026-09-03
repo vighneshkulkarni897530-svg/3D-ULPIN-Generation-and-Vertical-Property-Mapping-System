@@ -56,11 +56,11 @@ export const Footer: React.FC = () => {
           {/* Col 1: Platform Overview */}
           <div className="lg:col-span-2 space-y-4">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-slate-950 font-bold">
-                <Building className="w-5 h-5" />
+              <div className="w-9 h-9 rounded-lg overflow-hidden border border-cyan-500/40 bg-slate-950 flex items-center justify-center">
+                <img src="/logo.jpeg" alt="CyberSpark BHU-VERIFY" className="w-full h-full object-cover" />
               </div>
               <span className="font-extrabold text-white text-base tracking-tight">
-                SMART PROPERTY VERIFICATION
+                CYBERSPARK · BHU-VERIFY
               </span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed pr-6">

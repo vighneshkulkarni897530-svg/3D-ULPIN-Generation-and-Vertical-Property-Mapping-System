@@ -85,6 +85,9 @@ export interface GISContextType {
   // ── Activity actions ──
   addActivity: (activity: Omit<ActivityRecord, 'id'>) => void;
 
+  // ── Building registration ──
+  addBuilding: (building: Building) => void;
+
   // ── Registry hydration (Phase 13) ──
   /** 'loading' until the bootstrap snapshot has been applied. */
   registryStatus: RegistryStatus;
@@ -596,6 +599,9 @@ export const GISProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setLastValidationAt(runAt);
   }, []);
 
+  const addBuilding = useCallback((building: Building) => {
+    setBuildings((prev) => [building, ...prev]);
+  }, []);
 
   return (
     <GISContext.Provider
@@ -627,6 +633,7 @@ export const GISProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         lastValidationAt,
         recordSpatialValidation,
         addActivity,
+        addBuilding,
         registryStatus,
         registrySource,
       }}

@@ -53,7 +53,11 @@ interface AuthContextType {
   isAuthenticated: boolean;
   sessionUser: User | null;
   sessionExpiresAt: string | null;
-  login: (email: string, password: string) => Promise<AuthActionResult>;
+  login: (
+    email: string,
+    password: string,
+    options?: { portalRole?: 'CITIZEN' | 'OFFICER' | 'ADMIN'; badgeNumber?: string; societyRegNo?: string }
+  ) => Promise<AuthActionResult>;
   register: (input: RegisterInput) => Promise<AuthActionResult>;
   loginWithGoogle: () => Promise<AuthActionResult>;
   requestOtp: (email: string, name?: string) => Promise<AuthActionResult>;
@@ -63,6 +67,7 @@ interface AuthContextType {
   demoLoginAs: (roleKey: 'citizen' | 'officer' | 'admin') => Promise<AuthActionResult>;
   setRole: (role: UserRole) => void;
   logout: () => Promise<void>;
+  updateProfile: (data: Partial<User>) => Promise<{ ok: boolean; error?: string; user?: User }>;
   hasPermission: (permission: Permission) => boolean;
   canAccessPath: (path: string) => boolean;
   refreshSession: () => Promise<void>;
@@ -245,6 +250,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               role: data.user.role,
               phone: data.user.phone || '',
               aadhaarOrGovId: data.user.aadhaarOrGovId || 'PENDING-KYC',
+              badgeNumber: data.user.badgeNumber,
+              societyName: data.user.societyName,
+              societyRegNo: data.user.societyRegNo,
+              department: data.user.department,
+              designation: data.user.designation,
+              avatarUrl: data.user.avatarUrl,
             });
             setSessionExpiresAt(data.expiresAt);
             setAuthStatus('authenticated');
@@ -293,16 +304,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     applySession(current);
   }, [applySession]);
 
-      const login = useCallback(async (email: string, password: string): Promise<AuthActionResult> => {
-      // 1. Authenticate against the server route first. The server validates
-      //    against the durable userStore (scrypt-hashed passwords) and is the
-      //    authoritative path that returns the true role.
+  const login = useCallback(
+    async (
+      email: string,
+      password: string,
+      options?: { portalRole?: 'CITIZEN' | 'OFFICER' | 'ADMIN'; badgeNumber?: string; societyRegNo?: string }
+    ): Promise<AuthActionResult> => {
+      // 1. Authenticate against server route first (validates against durable userStore & reset passwords)
       let attemptFirebaseFallback = false;
       try {
         const serverRes = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify({ email, password, ...options }),
           credentials: 'same-origin',
         });
         if (serverRes.ok) {
@@ -315,6 +329,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               role: data.user.role,
               phone: data.user.phone || '',
               aadhaarOrGovId: data.user.aadhaarOrGovId || 'PENDING-KYC',
+              badgeNumber: data.user.badgeNumber,
+              societyName: data.user.societyName,
+              societyRegNo: data.user.societyRegNo,
+              department: data.user.department,
+              designation: data.user.designation,
+              avatarUrl: data.user.avatarUrl,
             });
             setSessionExpiresAt(new Date(Date.now() + 3600 * 24 * 365 * 1000).toISOString());
             setAuthStatus('authenticated');
@@ -325,20 +345,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const payload = await serverRes.json().catch(() => ({}));
         const code = payload?.error?.code;
         if (code === 'ACCOUNT_DISABLED') {
-          // Do NOT fall back: a disabled account is rejected at the gate.
           return { ok: false, error: payload?.error?.message || 'This account has been disabled by the administrator.' };
         }
-        // 401 INVALID_CREDENTIALS or any other non-fatal server rejection:
-        // fall back to Firebase client auth. firebaseLoginWithEmail no longer
-        // auto-provisions, so an unknown/wrong email still fails closed.
+        if (payload?.error?.message || payload?.error) {
+          return {
+            ok: false,
+            error: payload?.error?.message || payload?.error || 'Invalid credentials or unauthorized portal access.',
+          };
+        }
         attemptFirebaseFallback = true;
       } catch {
         attemptFirebaseFallback = true;
       }
 
-      // 2. Firebase client-auth fallback — only on server/network failure.
-      //    No account is auto-created here, so privilege escalation via a
-      //    wrong password is impossible.
+      // 2. Firebase client-auth fallback — only on network failure
       if (attemptFirebaseFallback) {
         try {
           const { user } = await firebaseLoginWithEmail(email, password);
@@ -355,7 +375,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
       return { ok: false, error: 'Invalid email or password.', errorCode: 'AUTH_FAILED' };
-  }, [completeLoginSession]);
+    },
+    [completeLoginSession]
+  );
 
   const register = useCallback(async (input: RegisterInput): Promise<AuthActionResult> => {
     try {
@@ -471,6 +493,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           role: data.user.role || 'CITIZEN',
           phone: data.user.phone || '',
           aadhaarOrGovId: data.user.aadhaarOrGovId || 'PENDING-KYC',
+          badgeNumber: data.user.badgeNumber,
+          societyName: data.user.societyName,
+          societyRegNo: data.user.societyRegNo,
+          department: data.user.department,
+          designation: data.user.designation,
+          avatarUrl: data.user.avatarUrl,
         };
         setSessionUser(mapped);
         setSessionExpiresAt(data.expiresAt ?? null);
@@ -481,6 +509,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { ok: false, error: 'Demo sign-in failed.', errorCode: 'DEMO_LOGIN_FAILED' };
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : 'Demo sign-in failed.', errorCode: 'DEMO_LOGIN_FAILED' };
+    }
+  }, []);
+
+  const updateProfile = useCallback(async (patch: Partial<User>) => {
+    try {
+      const res = await fetch('/api/auth/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        return { ok: false, error: data?.error?.message || data?.error || 'Failed to update profile.' };
+      }
+      if (data.user) {
+        setSessionUser((prev) => (prev ? { ...prev, ...data.user } : data.user));
+        return { ok: true, user: data.user };
+      }
+      return { ok: false, error: 'Failed to update profile.' };
+    } catch (err: any) {
+      return { ok: false, error: err?.message || 'Network error updating profile.' };
     }
   }, []);
 
@@ -549,11 +598,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       demoLoginAs,
       setRole,
       logout,
+      updateProfile,
       hasPermission: hasPermissionFor,
       canAccessPath: canAccess,
       refreshSession,
     }),
-    [currentUser, role, authStatus, isAuthenticated, sessionUser, sessionExpiresAt, login, register, loginWithGoogle, requestOtp, verifyOtp, completeLoginSession, loginAs, demoLoginAs, setRole, logout, hasPermissionFor, canAccess, refreshSession],
+    [currentUser, role, authStatus, isAuthenticated, sessionUser, sessionExpiresAt, login, register, loginWithGoogle, requestOtp, verifyOtp, completeLoginSession, loginAs, demoLoginAs, setRole, logout, updateProfile, hasPermissionFor, canAccess, refreshSession],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

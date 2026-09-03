@@ -17,6 +17,8 @@ import {
   Loader2,
   CreditCard,
   Sparkles,
+  Camera,
+  UploadCloud,
 } from 'lucide-react';
 import { requestEmailOtp, verifyEmailOtp, firebaseRegisterWithEmail } from '@/lib/firebase/auth';
 import { useAuth } from '@/context/AuthContext';
@@ -31,6 +33,7 @@ export default function RegisterPage() {
   const [aadhaar, setAadhaar] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
 
   // Email verification states
   const [emailVerified, setEmailVerified] = useState(false);
@@ -116,6 +119,25 @@ export default function RegisterPage() {
     }
   };
 
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setError('Please select a valid image file (PNG, JPG, WEBP).');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image file size should be less than 5MB.');
+      return;
+    }
+    setError(null);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setAvatarUrl(event.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -148,6 +170,7 @@ export default function RegisterPage() {
           phone: phone.trim(),
           aadhaarOrGovId: aadhaar.trim() || 'PENDING-KYC',
           password,
+          avatarUrl: avatarUrl || undefined,
         }),
       });
 
@@ -177,10 +200,8 @@ export default function RegisterPage() {
       <div className="max-w-md w-full space-y-6 relative z-10">
         {/* Header Branding */}
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 p-0.5 mx-auto shadow-tech-cyan flex items-center justify-center">
-            <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-              <Building className="w-6 h-6 text-cyan-400" />
-            </div>
+          <div className="w-14 h-14 rounded-2xl overflow-hidden border border-cyan-500/40 bg-slate-950 p-0.5 mx-auto shadow-tech-cyan flex items-center justify-center">
+            <img src="/logo.jpeg" alt="CyberSpark Logo" className="w-full h-full object-cover rounded-[14px]" />
           </div>
           <h2 className="text-2xl font-extrabold tracking-tight text-white">
             Create Cadastre Account
@@ -216,6 +237,48 @@ export default function RegisterPage() {
                   <span>{error}</span>
                 </div>
               )}
+
+              {/* Profile Photo Upload */}
+              <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                  Citizen Profile Photo (Optional)
+                </label>
+                <div className="flex items-center gap-4">
+                  <div className="relative h-14 w-14 shrink-0 rounded-2xl overflow-hidden border-2 border-cyan-500/40 bg-slate-900 flex items-center justify-center shadow-inner">
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt="Citizen Photo" className="h-full w-full object-cover" />
+                    ) : (
+                      <User className="h-7 w-7 text-slate-500" />
+                    )}
+                    <label
+                      htmlFor="citizen-photo-input"
+                      className="absolute inset-0 bg-slate-950/50 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+                    >
+                      <Camera className="h-4 w-4 text-white" />
+                    </label>
+                  </div>
+
+                  <div className="flex-1">
+                    <input
+                      id="citizen-photo-input"
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoUpload}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="citizen-photo-input"
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-bold text-slate-200 hover:bg-slate-800 hover:text-white cursor-pointer transition-colors"
+                    >
+                      <UploadCloud className="h-3.5 w-3.5 text-cyan-400" />
+                      {avatarUrl ? "Change Photo" : "Upload Profile Photo"}
+                    </label>
+                    <p className="mt-1 text-[10px] text-slate-500">
+                      PNG, JPG, or WEBP. Displayed across ownership records and digital badges.
+                    </p>
+                  </div>
+                </div>
+              </div>
 
               {/* Full Name */}
               <div>

@@ -82,23 +82,46 @@ export const UserMenu: React.FC = () => {
           className="flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900/80 py-1 pl-1 pr-2.5 transition-colors hover:border-cyan-500/50"
           aria-label="Account menu"
         >
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-700 text-[10px] font-extrabold text-slate-950">
-            {initials(currentUser.name)}
-          </span>
+          {currentUser.avatarUrl ? (
+            <img
+              src={currentUser.avatarUrl}
+              alt={currentUser.name}
+              className="h-7 w-7 rounded-full object-cover ring-1 ring-cyan-500/60"
+            />
+          ) : (
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-700 text-[10px] font-extrabold text-slate-950">
+              {initials(currentUser.name)}
+            </span>
+          )}
           <span className="hidden flex-col items-start leading-tight md:flex">
             <span className="max-w-[120px] truncate text-[11px] font-bold text-slate-200">{currentUser.name}</span>
-            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{role}</span>
+            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500">
+              {role === 'ADMIN' ? 'Secretary' : role}
+            </span>
           </span>
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-60">
+      <DropdownMenuContent align="end" className="w-64">
         <DropdownMenuLabel>Signed in</DropdownMenuLabel>
-        <div className="px-2.5 pb-2">
-          <p className="truncate text-xs font-bold text-slate-100">{currentUser.name}</p>
-          <p className="truncate text-[10px] text-slate-500">{currentUser.email}</p>
-          <span className={`mt-1.5 inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${ROLE_BADGE[role] ?? ''}`}>
-            <ShieldCheck className="h-2.5 w-2.5" /> {role}
-          </span>
+        <div className="px-2.5 pb-2 flex items-center gap-3">
+          {currentUser.avatarUrl ? (
+            <img
+              src={currentUser.avatarUrl}
+              alt={currentUser.name}
+              className="h-10 w-10 shrink-0 rounded-xl object-cover ring-1 ring-cyan-500/50 shadow"
+            />
+          ) : (
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-blue-700 text-xs font-extrabold text-slate-950">
+              {initials(currentUser.name)}
+            </span>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-bold text-slate-100">{currentUser.name}</p>
+            <p className="truncate text-[10px] text-slate-500">{currentUser.email}</p>
+            <span className={`mt-1 inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${ROLE_BADGE[role] ?? ''}`}>
+              <ShieldCheck className="h-2.5 w-2.5" /> {role === 'ADMIN' ? 'Society Secretary' : role}
+            </span>
+          </div>
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>

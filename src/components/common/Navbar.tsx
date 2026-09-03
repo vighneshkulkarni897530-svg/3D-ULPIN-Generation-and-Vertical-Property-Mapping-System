@@ -62,9 +62,9 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between gap-2 h-20">
           <Link href="/" className="flex items-center gap-3 group shrink-0">
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-cyan-500 via-blue-600 to-indigo-900 p-0.5 shadow-tech-cyan group-hover:scale-105 transition-transform duration-200 flex items-center justify-center">
-              <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
-                <Building className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-400" />
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl overflow-hidden bg-gradient-to-br from-cyan-500 via-blue-600 to-indigo-900 p-0.5 shadow-tech-cyan group-hover:scale-105 transition-transform duration-200 flex items-center justify-center">
+              <div className="w-full h-full bg-slate-950 rounded-[10px] overflow-hidden flex items-center justify-center">
+                <img src="/logo.jpeg" alt="CyberSpark BHU-VERIFY" className="w-full h-full object-cover" />
               </div>
             </div>
             <div className="hidden sm:block">

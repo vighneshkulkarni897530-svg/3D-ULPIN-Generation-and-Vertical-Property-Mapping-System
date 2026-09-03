@@ -3,12 +3,15 @@
 import React from "react";
 import { motion } from "framer-motion";
 import {
-  Building2, LayoutGrid, Home, Ruler, ShieldCheck, Activity, Box,
+  Building2, LayoutGrid, Home, Ruler, ShieldCheck, Activity, Box, Clock, ArrowRight,
   type LucideIcon,
 } from "lucide-react";
+import Link from "next/link";
 import { TwinBuildingInfo } from "@/data/mockDigitalTwin";
 import { fadeUp, staggerContainer } from "./motion";
 import { BuildingStatusCard } from "./BuildingStatusCard";
+import { useRenewals } from "@/context/RenewalContext";
+import { cn } from "@/lib/utils";
 
 interface BuildingInfoPanelProps {
   building: TwinBuildingInfo;
@@ -55,6 +58,9 @@ function InfoCard({
 
 /** Left vertical panel — building summary cards. */
 export function BuildingInfoPanel({ building, selectedFloorLabel }: BuildingInfoPanelProps) {
+  const { getRecordByBuildingId, getRecordByPropertyId } = useRenewals();
+  const renewalRecord = getRecordByBuildingId(building.propertyId) || getRecordByPropertyId(building.propertyId);
+
   const cards: { key: keyof typeof iconMap; label: string; value: string; accent: string }[] = [
     { key: "type", label: "Building Type", value: building.type, accent: "#00D9FF" },
     { key: "floors", label: "Total Floors", value: `${building.totalFloors} Floors`, accent: "#008CFF" },
@@ -87,6 +93,43 @@ export function BuildingInfoPanel({ building, selectedFloorLabel }: BuildingInfo
       <motion.div variants={fadeUp}>
         <BuildingStatusCard label="Verification Status" value={building.verificationStatus} tone="success" />
       </motion.div>
+
+      {/* Periodic Verification 10-Yr Milestone Card */}
+      <motion.div variants={fadeUp}>
+        <div className="dt-hud dt-hud-hover rounded-xl p-3 border border-[#164E73] bg-[#061426]">
+          <div className="flex items-center justify-between">
+            <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#94A3B8]">
+              Periodic Verification
+            </span>
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold",
+                renewalRecord?.renewalStatus === "OVERDUE"
+                  ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
+                  : renewalRecord?.renewalStatus === "DUE_SOON"
+                  ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                  : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+              )}
+            >
+              {renewalRecord?.renewalStatus === "OVERDUE"
+                ? "⚠️ Renewal Required"
+                : renewalRecord?.renewalStatus === "DUE_SOON"
+                ? "🔔 Review Due Soon"
+                : "✓ Verified"}
+            </span>
+          </div>
+          <div className="mt-2 flex items-center justify-between text-[10px] text-[#94A3B8]">
+            <span>Age: {renewalRecord?.calculatedAgeYears ?? 10} yrs</span>
+            <Link
+              href="/renewals"
+              className="inline-flex items-center gap-1 text-[#00D9FF] hover:underline font-bold"
+            >
+              Periodic Review <ArrowRight className="h-2.5 w-2.5" />
+            </Link>
+          </div>
+        </div>
+      </motion.div>
+
       <motion.div variants={fadeUp}>
         <BuildingStatusCard
           label="System Status"

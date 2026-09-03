@@ -25,6 +25,7 @@ import { useGIS } from "@/context/GISContext";
 import { computeDashboardStats } from "@/lib/gisSelectors";
 import { formatRelativeTime } from "@/lib/gisUtils";
 import type { ActivityRecord } from "@/types/activity";
+import { RenewalDashboardCard } from "@/components/renewals/RenewalDashboardCard";
 
 const QUICK_LINKS = [
   { label: "3D Map", desc: "Parcel canvas & vertical viewer", href: "/map", icon: Map },
@@ -148,6 +149,9 @@ function GisDashboardPageContent() {
           <DashboardCard label="Land Parcels" value={String(stats.totalParcels)} sub={`${stats.disputedParcels} disputed`} icon={<Map className="h-5 w-5" />} tone="blue" />
           <DashboardCard label="Open Conflicts" value={String(stats.openConflicts)} sub={`${stats.criticalConflicts} critical · ${stats.resolvedConflicts} resolved`} icon={<AlertTriangle className="h-5 w-5" />} tone="red" />
         </div>
+
+        {/* Periodic Property Verification & Renewal Section */}
+        <RenewalDashboardCard />
         {/* Activity + conflicts split */}
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_400px]">
           {/* Recent activity */}
