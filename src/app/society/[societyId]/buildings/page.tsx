@@ -4,7 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
-  Building2, Edit3, Layers, Plus, Trash2, Home, Eye,
+  Building2, Edit3, Layers, Plus, Trash2, Home, Eye, Archive, ShieldAlert,
 } from 'lucide-react';
 
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
@@ -19,7 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 
 import { getSocietyById } from '@/lib/society/service';
 import {
-  getBuildings, createBuilding, updateBuilding, deleteBuilding, buildingCodeExists,
+  getBuildings, createBuilding, updateBuilding, deleteBuilding, archiveBuilding, buildingCodeExists,
 } from '@/lib/society/buildingService';
 import { getFloors } from '@/lib/society/floorService';
 import { getFlats } from '@/lib/society/flatService';
@@ -69,7 +69,10 @@ export default function BuildingsPage() {
   const [editingBuilding, setEditingBuilding] = React.useState<Building | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
   const [deleteTarget, setDeleteTarget] = React.useState<Building | null>(null);
+  const [archiveTarget, setArchiveTarget] = React.useState<Building | null>(null);
   const [deleting, setDeleting] = React.useState(false);
+  const [archiving, setArchiving] = React.useState(false);
+  const [showArchived, setShowArchived] = React.useState(false);
   const [formErrors, setFormErrors] = React.useState<Record<string, string>>({});
 
   const loadAll = React.useCallback(async () => {
@@ -78,7 +81,7 @@ export default function BuildingsPage() {
     try {
       const [soc, bldgList] = await Promise.all([
         getSocietyById(societyId),
-        getBuildings(societyId),
+        getBuildings(societyId, showArchived),
       ]);
       setSociety(soc ? { name: soc.name } : null);
       setBuildings(bldgList);
@@ -105,7 +108,7 @@ export default function BuildingsPage() {
     } finally {
       setLoading(false);
     }
-  }, [societyId]);
+  }, [societyId, showArchived]);
 
   React.useEffect(() => { loadAll(); }, [loadAll]);
 
@@ -162,6 +165,25 @@ export default function BuildingsPage() {
     }
   };
 
+  const handleArchiveConfirm = async () => {
+    if (!archiveTarget) return;
+    setArchiving(true);
+    try {
+      await archiveBuilding(societyId, archiveTarget.id, 'Archived by society administrator');
+      toast({ title: 'Building archived', description: `${archiveTarget.name} has been archived safely. Historical floors and units are preserved.` });
+      setArchiveTarget(null);
+      loadAll();
+    } catch (err) {
+      toast({
+        title: 'Cannot archive building',
+        description: err instanceof Error ? err.message : 'Failed to archive building.',
+        variant: 'destructive',
+      });
+    } finally {
+      setArchiving(false);
+    }
+  };
+
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
@@ -173,7 +195,7 @@ export default function BuildingsPage() {
     } catch (err) {
       toast({
         title: 'Cannot delete building',
-        description: err instanceof Error ? err.message : 'This building contains floors/flats. Remove or handle its contents before deleting the building.',
+        description: err instanceof Error ? err.message : 'This building contains floors/flats. Please archive it instead to preserve cadastral history.',
         variant: 'destructive',
       });
     } finally {
@@ -199,11 +221,21 @@ export default function BuildingsPage() {
       <div className="p-6 max-w-7xl mx-auto">
         <PageHeader
           title="Buildings"
-          description="Manage the physical structure of your society."
+          description="Manage the physical structure of your society."
           actions={
-            <Button onClick={() => { setEditingBuilding(null); setShowAddForm(true); }}>
-              <Plus className="h-4 w-4 mr-1" />Add Building
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowArchived((s) => !s)}
+                className="text-xs"
+              >
+                {showArchived ? 'Hide Archived' : 'Show Archived'}
+              </Button>
+              <Button onClick={() => { setEditingBuilding(null); setShowAddForm(true); }}>
+                <Plus className="h-4 w-4 mr-1" />Add Building
+              </Button>
+            </div>
           }
         />
 
@@ -256,7 +288,9 @@ export default function BuildingsPage() {
                           {b.name}
                           <span className="text-xs font-normal text-slate-500">({b.code})</span>
                         </span>
-                        <Badge variant={b.status === 'active' ? 'success' : 'secondary'}>{b.status}</Badge>
+                        <Badge variant={b.status === 'active' ? 'success' : b.status === 'archived' ? 'secondary' : 'warning'}>
+                          {b.status}
+                        </Badge>
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
@@ -280,7 +314,7 @@ export default function BuildingsPage() {
                           </p>
                         </div>
                       </div>
-                      <div className="flex justify-end gap-2 pt-2 border-t">
+                      <div className="flex flex-wrap justify-end gap-2 pt-2 border-t">
                         <Link
                           href={`/society/${societyId}/buildings/${b.id}`}
                           className="inline-flex h-8 items-center justify-center gap-1 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
@@ -290,6 +324,16 @@ export default function BuildingsPage() {
                         <Button size="sm" variant="outline" onClick={() => setEditingBuilding(b)}>
                           <Edit3 className="h-3.5 w-3.5 mr-1" />Edit
                         </Button>
+                        {b.status !== 'archived' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setArchiveTarget(b)}
+                            className="text-amber-600 border-amber-200 hover:bg-amber-50"
+                          >
+                            <Archive className="h-3.5 w-3.5 mr-1" />Archive
+                          </Button>
+                        )}
                         <Button size="sm" variant="outline" onClick={() => setDeleteTarget(b)} className="text-red-600 border-red-200 hover:bg-red-50">
                           <Trash2 className="h-3.5 w-3.5 mr-1" />Delete
                         </Button>
@@ -339,11 +383,25 @@ export default function BuildingsPage() {
         )}
 
         <ConfirmationDialog
+          open={!!archiveTarget}
+          onOpenChange={(o) => !o && setArchiveTarget(null)}
+          title="Archive Building (Safe Soft-Delete)"
+          description={archiveTarget
+            ? `Are you sure you want to archive "${archiveTarget.name}" (${archiveTarget.code})? This will preserve all historical floor slabs, flat records, and audit logs while marking the building inactive.`
+            : ''}
+          confirmLabel="Archive Building"
+          cancelLabel="Cancel"
+          tone="default"
+          onConfirm={handleArchiveConfirm}
+          loading={archiving}
+        />
+
+        <ConfirmationDialog
           open={!!deleteTarget}
           onOpenChange={(o) => !o && setDeleteTarget(null)}
           title="Delete Building"
           description={deleteTarget
-            ? `Are you sure you want to delete "${deleteTarget.name}" (${deleteTarget.code})? If this building contains floors or flats, deletion will be refused. This action cannot be undone.`
+            ? `Are you sure you want to delete "${deleteTarget.name}" (${deleteTarget.code})? If this building contains floors or flats, deletion will be refused to prevent data loss.`
             : ''}
           confirmLabel="Delete"
           cancelLabel="Cancel"

@@ -188,6 +188,44 @@ export function TownshipFloorExplorer({
           </div>
         </div>
       )}
+
+      {/* Selected Unit Details Preview */}
+      {(() => {
+        const selUnit = units.find((u) => u.id === selectedUnitId);
+        if (!selUnit) return null;
+        return (
+          <div className="mt-2.5 rounded-xl border border-[#00D9FF]/40 bg-[#061426]/90 p-2.5 shadow-lg">
+            <div className="mb-1.5 flex items-center justify-between">
+              <span className="text-[8.5px] font-black uppercase tracking-wider text-[#00D9FF]">
+                Unit {selUnit.unitNumber} Selected
+              </span>
+              <span className="rounded bg-[#22C55E]/10 px-1.5 py-0.5 text-[7.5px] font-black text-[#22C55E]">
+                {selUnit.verificationStatus}
+              </span>
+            </div>
+            <div className="space-y-1 text-[8.5px]">
+              <div className="flex justify-between text-[#94A3B8]">
+                <span>Spatial ID:</span>
+                <span className="font-mono font-bold text-[#F8FAFC]">{selUnit.demoSpatialId}</span>
+              </div>
+              <div className="flex justify-between text-[#94A3B8]">
+                <span>Owner:</span>
+                <span className="font-bold text-[#F8FAFC]">{selUnit.ownerReferenceName || "—"}</span>
+              </div>
+              <div className="flex justify-between text-[#94A3B8]">
+                <span>Area / Elev:</span>
+                <span className="font-bold text-[#F8FAFC]">{selUnit.area} sqft • {selUnit.elevation}m</span>
+              </div>
+            </div>
+            <a
+              href={`/properties/${selUnit.id}`}
+              className="mt-2 block w-full rounded-lg border border-[#00D9FF]/60 bg-[#00D9FF]/20 py-1 text-center text-[8.5px] font-black uppercase tracking-wider text-[#00D9FF] hover:bg-[#00D9FF]/30"
+            >
+              Open Full Property View →
+            </a>
+          </div>
+        );
+      })()}
     </div>
   );
 }

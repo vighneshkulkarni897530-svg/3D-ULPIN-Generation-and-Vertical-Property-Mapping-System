@@ -66,12 +66,30 @@ export interface TowerLinkedData {
 
 /**
  * Mapping of illustrative tower id → real database building id.
- *
- * Intentionally EMPTY: there is no real building record for the Life Republic
- * towers in the current database. Any future entry MUST come from an actual
- * asset/GIS import — adding one here to fake data would violate project rules.
+ * Links 3D scene towers directly to the 5 realistic towers in the database.
  */
-export const TOWER_DB_LINKS: Record<string, string> = {};
+export const TOWER_DB_LINKS: Record<string, string> = {
+  'B-LR-A': 'B-LR-A',
+  'B-LR-B': 'B-LR-B',
+  'B-LR-C': 'B-LR-C',
+  'B-LR-D': 'B-LR-D',
+  'B-LR-E': 'B-LR-E',
+  'building-lr-a': 'B-LR-A',
+  'building-lr-b': 'B-LR-B',
+  'building-lr-c': 'B-LR-C',
+  'building-lr-d': 'B-LR-D',
+  'building-lr-e': 'B-LR-E',
+  'BLDG-LR-A': 'B-LR-A',
+  'BLDG-LR-B': 'B-LR-B',
+  'BLDG-LR-C': 'B-LR-C',
+  'BLDG-LR-D': 'B-LR-D',
+  'BLDG-LR-E': 'B-LR-E',
+  'twr-a1': 'B-LR-A',
+  'twr-b1': 'B-LR-B',
+  'twr-a2': 'B-LR-E',
+  'twr-c1': 'B-LR-C',
+  'twr-d1': 'B-LR-D',
+};
 
 /* ----------------------------- Helpers --------------------------------- */
 

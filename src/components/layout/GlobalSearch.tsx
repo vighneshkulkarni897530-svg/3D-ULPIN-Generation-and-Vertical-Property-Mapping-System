@@ -77,7 +77,7 @@ export function GlobalSearch() {
   };
 
   const propertyDestination = (p: PropertyUnit): { href: string; via: string } => {
-    const legacy = legacyProperties.find((lp) => lp.id === p.propertyId);
+    const legacy = legacyProperties.find((lp) => lp.id === p.propertyId || lp.id === p.id || lp.propertyId === p.id || lp.propertyId === p.propertyId);
     if (legacy) return { href: `/properties/${legacy.id}`, via: "Property record" };
     return { href: `/buildings/${p.buildingId}/floors?unit=${p.id}`, via: "Floor Explorer" };
   };

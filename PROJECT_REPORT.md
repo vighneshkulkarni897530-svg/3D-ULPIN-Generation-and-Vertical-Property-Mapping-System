@@ -699,3 +699,91 @@ Phase 14: SIH Final Presentation & Submission Readiness ────── [COMP
 The **3D ULPIN Generation and Vertical Property Mapping System** addresses the critical gap in modern urban land administration. By uniting **2D cadastral mapping**, **3D spatial digital twins**, **resident privacy safeguards**, **government dispute workflows**, and **executive analytics**, the platform provides a complete, scalable, and technically verified foundation for next-generation 3D land administration in vertical urban environments.
 
 All 9 completed development phases are fully operational, tested with zero TypeScript errors, verified across 53 compiled production routes, and ready for advanced field evaluation.
+
+---
+
+## 35. Phase 15–16 — Authentication Hardening & Production Validation (2026-09)
+
+### Phase 15 — Login, Route-Guard & Security Audit (complete)
+
+Full audit report: `phase15_authentication_route_security_audit.md`.
+
+- **Fixed (server boundary):** unsigned session cookie (now HMAC-SHA256 signed/verified — `cookieSigner.ts`), client-controlled role upsert in `/api/auth/firebase-login` (role now server-derived only), fabricated-token acceptance (`firebase_session_*` / `reg_session_*` → 401), OTP flow (signed, email-bound, TTL'd claims), wrong-password account auto-provisioning (removed), disabled-account fallback (fail closed), post-login redirect (server-role driven), dead Google-redirect fallback (now processed on boot), bfcache back-button re-validation.
+- **Live-tested:** 22 protected pages → 307 signed-out; protected APIs → 401; forged admin cookie → 401 (was 200 pre-fix).
+
+### Phase 16 — Production Environment Validation (this phase)
+
+Full reports: `phase16_production_environment_verification_report.md`, `phase16_security_regression_report.md`, `phase16_production_deployment_checklist.md`.
+
+**Verified (LOCAL LIVE HTTP — production build):**
+- Session-forgery regression matrix (V1–V10) — all Phase 15 fixes hold; forged/expired cookies and fake tokens → 401; wrong but well-formed signatures rejected (timing-safe compare).
+- Open-redirect neutralization (`https://`, `//`, `javascript:` `?next=` values stripped).
+- Route protection: 20-route signed-out sweep → 307; APIs → 401; public pages → 200; 404 page present; middleware latency 1–10 ms (measured).
+- `npx tsc --noEmit` 0 errors; `npm run build` passes (13 s / 19 s measured); `npm run lint` passes.
+
+**Hardening actions:**
+- Removed dead `src/backend/**` (11 files — incl. the unsigned legacy `spv_session` writer); zero references verified before removal; build re-verified.
+- Environment audit: all secrets correctly scoped; **one deployment blocker identified — server-only `SESSION_SECRET` is not configured and currently falls back to a prototype constant**; documented in the deployment checklist (no value invented, `.env.local` untouched).
+- Data honesty audit: demo personas / `DSID-xxx` prototype spatial IDs / `isOfficialUlpin:false` disclaimers confirmed — no claim of legally-issued ULPIN anywhere.
+
+**Deployment status:** target is Firebase Hosting (`ulpin-3d`); the site is **not currently deployed** (URLs → 404). Deployment, deployed-rules probes, real-Firebase logins, browser/UX/performance measurements are explicitly **NOT VERIFIED — REQUIRES LIVE PRODUCTION ENVIRONMENT**. No deployment, commit, or push was performed.
+
+### Phase 17 — Production Deployment, Live Firebase Validation & Final Release Hardening (2026-09)
+
+Full reports: `phase17_deployment_blocker_report.md`,
+`phase17_production_environment_verification_report.md`,
+`phase17_live_security_verification_report.md`, `phase17_final_release_checklist.md`.
+
+- **Deployment:** NOT performed — no `firebase`/`gcloud`/`vercel` CLI and no
+  deploy credentials/tokens in this environment (see blocker report). Target
+  and config (`firebase.json`, `.firebaserc`) confirmed pointing at project
+  `d-ulpin-de274`, site `ulpin-3d`.
+- **Deployment blocker resolved (documentation):** `SESSION_SECRET` server-only
+  variable is now documented in `.env.example` (no value committed). Production
+  MUST set a strong random secret via the hosting environment before deploy.
+- **Live security regression (Phase 15 V1–V10):** re-run against a real
+  `next start` production build over HTTP — all attacks (forged/unsigned/
+  expired cookie, fake `firebase_session_`/`reg_session` tokens, fake/wrong
+  OTP claims, open redirect, cross-role direct-URL) -> 401/307/redirect as
+  expected. No regression.
+- **TypeScript:** `npx tsc --noEmit` → 0 errors.
+- **Production build:** `npm run build` → PASS.
+- **Real-Firebase / browser / deployed-rules tests:** NOT VERIFIED — REQUIRES
+  LIVE PRODUCTION ENVIRONMENT (no real accounts, no browser automation, no
+  deployed rules to probe).
+- **Final release status:** C — DEPLOYMENT READY — NOT DEPLOYED (local build
+  secure and production-hardened in code; awaiting deploy credentials and the
+  `SESSION_SECRET` provisioning).
+- **Git safety:** no commit/push/reset/stash; `.env.local` untouched; stale
+  nested project copy `3D-ULPIN-Generation.../` left for owner decision (not
+  removed — not confirmed unused and no removal authorization given).
+
+---
+
+## 36. Phase 18 — Full Realistic Township 3D Digital Twin + Demo Property + Building Management (2026-09)
+
+Full report: `phase18_township_digital_twin_verification_report.md`.
+
+### Completed Upgrades & Technical Architecture:
+1. **Demo Society Model**:
+   - Registered *Kolte Patil Life Republic Penthouses*, Survey No. 74, Hinjewadi-Marunji-Kasarsai Road, Marunji, Mulshi, Pune 411057 (`PARCEL-MH-PUN-074`, 18,500 m²).
+   - Marked explicitly with `isOfficialUlpin: false`, `dataStatus: "DEMO"`, and `sourceType: "ILLUSTRATIVE"`.
+2. **Realistic 3D Masterplan Scene**:
+   - WebGL / Three.js / React Three Fiber interactive digital twin featuring dark/navy atmospheric lighting, glowing perimeter boundary, entrance gate with dynamic canvas signage (`LIFE REPUBLIC PENTHOUSES`), asphalt road network, landscaped central garden with trees/shrubs, swimming pool, clubhouse, parking with vehicles, and instanced streetlight luminaires.
+   - Five realistic high-rise towers: Tower A (24F, 74.4m), Tower B (20F, 62.0m), Tower C (22F, 68.2m), Tower D (18F, 55.8m), Tower E (23F, 71.3m) with floor slabs and window illumination.
+3. **Full Floor Hierarchy & Featured Demo Property**:
+   - Tower B floor records (Floors 0 to 20, 3.1m step elevations) with residential floor plates.
+   - Featured unit: Flat 402, 4th Floor (`PROP-LR-B-0402`, 2BHK, 1050 sq ft, elevation 12.4m, Spatial ID: `3D-MH-PUN-LR-B-0402` / `27412104101A8F-F04-402`, Verified demo status).
+4. **Interactive 3D Workbench**:
+   - Tower click telemetry panel, Building Isolation mode (dimming non-selected towers with ghost transparency), Vertical Floor Slicing (`ALL`, `SHOW`, `HIDE`, `ISOLATE`, `EXPLODE`), and Flat Selection with metadata card.
+5. **Bidirectional 2D GIS ↔ 3D Digital Twin Navigation**:
+   - Seamless deep linking between `/map` and `/properties/[id]/digital-twin?building=B-LR-B&floor=4&flat=402`.
+6. **Building Management & Safe Archiving**:
+   - `/society/[societyId]/buildings` management interface supporting Add Building, Edit Building, and Safe Soft-Delete Archiving (`archiveBuilding`).
+   - Soft-delete preserves historical floor and unit records, logging audit events without destructive data loss.
+   - Role-Based Access Control blocks citizen tampering and scopes society admins to their respective jurisdictions.
+7. **Verification & Testing**:
+   - `npx tsc --noEmit` exited with 0 errors.
+   - `npm run build` compiled all 57 Next.js production routes successfully.
+
+

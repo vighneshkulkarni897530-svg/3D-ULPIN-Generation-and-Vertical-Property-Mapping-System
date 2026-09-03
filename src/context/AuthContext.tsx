@@ -33,6 +33,7 @@ export interface AuthActionResult {
   errorCode?: string;
   otpRequired?: boolean;
   email?: string;
+  role?: string;
   devOtp?: string;
   token?: string;
   challengeId?: string;
@@ -57,7 +58,7 @@ interface AuthContextType {
   loginWithGoogle: () => Promise<AuthActionResult>;
   requestOtp: (email: string, name?: string) => Promise<AuthActionResult>;
   verifyOtp: (email: string, code: string, token?: string, challengeId?: string) => Promise<AuthActionResult>;
-  completeLoginSession: (firebaseUser?: any, fallbackEmail?: string) => Promise<AuthActionResult>;
+  completeLoginSession: (firebaseUser?: any, fallbackEmail?: string, otpClaim?: string) => Promise<AuthActionResult>;
   loginAs: (roleKey: 'citizen' | 'officer' | 'admin') => void;
   demoLoginAs: (roleKey: 'citizen' | 'officer' | 'admin') => Promise<AuthActionResult>;
   setRole: (role: UserRole) => void;
@@ -101,22 +102,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const completeLoginSession = useCallback(async (firebaseUser?: any, fallbackEmail?: string): Promise<AuthActionResult> => {
+  const completeLoginSession = useCallback(
+    async (firebaseUser?: any, fallbackEmail?: string, otpClaim?: string): Promise<AuthActionResult> => {
     try {
       const userToUse = firebaseUser || auth.currentUser;
-      if (userToUse) {
-        let idToken: string | null = null;
+        if (userToUse) {
+                let idToken: string | null = null;
         try {
           idToken = await userToUse.getIdToken();
-        } catch {}
-
-        const tokenToSend = idToken || `firebase_session_${userToUse.uid}`;
-
+        } catch {
+          idToken = null;
+        }
+        if (!idToken) {
+          // Phase 15: fail closed — no forged-token fallback.
+          return { ok: false, error: 'Unable to obtain a verified sign-in token. Please sign in again.', errorCode: 'NO_TOKEN' };
+        }
         const res = await fetch('/api/auth/firebase-login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            idToken: tokenToSend,
+            idToken,
             expiresIn: 3600 * 24 * 365,
             user: {
               uid: userToUse.uid,
@@ -124,6 +129,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               name: userToUse.displayName || (userToUse.email || fallbackEmail)?.split('@')[0] || 'Cadastre User',
               phone: userToUse.phoneNumber || '',
             },
+            // Only the OTP-only flow attaches a signed claim.
+            ...(otpClaim ? { claim: otpClaim } : {}),
           }),
           credentials: 'same-origin',
         });
@@ -146,9 +153,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setSessionExpiresAt(new Date(Date.now() + 3600 * 24 * 365 * 1000).toISOString());
           setAuthStatus('authenticated');
         } else {
-          applySession(userToUse);
+                  applySession(userToUse);
         }
-        return { ok: true };
+        return { ok: true, role: data?.user?.role };
       }
 
       if (fallbackEmail) {
@@ -190,9 +197,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setSessionExpiresAt(new Date(Date.now() + 3600 * 24 * 365 * 1000).toISOString());
           setAuthStatus('authenticated');
         } else {
-          applySession(emailUser);
+                  applySession(emailUser);
         }
-        return { ok: true };
+        return { ok: true, role: data?.user?.role };
       }
 
       return { ok: true };
@@ -206,6 +213,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let mounted = true;
 
     const initializeAuth = async () => {
+      // Phase 15: process a pending Google sign-in redirect FIRST. When the
+      // Google popup is blocked, `firebaseLoginWithGoogle` falls back to
+      // `signInWithRedirect`; on return to the app the result must be consumed
+      // (and the server session established) before the session check below
+      // would otherwise mark the user unauthenticated and sign them out.
+      // Previously this import was unused — the redirect path was dead.
+      try {
+        const redirectResult = await checkGoogleRedirectResult();
+        if (redirectResult?.user?.email && mounted) {
+          const sessionRes = await completeLoginSession(
+            redirectResult.user,
+            redirectResult.user.email,
+          );
+          if (sessionRes.ok) return; // session state set by completeLoginSession
+        }
+      } catch {
+        // No pending redirect (or transient error) — continue normally.
+      }
+
       try {
         // Try to restore session from server cookie
         const response = await fetch('/api/auth/session', { credentials: 'same-origin' });
@@ -244,8 +270,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     initializeAuth();
 
+    // Phase 15 — bfcache/back-button session re-validation: when the browser
+    // restores this page from the back-forward cache (e.g. pressing Back after
+    // logout) the stale in-memory state would otherwise show protected content.
+    // Re-checking the server session on `pageshow` forces a fresh
+    // authenticated/unauthenticated decision.
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        void initializeAuth();
+      }
+    };
+    window.addEventListener('pageshow', onPageShow);
+
     return () => {
       mounted = false;
+      window.removeEventListener('pageshow', onPageShow);
     };
   }, []);
 
@@ -254,56 +293,68 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     applySession(current);
   }, [applySession]);
 
-  const login = useCallback(async (email: string, password: string): Promise<AuthActionResult> => {
-    // 1. Authenticate against server route first (validates against durable userStore & reset passwords)
-    try {
-      const serverRes = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-        credentials: 'same-origin',
-      });
-      if (serverRes.ok) {
-        const data = await serverRes.json();
-        if (data.user) {
-          setSessionUser({
-            id: data.user.id,
-            name: data.user.name,
-            email: data.user.email,
-            role: data.user.role,
-            phone: data.user.phone || '',
-            aadhaarOrGovId: data.user.aadhaarOrGovId || 'PENDING-KYC',
-          });
-          setSessionExpiresAt(new Date(Date.now() + 3600 * 24 * 365 * 1000).toISOString());
-          setAuthStatus('authenticated');
-          return { ok: true, otpRequired: false, email: data.user.email };
+      const login = useCallback(async (email: string, password: string): Promise<AuthActionResult> => {
+      // 1. Authenticate against the server route first. The server validates
+      //    against the durable userStore (scrypt-hashed passwords) and is the
+      //    authoritative path that returns the true role.
+      let attemptFirebaseFallback = false;
+      try {
+        const serverRes = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+          credentials: 'same-origin',
+        });
+        if (serverRes.ok) {
+          const data = await serverRes.json();
+          if (data.user) {
+            setSessionUser({
+              id: data.user.id,
+              name: data.user.name,
+              email: data.user.email,
+              role: data.user.role,
+              phone: data.user.phone || '',
+              aadhaarOrGovId: data.user.aadhaarOrGovId || 'PENDING-KYC',
+            });
+            setSessionExpiresAt(new Date(Date.now() + 3600 * 24 * 365 * 1000).toISOString());
+            setAuthStatus('authenticated');
+            return { ok: true, otpRequired: false, email: data.user.email, role: data.user.role };
+          }
+          return { ok: false, error: 'Authentication response was incomplete. Please try again.' };
         }
-      } else {
         const payload = await serverRes.json().catch(() => ({}));
-        if (payload?.error?.code === 'ACCOUNT_DISABLED') {
-          return { ok: false, error: payload.error.message || 'This account has been disabled by the administrator.' };
+        const code = payload?.error?.code;
+        if (code === 'ACCOUNT_DISABLED') {
+          // Do NOT fall back: a disabled account is rejected at the gate.
+          return { ok: false, error: payload?.error?.message || 'This account has been disabled by the administrator.' };
         }
+        // 401 INVALID_CREDENTIALS or any other non-fatal server rejection:
+        // fall back to Firebase client auth. firebaseLoginWithEmail no longer
+        // auto-provisions, so an unknown/wrong email still fails closed.
+        attemptFirebaseFallback = true;
+      } catch {
+        attemptFirebaseFallback = true;
       }
-    } catch {}
 
-    // 2. Fallback to Firebase client authentication
-    try {
-      const { user } = await firebaseLoginWithEmail(email, password);
-      if (user && user.email) {
-        const sessionRes = await completeLoginSession(user, user.email);
-        if (!sessionRes.ok) {
-          return { ok: false, error: sessionRes.error || 'Failed to establish session.' };
+      // 2. Firebase client-auth fallback — only on server/network failure.
+      //    No account is auto-created here, so privilege escalation via a
+      //    wrong password is impossible.
+      if (attemptFirebaseFallback) {
+        try {
+          const { user } = await firebaseLoginWithEmail(email, password);
+          if (user && user.email) {
+            const sessionRes = await completeLoginSession(user, user.email);
+            if (!sessionRes.ok) {
+              return { ok: false, error: sessionRes.error || 'Failed to establish session.' };
+            }
+            return { ok: true, otpRequired: false, email: user.email, role: sessionRes.role };
+          }
+          return { ok: false, error: 'Invalid sign-in response.' };
+        } catch (err: any) {
+          return { ok: false, error: err?.message || 'Invalid email or password.', errorCode: 'AUTH_FAILED' };
         }
-        return {
-          ok: true,
-          otpRequired: false,
-          email: user.email,
-        };
       }
-      return { ok: false, error: 'Invalid sign-in response.' };
-    } catch (err: any) {
-      return { ok: false, error: err?.message || 'Invalid email or password.', errorCode: 'AUTH_FAILED' };
-    }
+      return { ok: false, error: 'Invalid email or password.', errorCode: 'AUTH_FAILED' };
   }, [completeLoginSession]);
 
   const register = useCallback(async (input: RegisterInput): Promise<AuthActionResult> => {
@@ -348,10 +399,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!sessionRes.ok) {
           return { ok: false, error: sessionRes.error || 'Failed to establish session.' };
         }
-        return {
+                return {
           ok: true,
           otpRequired: false,
           email: user.email,
+          role: sessionRes.role,
         };
       }
       return { ok: false, error: 'Google sign-in failed: no email provided.' };
@@ -372,9 +424,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const verifyOtp = useCallback(
     async (email: string, code: string, token?: string, challengeId?: string): Promise<AuthActionResult> => {
       try {
-        await verifyEmailOtp(email, code, auth.currentUser?.uid, token, challengeId);
-        await completeLoginSession(auth.currentUser, email);
-        return { ok: true };
+                    const claim = await verifyEmailOtp(email, code, auth.currentUser?.uid, token, challengeId);
+          const sessionRes = await completeLoginSession(
+            auth.currentUser,
+            email,
+            typeof claim === 'string' ? claim : undefined,
+          );
+        if (!sessionRes.ok) {
+          return { ok: false, error: sessionRes.error || 'Failed to establish session.' };
+        }
+        return { ok: true, otpRequired: false, email, role: sessionRes.role };
       } catch (err) {
         return { ok: false, error: err instanceof Error ? err.message : 'OTP verification failed.', errorCode: 'OTP_FAILED' };
       }

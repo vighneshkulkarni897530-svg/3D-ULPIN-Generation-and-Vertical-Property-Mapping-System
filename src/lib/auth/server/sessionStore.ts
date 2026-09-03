@@ -17,6 +17,7 @@ import { getAuth } from 'firebase-admin/auth';
 import type { User } from '@/types';
 import { SESSION_COOKIE } from '../sessionCookie';
 import { findUserById, findUserByEmail, isUserDeleted, upsertUser } from './userStore';
+import { signSession, sessionSignatureMaterial, verifySignature } from './cookieSigner';
 
 type SupabaseAuthUser = {
   id: string;
@@ -42,6 +43,8 @@ const TOKEN_CACHE_MAX = 500;
 export interface SupabaseSessionData {
   access_token: string;
   refresh_token: string;
+  /** HMAC-SHA256 signature (hex) covering the session fields. Computed by setSessionCookie; optional on input. */
+  sig?: string;
   /** Unix seconds — expiry of the access token. */
   expires_at: number;
   userId?: string;
@@ -68,6 +71,7 @@ export function readSessionCookie(req: NextRequest): SupabaseSessionData | null 
     return {
       access_token: parsed.access_token,
       refresh_token: typeof parsed.refresh_token === 'string' ? parsed.refresh_token : 'session-token',
+      sig: typeof parsed.sig === 'string' ? parsed.sig : '',
       expires_at: parsed.expires_at,
       userId: parsed.userId,
       email: parsed.email,
@@ -78,6 +82,7 @@ export function readSessionCookie(req: NextRequest): SupabaseSessionData | null 
       return {
         access_token: raw,
         refresh_token: 'legacy',
+        sig: '',
         expires_at: Math.floor(Date.now() / 1000) + SESSION_MAX_AGE_SEC,
       };
     }
@@ -90,10 +95,20 @@ export function setSessionCookie(res: NextResponse, session: SupabaseSessionData
   const safeSession: SupabaseSessionData = {
     access_token: session.access_token,
     refresh_token: session.refresh_token || 'session-token',
+    sig: '',
     expires_at: session.expires_at || Math.floor(Date.now() / 1000) + SESSION_MAX_AGE_SEC,
     userId: session.userId,
     email: session.email,
   };
+  // HMAC signature binds the trusted fields to the server secret so the
+  // httpOnly cookie cannot be forged by a user editing it in devtools/curl.
+  safeSession.sig = signSession({
+    access_token: safeSession.access_token,
+    refresh_token: safeSession.refresh_token,
+    expires_at: safeSession.expires_at,
+    userId: safeSession.userId,
+    email: safeSession.email,
+  });
 
   res.cookies.set(SESSION_COOKIE, JSON.stringify(safeSession), {
     httpOnly: true,
@@ -250,6 +265,19 @@ export async function getSessionUser(
 ): Promise<ResolvedSession | null> {
   const cookieSession = readSessionCookie(req);
   if (!cookieSession?.access_token) return null;
+
+  // Phase 15: enforce server-side HMAC signature on the session cookie.
+  // Without this a user could forge the httpOnly cookie in devtools/curl and
+  // impersonate any account (the cookie is JSON, so its userId/email fields
+  // were previously trusted without integrity protection). Signed cookies are
+  // issued only by our own route handlers — forged/legacy unsigned cookies are
+  // rejected and the user is forced to re-authenticate.
+  if (
+    !cookieSession.sig ||
+    !verifySignature(sessionSignatureMaterial(cookieSession), cookieSession.sig)
+  ) {
+    return null;
+  }
 
   // 1) Firebase / Local Persistent Store Path
   if (!isSupabaseAuthConfigured()) {

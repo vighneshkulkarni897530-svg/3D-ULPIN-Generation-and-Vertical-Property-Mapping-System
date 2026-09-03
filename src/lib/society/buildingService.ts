@@ -105,15 +105,17 @@ export async function createBuilding(
   }
 }
 
-/** Fetches all buildings for a society, ordered by creation time. */
-export async function getBuildings(societyId: string): Promise<Building[]> {
+/** Fetches all buildings for a society, ordered by creation time. Excludes archived buildings unless requested. */
+export async function getBuildings(societyId: string, includeArchived = false): Promise<Building[]> {
   try {
     const q = query(
       societyBuildingsCollection(societyId),
       orderBy('createdAt', 'asc'),
     );
     const snapshot = await getDocs(q);
-    return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Building));
+    const all = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Building));
+    if (includeArchived) return all;
+    return all.filter((b) => b.status !== 'archived');
   } catch (error) {
     throw normalizeFirestoreError(error);
   }
@@ -167,6 +169,37 @@ export async function updateBuilding(
 }
 
 /**
+ * Safely archives a building document.
+ * Soft-deletes by setting status to 'archived', recording archivedAt, archivedBy, and archiveReason.
+ * Preserves all audit history, child floors, flat units, and verifications without destructive data loss.
+ */
+export async function archiveBuilding(
+  societyId: string,
+  buildingId: string,
+  reason: string = 'Archived by administrator',
+): Promise<void> {
+  const uid = requireUid();
+  try {
+    const docRef = buildingDocRef(societyId, buildingId);
+    const existing = await getDoc(docRef);
+    if (!existing.exists()) {
+      throw new SocietyServiceError('NOT_FOUND', 'Building record not found.');
+    }
+
+    await updateDoc(docRef, {
+      status: 'archived' as BuildingStatus,
+      archivedAt: serverTimestamp(),
+      archivedBy: uid,
+      archiveReason: reason.trim() || 'Archived by administrator',
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    if (error instanceof SocietyServiceError) throw error;
+    throw normalizeFirestoreError(error);
+  }
+}
+
+/**
  * Deletes a building ONLY if it has no child floors.
  * Throws if children exist.
  */
@@ -191,7 +224,7 @@ export async function deleteBuilding(
     if (!floorsSnapshot.empty) {
       throw new SocietyServiceError(
         'UNAVAILABLE',
-        'This building contains floors. Remove or handle its contents before deleting the building.',
+        'This building contains floors. Archive the building instead or remove child floors first.',
       );
     }
 

@@ -24,12 +24,29 @@ const DEMO_ACCOUNTS: Record<'citizen' | 'officer' | 'admin', { email: string; da
   admin: { email: 'admin.cadastre@gov.in', dashboard: '/dashboard/admin' },
 };
 
+/**
+ * Phase 15 — canonical role → dashboard mapping.
+ * The post-login redirect is derived from the SERVER-verified role returned by
+ * the login session (never from the selected tab or the typed email alone), so
+ * a real officer/admin signing in while another tab is selected still lands on
+ * their own dashboard.
+ */
+const ROLE_DASHBOARDS: Record<string, string> = {
+  CITIZEN: '/dashboard/citizen',
+  OFFICER: '/dashboard/officer',
+  ADMIN: '/dashboard/admin',
+};
+
+/** Safe `?next=` handling: same-origin relative paths only. */
+function safeNextPath(): string | null {
+  if (typeof window === 'undefined') return null;
+  const next = new URLSearchParams(window.location.search).get('next');
+  if (next && next.startsWith('/') && !next.startsWith('//')) return next;
+  return null;
+}
+
 function destinationAfterLogin(roleKey: 'citizen' | 'officer' | 'admin'): string {
-  if (typeof window !== 'undefined') {
-    const next = new URLSearchParams(window.location.search).get('next');
-    if (next && next.startsWith('/') && !next.startsWith('//')) return next;
-  }
-  return DEMO_ACCOUNTS[roleKey].dashboard;
+  return safeNextPath() ?? DEMO_ACCOUNTS[roleKey].dashboard;
 }
 
 export default function LoginPage() {
@@ -60,10 +77,16 @@ export default function LoginPage() {
       return;
     }
 
+    // Phase 15 — redirect by SERVER-verified role first; fall back to the
+    // demo-email lookup and finally the selected tab for legacy flows.
     const matchedRole = (Object.keys(DEMO_ACCOUNTS) as (keyof typeof DEMO_ACCOUNTS)[]).find(
       (k) => DEMO_ACCOUNTS[k].email.toLowerCase() === email.trim().toLowerCase(),
     );
-    window.location.href = destinationAfterLogin(matchedRole ?? selectedRole ?? 'citizen');
+    const serverDashboard = result.role ? ROLE_DASHBOARDS[result.role] : undefined;
+    const fallbackDashboard =
+      (matchedRole ? DEMO_ACCOUNTS[matchedRole].dashboard : undefined) ??
+      DEMO_ACCOUNTS[selectedRole ?? 'citizen'].dashboard;
+    window.location.href = safeNextPath() ?? serverDashboard ?? fallbackDashboard;
   };
 
   const handleFillDemo = (roleKey: 'citizen' | 'officer' | 'admin') => {

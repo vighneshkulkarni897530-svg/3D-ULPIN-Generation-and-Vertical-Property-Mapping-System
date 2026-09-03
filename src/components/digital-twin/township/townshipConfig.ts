@@ -177,12 +177,12 @@ export interface PlaceInfo {
  */
 export const PLACE: PlaceInfo = {
   id: "life-republic",
-  name: "Kolte-Patil Life Republic Township",
-  displayName: "LIFE REPUBLIC",
+  name: "Kolte Patil Life Republic Penthouses",
+  displayName: "LIFE REPUBLIC PENTHOUSES",
   type: "Township",
   address: {
     line1: "Survey No. 74, Marunji",
-    line2: "Hinjawadi–Marunji–Kasarsai Road",
+    line2: "Hinjewadi–Marunji–Kasarsai Road, Near Hinjewadi Phase 2",
     taluka: "Mulshi",
     city: "Pune",
     state: "Maharashtra",
@@ -190,9 +190,9 @@ export const PLACE: PlaceInfo = {
     country: "India",
   },
   center: { lat: 18.6172, lng: 73.7141 },
-  centerNote: "Approximate visualization center",
+  centerNote: "Approximate visualization center (Survey No. 74, Marunji)",
   dataStatus: "illustrative",
-  visualizationStatus: "Illustrative 3D Township Visualization",
+  visualizationStatus: "Kolte Patil Life Republic 3D Township Digital Twin",
   sceneScale: "meters",
 };
 
@@ -259,7 +259,7 @@ export type TowerType = "A" | "B" | "C" | "D";
 
 export interface TowerDef {
   id: string;
-  /** Display name — kept generic because no database building record exists. */
+  /** Display name. */
   name: string;
   type: TowerType;
   typeLabel: string;
@@ -285,6 +285,7 @@ const TYPE_LABELS: Record<TowerType, string> = {
 
 function tower(
   id: string,
+  name: string,
   type: TowerType,
   position: [number, number],
   rotation: number,
@@ -293,7 +294,7 @@ function tower(
 ): TowerDef {
   return {
     id,
-    name: "Illustrative Building",
+    name,
     type,
     typeLabel: TYPE_LABELS[type],
     position,
@@ -307,25 +308,26 @@ function tower(
 /**
  * 13 illustrative residential towers arranged as a planned township around a
  * central amenity — deliberately irregular positions / rotations / heights.
+ * The 5 core towers correspond directly to Towers A, B, C, D, E.
  */
 export const TOWERS: TowerDef[] = [
-  tower("twr-a1", "A", [-108, -92], 0.1, 24, [18, 16]),
-  tower("twr-b1", "B", [-38, -102], -0.06, 20, [26, 16]),
-  tower("twr-a2", "A", [44, -96], 0.12, 26, [18, 16]),
-  tower("twr-c1", "C", [116, -90], -0.08, 22, [30, 16]),
-  tower("twr-b2", "B", [-132, -18], 0.18, 18, [24, 17]),
-  tower("twr-d1", "D", [-64, -34], -0.1, 12, [22, 15]),
-  tower("twr-a3", "A", [0, -52], 0.05, 24, [18, 16]),
-  tower("twr-c2", "C", [68, -40], 0.1, 20, [30, 16]),
-  tower("twr-d2", "D", [128, -14], -0.15, 12, [22, 15]),
-  tower("twr-b3", "B", [-104, 58], -0.12, 19, [24, 16]),
-  tower("twr-c3", "C", [-24, 66], 0.07, 21, [30, 16]),
-  tower("twr-a4", "A", [108, 52], 0.16, 23, [18, 16]),
-  tower("twr-d3", "D", [44, 96], -0.06, 11, [22, 15]),
+  tower("B-LR-A", "Tower A", "A", [-108, -92], 0.1, 24, [18, 16]),
+  tower("B-LR-B", "Tower B", "B", [-38, -102], -0.06, 20, [26, 16]),
+  tower("B-LR-E", "Tower E", "A", [44, -96], 0.12, 23, [18, 16]),
+  tower("B-LR-C", "Tower C", "C", [116, -90], -0.08, 22, [30, 16]),
+  tower("twr-b2", "Residential Wing 2", "B", [-132, -18], 0.18, 18, [24, 17]),
+  tower("B-LR-D", "Tower D", "D", [-64, -34], -0.1, 18, [22, 15]),
+  tower("twr-a3", "Central Tower", "A", [0, -52], 0.05, 24, [18, 16]),
+  tower("twr-c2", "East Wing 1", "C", [68, -40], 0.1, 20, [30, 16]),
+  tower("twr-d2", "South Wing 1", "D", [128, -14], -0.15, 12, [22, 15]),
+  tower("twr-b3", "West Tower 2", "B", [-104, 58], -0.12, 19, [24, 16]),
+  tower("twr-c3", "South-West Tower", "C", [-24, 66], 0.07, 21, [30, 16]),
+  tower("twr-a4", "South-East Tower", "A", [108, 52], 0.16, 23, [18, 16]),
+  tower("twr-d3", "Entrance Tower", "D", [44, 96], -0.06, 11, [22, 15]),
 ];
 
-/** The township's pre-selected (central) tower. */
-export const SELECTED_TOWER_ID = "twr-a3";
+/** The township's pre-selected (featured) tower — Tower B. */
+export const SELECTED_TOWER_ID = "B-LR-B";
 
 /* -------------------------- Building clusters ------------------------- */
 
@@ -344,8 +346,8 @@ export interface BuildingClusterDef {
 }
 
 export const BUILDING_CLUSTERS: BuildingClusterDef[] = [
-  { id: "cluster-north", label: "North Residential Cluster", towerIds: ["twr-a1", "twr-b1", "twr-a2", "twr-c1"] },
-  { id: "cluster-west", label: "West Residential Cluster", towerIds: ["twr-b2", "twr-d1", "twr-b3"] },
+  { id: "cluster-north", label: "North Residential Cluster", towerIds: ["B-LR-A", "B-LR-B", "B-LR-E", "B-LR-C"] },
+  { id: "cluster-west", label: "West Residential Cluster", towerIds: ["twr-b2", "B-LR-D", "twr-b3"] },
   { id: "cluster-central", label: "Central Residential Cluster", towerIds: ["twr-a3", "twr-c2", "twr-d2"] },
   { id: "cluster-south", label: "Entrance-side Cluster", towerIds: ["twr-c3", "twr-a4", "twr-d3"] },
 ];

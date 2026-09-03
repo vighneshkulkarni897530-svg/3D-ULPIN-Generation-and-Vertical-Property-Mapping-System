@@ -150,6 +150,73 @@ export const MOCK_FLOORS: Floor[] = [
     area: 6500,
     totalUnits: 1,
   },
+
+  // ── Kolte Patil Life Republic: Tower B (20 Floors: 0..20) ──
+  {
+    id: 'FLOOR-LR-B-G',
+    buildingId: 'B-LR-B',
+    floorNumber: 0,
+    name: 'Ground Floor - Grand Lobby & Concierge',
+    elevation: 0,
+    area: 4800,
+    totalUnits: 4,
+  },
+  ...Array.from({ length: 20 }, (_, i) => {
+    const flNum = i + 1;
+    return {
+      id: `FLOOR-LR-B-${String(flNum).padStart(2, '0')}`,
+      buildingId: 'B-LR-B',
+      floorNumber: flNum,
+      name: flNum === 20 ? '20th Floor - Sky Penthouses' : flNum === 4 ? '4th Floor - Premium Residences' : `Floor ${flNum} - Residential Units`,
+      elevation: Number((flNum * 3.1).toFixed(1)),
+      area: 4200,
+      totalUnits: 4,
+    };
+  }),
+
+  // ── Tower A (24 Floors: 0..24) ──
+  ...Array.from({ length: 25 }, (_, i) => ({
+    id: `FLOOR-LR-A-${String(i).padStart(2, '0')}`,
+    buildingId: 'B-LR-A',
+    floorNumber: i,
+    name: i === 0 ? 'Ground Floor - Atrium Lobby' : i === 24 ? '24th Floor - Penthouse Suite' : `Floor ${i} - Luxury Residences`,
+    elevation: Number((i * 3.1).toFixed(1)),
+    area: 4500,
+    totalUnits: 4,
+  })),
+
+  // ── Tower C (22 Floors: 0..22) ──
+  ...Array.from({ length: 23 }, (_, i) => ({
+    id: `FLOOR-LR-C-${String(i).padStart(2, '0')}`,
+    buildingId: 'B-LR-C',
+    floorNumber: i,
+    name: i === 0 ? 'Ground Floor - Reception & Club Lounge' : `Floor ${i} - Residential`,
+    elevation: Number((i * 3.1).toFixed(1)),
+    area: 4400,
+    totalUnits: 4,
+  })),
+
+  // ── Tower D (18 Floors: 0..18) ──
+  ...Array.from({ length: 19 }, (_, i) => ({
+    id: `FLOOR-LR-D-${String(i).padStart(2, '0')}`,
+    buildingId: 'B-LR-D',
+    floorNumber: i,
+    name: i === 0 ? 'Ground Floor - Resident Lobby' : `Floor ${i} - Residential`,
+    elevation: Number((i * 3.1).toFixed(1)),
+    area: 4000,
+    totalUnits: 4,
+  })),
+
+  // ── Tower E (23 Floors: 0..23) ──
+  ...Array.from({ length: 24 }, (_, i) => ({
+    id: `FLOOR-LR-E-${String(i).padStart(2, '0')}`,
+    buildingId: 'B-LR-E',
+    floorNumber: i,
+    name: i === 0 ? 'Ground Floor - Grand Foyer' : `Floor ${i} - Residential`,
+    elevation: Number((i * 3.1).toFixed(1)),
+    area: 4300,
+    totalUnits: 4,
+  })),
 ];
 
 /** Convenience lookup by ID. */
