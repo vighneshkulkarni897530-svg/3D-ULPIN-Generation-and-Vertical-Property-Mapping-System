@@ -149,9 +149,9 @@
       "aadhaarOrGovId": "PENDING-KYC",
       "accountStatus": "ACTIVE",
       "createdAt": "2026-09-03T04:22:04.332Z",
-      "lastLoginAt": "2026-09-03T11:15:11.458Z",
-      "passwordSalt": "94930c0be028df918363786d9db032ec",
-      "passwordHash": "fe7feaebb7a5b0479d1fc9902eaf628f6ace1ab28557f7f914994bd41788e8fb86a299f67df3637333debdba2d94771072d656545cf8b7d44b86b2cb01f9aa31"
+      "lastLoginAt": "2026-09-03T13:37:24.764Z",
+      "passwordSalt": "f9f830c173ce1a0d8554c1382f0ca0f9",
+      "passwordHash": "5e3b45d3ff7a2ec7d1bc5eb8270df85107c99c33d6bd73aa5091e6e4569e8f0003e8da62ffdb56175ba5a2df31af079d3aff22fa1a5056330936b97c366ebf95"
     },
     {
       "id": "usr_admin",
@@ -183,6 +183,24 @@
       "lastLoginAt": "2026-09-03T11:00:55.374Z",
       "passwordSalt": "547bd6c67dd1c692c4ce870f86e6c982",
       "passwordHash": "cfd09765b0e43f30d3bee7a8a6b6c29ca85ef090321d5e1506970cfda98c72bfba3cc279996047755c9e0c9da44a5e72dd7f44bc47eaa5b7b724838184397c0d"
+    },
+    {
+      "id": "usr-cit-2a36c4e5",
+      "name": "Vighnesh Kulkarni",
+      "email": "vighneshkulkarni8975@gmail.com",
+      "role": "ADMIN",
+      "phone": "7391010883",
+      "aadhaarOrGovId": "PENDING-KYC",
+      "accountStatus": "ACTIVE",
+      "createdAt": "2026-09-03T16:10:06.814Z",
+      "lastLoginAt": "2026-09-03T16:10:06.814Z",
+      "department": "Ecocity",
+      "designation": "Authorized Society Secretary",
+      "jurisdictionDistrict": "Pune City",
+      "societyName": "Ecocity",
+      "societyRegNo": "PUN/HSG/2026/96240",
+      "passwordSalt": "e439b079210648cf4575e1ebd49bf71c",
+      "passwordHash": "a6901eee10d5be97ecc93f64c128132ed489888b09163c4b60af8afe3bce974221383d136d29584bd9a4ef8ed71aaa6d76ab6a5494380e6891546e9b0eec6fa6"
     }
   ],
   "deletedIds": []

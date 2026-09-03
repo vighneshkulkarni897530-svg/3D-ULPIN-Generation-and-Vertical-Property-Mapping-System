@@ -2,7 +2,7 @@
 
 /**
  * Route layout guard (Phase 10) — /properties/**
- * Requires an authenticated session (see src/middleware.ts + RouteGuards).
+  * Requires an authenticated session (see src/proxy.ts + RouteGuards).
  */
 import { ProtectedRoute } from '@/components/auth/RouteGuards';
 

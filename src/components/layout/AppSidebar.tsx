@@ -5,7 +5,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Building, ChevronsLeft, ChevronsRight, X, ShieldCheck } from "lucide-react";
-import { NAV_SECTIONS, isNavItemActive } from "@/lib/navigation";
+import { NAV_SECTIONS, getNavSectionsForRole, isNavItemActive } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { useGIS } from "@/context/GISContext";
@@ -61,6 +61,11 @@ function SidebarBody({
   const pathname = usePathname();
   const { currentUser, role, hasPermission, isAuthenticated } = useAuth();
   const { conflicts, properties } = useGIS();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const openConflicts = conflicts.filter((c) => c.status !== "Resolved").length;
   const pendingVerifications = properties.filter((p) =>
@@ -75,6 +80,10 @@ function SidebarBody({
 
   const roleLabel =
     role === "OFFICER" ? "Revenue Officer" : role === "ADMIN" ? "Society Secretary" : "Verified Citizen";
+
+  // During SSR or before mount, use role or fallback gracefully
+  const activeRole = mounted ? role : (role || 'CITIZEN');
+  const navSections = getNavSectionsForRole(activeRole);
 
   const CollapseControl = () => {
     if (drawer) {
@@ -119,9 +128,9 @@ function SidebarBody({
           <CollapseControl />
         </span>
       </div>
-      {/* Navigation sections — permission-filtered (Phase 10 RBAC-aware) */}
-      <nav className="sidebar-scroll flex-1 space-y-5 overflow-y-auto px-3 py-4" aria-label="Primary">
-        {NAV_SECTIONS.map((section) => {
+      {/* Navigation sections — role-tailored (Phase 18 Dynamic RBAC Navigation) */}
+      <nav suppressHydrationWarning className="sidebar-scroll flex-1 space-y-5 overflow-y-auto px-3 py-4" aria-label="Primary">
+        {navSections.map((section) => {
           if (section.permission && !hasPermission(section.permission)) return null;
           const items = section.items.filter((item) => !item.permission || hasPermission(item.permission));
           if (items.length === 0) return null;

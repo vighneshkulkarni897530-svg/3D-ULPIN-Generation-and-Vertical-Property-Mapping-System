@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, MapPinned, FileText } from "lucide-react";
 import { Township3DViewerDynamic, Township3DViewerHandle } from "@/components/digital-twin/township/Township3DViewerDynamic";
@@ -75,6 +75,7 @@ export default function BuildingDigitalTwinPage() {
 }
 
 function BuildingDigitalTwinPageContent() {
+  const router = useRouter();
   const inspection = useDigitalTwinInspection();
   const [selectedFloorLevel, setSelectedFloorLevel] = useState(6);
   const [selectedUnit, setSelectedUnit] = useState<TwinUnit | null>(null);
@@ -566,16 +567,30 @@ function BuildingDigitalTwinPageContent() {
                   )}
                 </AnimatePresence>
 
-                {/* Phase 7 — Inspection Workbench Panel */}
+                {/* Phase 18 — Interactive Building Details Panel */}
                 <AnimatePresence>
                   {selectedTower && showTowerPanel && (
-                    <InspectionPanel
-                      building={linkedTowerData.building}
-                      floors={linkedTowerData.floors}
-                      units={linkedTowerData.units}
+                    <TownshipBuildingPanel
+                      tower={selectedTower}
+                      linkedBuilding={linkedTowerData.building}
+                      linkedFloors={linkedTowerData.floors}
+                      linkedUnits={linkedTowerData.units}
                       parcel={linkedTowerData.parcel}
+                      property={routeProperty}
                       onClose={handleCloseTowerPanel}
-                      className="absolute right-3 top-[150px] z-30 hidden max-h-[calc(100%-170px)] overflow-y-auto lg:block"
+                      onViewBuilding={() => {
+                        viewerHandleRef.current?.focusTower?.(selectedTower);
+                      }}
+                      onToggleIsolate={() => inspection.toggleBuildingIsolation()}
+                      isIsolated={inspection.buildingIsolation}
+                      onViewFloors={() => {
+                        setSelectedLevel(4);
+                        handleFloorMode("isolate");
+                      }}
+                      onToggleExplode={() => handleFloorMode(floorMode === "explode" ? "all" : "explode")}
+                      isExploded={floorMode === "explode"}
+                      onOpenProperty={() => router.push(`/properties/${routeProperty?.id ?? "PROP-LR-B-0402"}`)}
+                      className="absolute right-3 top-[56px] z-30 hidden max-h-[calc(100%-70px)] overflow-y-auto lg:block"
                     />
                   )}
                 </AnimatePresence>

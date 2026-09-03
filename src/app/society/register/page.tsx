@@ -25,6 +25,7 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertTriangle, Building2, MapPin, ShieldCheck } from 'lucide-react';
 
+import { PERMISSIONS } from '@/types/auth';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { PageHeader, SectionHeader } from '@/components/layout/PageHeader';
 import { SocietyImageUploader } from '@/components/society/SocietyImageUploader';
@@ -147,7 +148,7 @@ function toRegistrationPayload(values: SocietyRegistrationFormValues): SocietyRe
 
 export default function SocietyRegisterPage() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute permission={PERMISSIONS.REGISTER_BUILDING}>
       <SocietyRegisterPageContent />
     </ProtectedRoute>
   );

@@ -49,7 +49,7 @@ API routes ── getSessionUser(req): signature + expiry + userStore re-validat
              requirePermission(...) re-checks role. Browser role values are never trusted.
 ```
 
-**Key files:** `src/lib/firebase.ts`, `src/lib/firebase/auth.ts`, `src/context/AuthContext.tsx`, `src/lib/auth/server/sessionStore.ts`, `src/lib/auth/server/cookieSigner.ts` (new), `src/lib/auth/server/{apiAuth,userStore,authService,profiles,auditStore,otpStore}.ts`, `src/lib/auth/{permissions,sessionCookie,navigation}.ts`, `src/middleware.ts`, `src/components/auth/{ProtectedRoute,RouteGuards,FullScreenLoader}.tsx`, `firestore.rules`, `storage.rules`.
+**Key files:** `src/lib/firebase.ts`, `src/lib/firebase/auth.ts`, `src/context/AuthContext.tsx`, `src/lib/auth/server/sessionStore.ts`, `src/lib/auth/server/cookieSigner.ts` (new), `src/lib/auth/server/{apiAuth,userStore,authService,profiles,auditStore,otpStore}.ts`, `src/lib/auth/{permissions,sessionCookie,navigation}.ts`, `src/proxy.ts`, `src/components/auth/{ProtectedRoute,RouteGuards,FullScreenLoader}.tsx`, `firestore.rules`, `storage.rules`.
 
 **Session resolution (`getSessionUser`)** is authoritative for role: cookie → signature check → userStore lookup → deleted-tombstone check → disabled-status check → **role comes from the server store, never the cookie**. The Supabase path (when configured) does the same via `profiles`.
 

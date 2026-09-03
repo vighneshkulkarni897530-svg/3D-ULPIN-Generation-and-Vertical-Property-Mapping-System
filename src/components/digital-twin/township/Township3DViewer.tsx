@@ -64,6 +64,18 @@ import {
 } from "./townshipLandscape";
 import type { ExplicitFloor, GisFootprint, TownshipFloorMode } from "./townshipData";
 import { cn } from "@/lib/utils";
+import {
+  Crosshair,
+  Eye,
+  Layers,
+  Maximize,
+  Moon,
+  RotateCcw,
+  RotateCw,
+  Scissors,
+  Sparkles,
+  Sun,
+} from "lucide-react";
 
 /* ======================================================================
  * Phase 15A+15B — Realistic Township Digital Twin (ILLUSTRATIVE).
@@ -75,6 +87,7 @@ import { cn } from "@/lib/utils";
 export interface Township3DViewerHandle {
   applyPreset: (preset: CameraPresetId) => void;
   zoomBy: (factor: number) => void;
+  focusTower?: (tower: TowerDef) => void;
   getContainer: () => HTMLDivElement | null;
 }
 
@@ -187,9 +200,18 @@ const M = {
   /* ---- Phase 15C: floor-mode + GIS footprint materials ---- */
   floorPlate: std(0x8fb8cc, 0.55, 0.1, { transparent: true, opacity: 0.42 }),
   floorPlateGhost: std(0x8fb8cc, 0.6, 0.05, { transparent: true, opacity: 0.13, depthWrite: false }),
-  floorPlateSel: std(0x00d9ff, 0.3, 0.35, { transparent: true, opacity: 0.78, emissive: 0x00d9ff, emissiveIntensity: 0.32 }),
-  bodyGhost: std(0xc4cbd1, 0.9, 0.02, { transparent: true, opacity: 0.1, depthWrite: false }),
+  floorPlateSel: std(0x00d9ff, 0.3, 0.35, { transparent: true, opacity: 0.85, emissive: 0x00d9ff, emissiveIntensity: 0.6 }),
+  bodyGhost: std(0x1e293b, 0.9, 0.02, { transparent: true, opacity: 0.14, depthWrite: false }),
   footprintFill: std(0x22c55e, 0.6, 0.05, { transparent: true, opacity: 0.3 }),
+  /* ---- Realism Night Mode & Reference Render Materials ---- */
+  emissiveCrown: new THREE.MeshBasicMaterial({ color: 0x00e5ff }),
+  windowLitWarm: std(0xffd166, 0.25, 0.1, { emissive: 0xffaa00, emissiveIntensity: 1.1 }),
+  windowLitCool: std(0xe0f2fe, 0.2, 0.2, { emissive: 0x7dd3fc, emissiveIntensity: 0.9 }),
+  windowDark: std(0x0f172a, 0.15, 0.8),
+  lobbyWarm: std(0xfbbf24, 0.2, 0.3, { emissive: 0xd97706, emissiveIntensity: 0.8, transparent: true, opacity: 0.92 }),
+  neonBoundary: new THREE.MeshBasicMaterial({ color: 0x00f0ff }),
+  waterNight: std(0x0284c7, 0.05, 0.8, { transparent: true, opacity: 0.92, emissive: 0x0369a1, emissiveIntensity: 0.32 }),
+  pavilionGlow: std(0xffb703, 0.3, 0.1, { emissive: 0xf59e0b, emissiveIntensity: 0.8 }),
 } as const;
 
 /** Rounded-rectangle outline points (clockwise, for Line / Shape building). */
@@ -489,7 +511,7 @@ function Tower({
       {bodyFull && tower.type === "A" && (
         <group>
           <mesh geometry={UNIT_BOX} material={bodyMat} castShadow receiveShadow position={[0, 4.8 + (h - 4.8) / 2, 0]} scale={[w, h - 4.8, d]}>
-            {selected && <Edges />}
+            <Edges color={selected ? "#00d9ff" : hovered ? "#38bdf8" : "#0284c7"} threshold={20} />
           </mesh>
           {/* vertical facade fins */}
           <mesh geometry={UNIT_BOX} material={M.fin} castShadow position={[w / 2 + 0.25, 4.8 + (h - 4.8) / 2, 0]} scale={[0.5, h - 4.8, d * 0.5]} />
@@ -500,7 +522,7 @@ function Tower({
       {bodyFull && tower.type === "B" && (
         <group>
           <mesh geometry={UNIT_BOX} material={bodyMat} castShadow receiveShadow position={[0, 4.8 + (h - 4.8) / 2, 0]} scale={[w, h - 4.8, d]}>
-            {selected && <Edges />}
+            <Edges color={selected ? "#00d9ff" : hovered ? "#38bdf8" : "#0284c7"} threshold={20} />
           </mesh>
           {/* recessed central glass slot */}
           <mesh geometry={UNIT_BOX} material={M.glass} castShadow position={[0, 4.8 + (h - 4.8) / 2, 0]} scale={[w * 0.4, h - 6.4, d + 0.3]} />
@@ -511,7 +533,7 @@ function Tower({
         <group>
           {/* twin offset volumes */}
           <mesh geometry={UNIT_BOX} material={bodyMat} castShadow receiveShadow position={[-w * 0.19, 4.8 + (h - 4.8) / 2, 0]} scale={[w * 0.62, h - 4.8, d]}>
-            {selected && <Edges />}
+            <Edges color={selected ? "#00d9ff" : hovered ? "#38bdf8" : "#0284c7"} threshold={20} />
           </mesh>
           <mesh geometry={UNIT_BOX} material={M.glassDark} castShadow receiveShadow position={[w * 0.26, 4.8 + (h * 0.78 - 4.8) / 2, 0]} scale={[w * 0.48, h * 0.78 - 4.8, d * 0.92]} />
           {/* sky-bridge */}
@@ -522,14 +544,30 @@ function Tower({
       {bodyFull && tower.type === "D" && (
         <group>
           <mesh geometry={UNIT_BOX} material={bodyMat} castShadow receiveShadow position={[0, 4.8 + (h - 8.8) / 2, 0]} scale={[w, h - 8.8, d]}>
-            {selected && <Edges />}
+            <Edges color={selected ? "#00d9ff" : hovered ? "#38bdf8" : "#0284c7"} threshold={20} />
           </mesh>
           {/* setback crown */}
           <mesh geometry={UNIT_BOX} material={M.glass} castShadow position={[0, h - 2.2, 0]} scale={[w * 0.6, 4.4, d * 0.6]} />
         </group>
       )}
 
-      {/* balcony / floor-division slabs (suppressed when floor modes replace the body or when dimmed) */}
+      {/* Realistic Illuminated Window Matrix on Tower Facades (Night Mode Realism) */}
+      {bodyFull &&
+        Array.from({ length: Math.min(tower.floors - 2, 18) }).map((_, fIdx) => {
+          const winY = 6.2 + fIdx * FLOOR_HEIGHT;
+          const isAmber = (fIdx + tower.floors) % 3 === 0;
+          const isLit = (fIdx * 7 + tower.id.charCodeAt(tower.id.length - 1)) % 5 !== 0;
+          if (!isLit) return null;
+          const winMat = isAmber ? M.windowLitWarm : M.windowLitCool;
+          return (
+            <group key={`win-row-${fIdx}`}>
+              <mesh geometry={UNIT_BOX} material={winMat} position={[0, winY, d / 2 + 0.08]} scale={[w * 0.76, 1.45, 0.12]} />
+              <mesh geometry={UNIT_BOX} material={winMat} position={[0, winY, -d / 2 - 0.08]} scale={[w * 0.76, 1.45, 0.12]} />
+            </group>
+          );
+        })}
+
+      {/* Balcony / floor-division slabs */}
       {bodyFull &&
         slabs.map((y, i) => (
           <mesh key={`slab-${i}`} geometry={UNIT_BOX} material={M.slab} castShadow receiveShadow position={[0, y, 0]} scale={[w + 0.7, 0.32, d + 0.7]} />
@@ -538,7 +576,7 @@ function Tower({
       {/* Phase 15C — capped simple body for "hide" mode */}
       {!isDimmed && floorsActive && floorMode === "hide" && cappedBodyH > 0.5 && (
         <mesh geometry={UNIT_BOX} material={bodyMat} castShadow receiveShadow position={[0, 4.8 + cappedBodyH / 2, 0]} scale={[w, cappedBodyH, d]}>
-          {selected && <Edges />}
+          <Edges color={selected ? "#00d9ff" : "#0284c7"} threshold={20} />
         </mesh>
       )}
 
@@ -560,11 +598,29 @@ function Tower({
           />
         ))}
 
-      {/* rooftop parapet + core (hidden while ghosted or dimmed) */}
-      {showRoof && <mesh geometry={UNIT_BOX} material={M.roof} castShadow position={[0, topY + 0.5, 0]} scale={[w + 0.4, 1.1, d + 0.4]} />}
+      {/* Rooftop Parapet + Illuminated LED Cyan Crown (Matching Reference Render) */}
+      {showRoof && (
+        <group>
+          <mesh geometry={UNIT_BOX} material={M.roof} castShadow position={[0, topY + 0.5, 0]} scale={[w + 0.4, 1.1, d + 0.4]} />
+          {/* Glowing Cyan LED Crown */}
+          <mesh geometry={UNIT_BOX} material={M.emissiveCrown} position={[0, topY + 1.2, 0]} scale={[w * 0.75, 1.4, d * 0.75]}>
+            <Edges color="#00f0ff" threshold={15} />
+          </mesh>
+        </group>
+      )}
       {bodyFull && <mesh geometry={UNIT_BOX} material={M.bodyGrey} castShadow position={[w * 0.18, h + 2.2, 0]} scale={[w * 0.34, 2.8, d * 0.4]} />}
 
-      {/* invisible interaction volume covering the whole tower (click + hover) */}
+      {/* Hover Tooltip over Tower Apex */}
+      {hovered && !selected && (
+        <Html position={[0, h + 8, 0]} center distanceFactor={220} zIndexRange={[40, 0]} style={{ pointerEvents: "none" }}>
+          <div className="flex items-center gap-1.5 rounded-lg border border-cyan-400 bg-slate-950/95 px-2.5 py-1 text-[9.5px] font-black text-cyan-300 shadow-[0_0_20px_rgba(0,217,255,0.4)] backdrop-blur-md">
+            <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
+            <span>{tower.name} · {tower.floors} Floors · {(tower.floors * 3.1).toFixed(1)} m</span>
+          </div>
+        </Html>
+      )}
+
+      {/* Invisible interaction volume covering the whole tower (click + hover) */}
       <mesh
         geometry={UNIT_BOX}
         material={INTERACTION_MAT}
@@ -591,35 +647,50 @@ const INTERACTION_MAT = new THREE.MeshBasicMaterial({ colorWrite: false, depthWr
 
 function Amenity() {
   const [px, pz] = AMENITY.center;
-  const [pw, pd, ph] = AMENITY.podium;
-  const [gw, gd, gh] = AMENITY.glass;
   return (
     <group position={[px, 0, pz]}>
-      {/* circular plaza with landscaped ring */}
+      {/* Circular plaza paved ground with landscaping */}
       <mesh receiveShadow material={M.plaza} position={[0, 0.1, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[AMENITY.plazaRadius, 56]} />
       </mesh>
       <mesh receiveShadow material={M.plazaRing} position={[0, 0.12, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[AMENITY.plazaRadius - 5, AMENITY.plazaRadius - 3.4, 56]} />
+        <ringGeometry args={[AMENITY.plazaRadius - 4, AMENITY.plazaRadius - 2.5, 56]} />
       </mesh>
-      {/* radial walkways */}
-      {[0, Math.PI / 3, (2 * Math.PI) / 3, Math.PI, (4 * Math.PI) / 3, (5 * Math.PI) / 3].map((a, i) => (
+
+      {/* Radial walkways connecting to towers and gardens */}
+      {[0, Math.PI / 4, Math.PI / 2, (3 * Math.PI) / 4, Math.PI, (5 * Math.PI) / 4, (3 * Math.PI) / 2, (7 * Math.PI) / 4].map((a, i) => (
         <mesh
           key={`walk-${i}`}
           geometry={UNIT_BOX}
           material={M.plazaRing}
           receiveShadow
-          position={[Math.cos(a) * (AMENITY.plazaRadius + 10), 0.09, Math.sin(a) * (AMENITY.plazaRadius + 10)]}
-          scale={[30, 0.08, 3]}
+          position={[Math.cos(a) * (AMENITY.plazaRadius + 12), 0.09, Math.sin(a) * (AMENITY.plazaRadius + 12)]}
+          scale={[28, 0.08, 3.2]}
           rotation={[0, -a, 0]}
         />
       ))}
-      {/* recreation clubhouse — visually subordinate to the towers */}
-      <mesh geometry={UNIT_BOX} material={M.amenityBody} castShadow receiveShadow position={[0, ph / 2, 0]} scale={[pw, ph, pd]} />
-      <mesh geometry={UNIT_BOX} material={M.amenityGlass} castShadow position={[0, ph + gh / 2, 0]} scale={[gw, gh, gd]} />
-      <mesh geometry={UNIT_BOX} material={M.amenityRoof} castShadow position={[0, ph + gh + 0.3, 0]} scale={[gw + 2, 0.7, gd + 2]} />
-      {/* entrance canopy */}
-      <mesh geometry={UNIT_BOX} material={M.amenityRoof} castShadow position={[0, 5.2, pd / 2 + 4]} scale={[12, 0.5, 8]} />
+
+      {/* Circular Glass Atrium Pavilion (Donut Profile matching reference image) */}
+      <mesh receiveShadow position={[0, 3.2, 0]} material={M.pavilionGlow}>
+        <cylinderGeometry args={[20, 20, 6.4, 48, 1, true]} />
+      </mesh>
+      {/* Inner atrium glass wall */}
+      <mesh receiveShadow position={[0, 3.2, 0]} material={M.pavilionGlow}>
+        <cylinderGeometry args={[9, 9, 6.4, 32, 1, true]} />
+      </mesh>
+      {/* Ring Roof Canopy */}
+      <mesh receiveShadow castShadow position={[0, 6.5, 0]} material={M.amenityRoof}>
+        <ringGeometry args={[8.5, 21.5, 48]} />
+      </mesh>
+      {/* Illuminated Roof Ring Edge */}
+      <mesh position={[0, 6.6, 0]} material={M.emissiveCrown}>
+        <ringGeometry args={[21.2, 21.8, 48]} />
+      </mesh>
+      {/* Inner Courtyard Tree / Garden */}
+      <mesh receiveShadow material={M.lawn} position={[0, 0.14, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[8.8, 32]} />
+      </mesh>
+      <mesh geometry={UNIT_BOX} material={M.canopy} position={[0, 2.5, 0]} scale={[3.5, 5, 3.5]} />
     </group>
   );
 }
@@ -627,9 +698,10 @@ function Amenity() {
 /* ---------------------------- Water feature ----------------------------- */
 
 function WaterFeature() {
-  const geom = React.useMemo(() => new THREE.ShapeGeometry(blobShape(WATER_FEATURE.radii), 24), []);
-  const edgeGeom = React.useMemo(() => new THREE.ShapeGeometry(blobShape(WATER_FEATURE.radii.map((r) => r + 2.2)), 24), []);
-  const waterMat = React.useRef<THREE.MeshStandardMaterial>(null!);
+  const geom = React.useMemo(() => new THREE.ShapeGeometry(blobShape(WATER_FEATURE.radii), 36), []);
+  const edgeGeom = React.useMemo(() => new THREE.ShapeGeometry(blobShape(WATER_FEATURE.radii.map((r) => r + 2.8)), 36), []);
+  const [cx, cz] = WATER_FEATURE.center;
+
   React.useEffect(
     () => () => {
       geom.dispose();
@@ -637,46 +709,113 @@ function WaterFeature() {
     },
     [geom, edgeGeom]
   );
-  const [cx, cz] = WATER_FEATURE.center;
-  // subtle animated vertex-wave via uniform scale oscillation (cheap, no extra shaders)
-  useFrame((_, dt) => {
-    if (waterMat.current) {
-      waterMat.current.emissiveIntensity = 0.1 + Math.sin(performance.now() * 0.0008) * 0.02;
-    }
-  });
+
   return (
     <group position={[cx, 0, cz]}>
-      {/* landscaped edge */}
-      <mesh geometry={edgeGeom} material={M.pondEdge} receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.07, 0]} />
-      {/* water surface — subtle animated material */}
-      <mesh geometry={geom} ref={waterMat} receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.11, 0]}>
-        <primitive object={M.waterAnim} attach="material" />
+      {/* Landscaped shoreline stone curb */}
+      <mesh geometry={edgeGeom} material={M.pondEdge} receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.08, 0]} />
+      {/* Organic central lake — deep cyan reflective night shader */}
+      <mesh geometry={geom} material={M.waterNight} receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.14, 0]}>
+        <Edges color="#00f0ff" threshold={25} />
+      </mesh>
+      {/* Lake perimeter bollard lights */}
+      {WATER_FEATURE.radii.map((r, i) => {
+        const angle = (i / WATER_FEATURE.radii.length) * Math.PI * 2;
+        const lx = Math.cos(angle) * (r + 3.2);
+        const lz = Math.sin(angle) * (r + 3.2);
+        return (
+          <group key={`lake-light-${i}`} position={[lx, 0.6, lz]}>
+            <mesh geometry={UNIT_BOX} material={M.post} scale={[0.3, 1.2, 0.3]} />
+            <mesh geometry={UNIT_BOX} material={M.lightGlobe} position={[0, 0.65, 0]} scale={[0.4, 0.4, 0.4]} />
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
+/* ---------------------------- Community Center & Sports Complex ----------------------------- */
+
+function CommunityCenter() {
+  return (
+    <group position={[84, 0, 54]}>
+      {/* Main modern 2-story glass community center */}
+      <mesh geometry={UNIT_BOX} material={M.amenityBody} castShadow receiveShadow position={[0, 4.5, 0]} scale={[38, 9, 28]} />
+      <mesh geometry={UNIT_BOX} material={M.pavilionGlow} position={[0, 4.5, 14.1]} scale={[34, 7, 0.4]} />
+      <mesh geometry={UNIT_BOX} material={M.amenityRoof} castShadow position={[0, 9.4, 0]} scale={[40, 0.8, 30]} />
+      <mesh geometry={UNIT_BOX} material={M.emissiveCrown} position={[0, 9.9, 0]} scale={[39, 0.2, 29]}>
+        <Edges color="#00f0ff" threshold={15} />
+      </mesh>
+
+      {/* Surface parking lot with cars and bays */}
+      <group position={[-28, 0, 18]}>
+        <mesh geometry={UNIT_BOX} material={M.parking} receiveShadow position={[0, 0.06, 0]} scale={[32, 0.1, 24]} />
+        {/* Parked vehicle instances */}
+        {[-8, -3, 2, 7].map((xOffset, i) => (
+          <group key={`comm-car-${i}`} position={[xOffset * 1.5, 0.8, -4]}>
+            <mesh geometry={UNIT_BOX} material={M.carBody} castShadow scale={[2.2, 1.3, 4.4]} />
+            <mesh geometry={UNIT_BOX} material={M.lightGlobe} position={[0, 0.5, 2.2]} scale={[1.8, 0.3, 0.2]} />
+          </group>
+        ))}
+      </group>
+    </group>
+  );
+}
+
+function SportsArena() {
+  return (
+    <group position={[-132, 0, -96]}>
+      {/* Sports complex clubhouse */}
+      <mesh geometry={UNIT_BOX} material={M.amenityBody} castShadow receiveShadow position={[0, 3.5, 0]} scale={[28, 7, 18]} />
+      <mesh geometry={UNIT_BOX} material={M.amenityRoof} castShadow position={[0, 7.3, 0]} scale={[30, 0.6, 20]} />
+      {/* Outdoor sports courts */}
+      <mesh geometry={UNIT_BOX} material={M.context} receiveShadow position={[0, 0.08, 18]} scale={[26, 0.1, 14]}>
+        <Edges color="#22c55e" threshold={15} />
       </mesh>
     </group>
   );
 }
 
-/* ---------------------------- Site boundary ----------------------------- */
+/* ---------------------------- Site boundary & Grand Entrance ----------------------------- */
 
 function SiteBoundary() {
   const { half, radius, y } = SITE_BOUNDARY;
   const points = React.useMemo(() => {
-    const v2 = roundedRectPoints(half[0], half[1], radius, 12);
-    return v2.map((p) => [p.x, y, p.y] as [number, number, number]);
+    const v2 = roundedRectPoints(half[0], half[1], radius, 18);
+    return v2.map((p) => [p.x, y + 0.3, p.y] as [number, number, number]);
   }, [half, radius, y]);
   const posts = React.useMemo(() => points.filter((_, i) => i % 4 === 0), [points]);
+
   return (
     <group>
-      <Line points={points} color="#1e7fd6" lineWidth={1.6} transparent opacity={0.85} />
-      {/* boundary marker posts */}
+      {/* Glowing Neon Cyan Ribbon (Matching Reference Render Perimeter Track) */}
+      <Line points={points} color="#00f0ff" lineWidth={3.5} transparent opacity={0.98} />
+      <Line points={points.map(([x, py, z]) => [x, py + 0.6, z])} color="#38bdf8" lineWidth={2.0} transparent opacity={0.75} />
+
+      {/* Boundary marker posts with glowing cyan caps */}
       {posts.map((p, i) => (
-        <mesh key={i} geometry={UNIT_BOX} material={M.post} castShadow position={[p[0], 1.4, p[2]]} scale={[0.5, 2.8, 0.5]} />
+        <group key={i} position={[p[0], 1.4, p[2]]}>
+          <mesh geometry={UNIT_BOX} material={M.post} castShadow scale={[0.5, 2.8, 0.5]} />
+          <mesh geometry={UNIT_BOX} material={M.emissiveCrown} position={[0, 1.5, 0]} scale={[0.6, 0.3, 0.6]} />
+        </group>
       ))}
-      {/* main gate on the south spine */}
-      <group position={[0, 0, SITE_BOUNDARY.gateZ]}>
-        <mesh geometry={UNIT_BOX} material={M.pillar} castShadow position={[-SITE_BOUNDARY.gateX, 3, 0]} scale={[1.6, 6, 1.6]} />
-        <mesh geometry={UNIT_BOX} material={M.pillar} castShadow position={[SITE_BOUNDARY.gateX, 3, 0]} scale={[1.6, 6, 1.6]} />
-        <mesh geometry={UNIT_BOX} material={M.roof} castShadow position={[0, 6.6, 0]} scale={[SITE_BOUNDARY.gateX * 2 + 2, 1.2, 2]} />
+
+      {/* Grand Entrance Gateway Boulevard (Bottom-Left Location matching reference) */}
+      <group position={[ENTRANCE.gate.x, 0, ENTRANCE.gate.z]}>
+        {/* Cantilevered Gate Canopy Arch */}
+        <mesh geometry={UNIT_BOX} material={M.pillar} castShadow position={[-12, 3.8, 0]} scale={[2.2, 7.6, 3.2]} />
+        <mesh geometry={UNIT_BOX} material={M.pillar} castShadow position={[12, 3.8, 0]} scale={[2.2, 7.6, 3.2]} />
+        <mesh geometry={UNIT_BOX} material={M.roof} castShadow position={[0, 7.8, 0]} scale={[28, 1.4, 5.5]} />
+        <mesh geometry={UNIT_BOX} material={M.emissiveCrown} position={[0, 8.6, 0]} scale={[27.6, 0.3, 5.2]}>
+          <Edges color="#00f0ff" threshold={15} />
+        </mesh>
+        {/* Illuminated Gate Signboard */}
+        <mesh geometry={UNIT_BOX} material={M.signNavy} position={[0, 7.2, 2.8]} scale={[22, 1.6, 0.3]} />
+        <mesh geometry={UNIT_BOX} material={M.windowLitCool} position={[0, 7.2, 2.96]} scale={[18, 0.8, 0.05]} />
+
+        {/* Security Cabin */}
+        <mesh geometry={UNIT_BOX} material={M.amenityBody} castShadow position={[16, 1.8, 0]} scale={[4, 3.6, 4]} />
+        <mesh geometry={UNIT_BOX} material={M.lobbyWarm} position={[16, 1.8, 2.1]} scale={[3.4, 2.4, 0.2]} />
       </group>
     </group>
   );
@@ -1339,11 +1478,12 @@ type OrbitLike = {
 interface ViewerApi {
   applyPreset: (preset: CameraPresetId) => void;
   zoomBy: (factor: number) => void;
+  focusTower: (tower: TowerDef) => void;
 }
 
 /**
- * Smoothly flies the orbit rig between camera presets. Any manual orbit /
- * pan / zoom interaction cancels the in-flight animation immediately.
+ * Smoothly flies the orbit rig between camera presets or focuses on a building.
+ * Any manual orbit / pan / zoom interaction cancels the in-flight animation immediately.
  */
 function CameraController({
   preset,
@@ -1361,6 +1501,14 @@ function CameraController({
     const def = CAMERA_PRESET_DEFS[id];
     flight.current.pos.set(def.position[0], def.position[1], def.position[2]);
     flight.current.target.set(def.target[0], def.target[1], def.target[2]);
+    flight.current.active = true;
+  }, []);
+
+  const focusTower = React.useCallback((t: TowerDef) => {
+    const h = t.floors * FLOOR_HEIGHT;
+    const [tx, tz] = t.position;
+    flight.current.pos.set(tx + 48, Math.max(35, h * 0.75 + 20), tz + 48);
+    flight.current.target.set(tx, h * 0.4, tz);
     flight.current.active = true;
   }, []);
 
@@ -1386,12 +1534,13 @@ function CameraController({
         const c = controls as unknown as OrbitLike;
         if (!c) return;
         const offset = camera.position.clone().sub(c.target);
-        offset.setLength(THREE.MathUtils.clamp(offset.length() / factor, 30, 760));
+        offset.setLength(THREE.MathUtils.clamp(offset.length() / factor, 18, 450));
         camera.position.copy(c.target).add(offset);
         flight.current.active = false;
       },
+      focusTower,
     };
-  }, [apiRef, camera, controls, flyTo]);
+  }, [apiRef, camera, controls, flyTo, focusTower]);
 
   useFrame(() => {
     if (!flight.current.active) return;
@@ -1607,9 +1756,11 @@ export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Townshi
     const apiRef = React.useRef<ViewerApi | null>(null);
     const [preset, setPreset] = React.useState<CameraPresetId>("isometric");
     const [flightNonce, setFlightNonce] = React.useState(0);
+    const [isNightMode, setIsNightMode] = React.useState(true);
+    const [isAutoRotate, setIsAutoRotate] = React.useState(false);
     const tier = useMobileTier();
 
-    // Phase 7: Dynamic Sun Calculation from solarTimeMinutes (default 720 = 12:00 PM)
+    // Dynamic Sun Calculation for Day mode
     const sunPos = React.useMemo(() => {
       const dayFraction = Math.max(0, Math.min(1, (solarTimeMinutes - 360) / 720));
       const altRad = (Math.max(5, Math.sin(dayFraction * Math.PI) * 72) * Math.PI) / 180;
@@ -1629,13 +1780,118 @@ export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Townshi
           setFlightNonce((n) => n + 1);
         },
         zoomBy: (factor: number) => apiRef.current?.zoomBy(factor),
+        focusTower: (tower: TowerDef) => apiRef.current?.focusTower(tower),
         getContainer: () => mountRef.current,
       }),
       []
     );
 
+    const handleFocusBuilding = () => {
+      const target = TOWERS.find((t) => t.id === selectedTowerId) ?? TOWERS[1]; // default Tower B
+      apiRef.current?.focusTower(target);
+      if (!selectedTowerId) onSelectTower(target.id);
+    };
+
+    const handleResetAll = () => {
+      setPreset("isometric");
+      setFlightNonce((n) => n + 1);
+      onSelectTower(null);
+    };
+
+    const handleToggleFullscreen = () => {
+      const el = mountRef.current;
+      if (!el) return;
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => undefined);
+      } else {
+        el.requestFullscreen?.().catch(() => undefined);
+      }
+    };
+
     return (
-      <div ref={mountRef} className={cn("relative h-full w-full overflow-hidden", className)} aria-label="Interactive 3D township digital twin (illustrative)">
+      <div
+        ref={mountRef}
+        className={cn("relative h-full w-full overflow-hidden select-none", className)}
+        aria-label="Interactive 3D township digital twin (illustrative)"
+      >
+        {/* ── 3D Interactive Floating Toolbar (Top Center of Viewport) ── */}
+        <div className="pointer-events-auto absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 rounded-2xl border border-cyan-500/40 bg-slate-950/90 p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.85)] backdrop-blur-xl">
+          {/* Zoom In */}
+          <button
+            type="button"
+            onClick={() => apiRef.current?.zoomBy(1.3)}
+            title="Zoom In (+)"
+            className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-700 bg-slate-900/80 text-cyan-300 transition-all hover:border-cyan-400 hover:bg-cyan-500/20 text-xs font-black"
+          >
+            +
+          </button>
+          {/* Zoom Out */}
+          <button
+            type="button"
+            onClick={() => apiRef.current?.zoomBy(0.75)}
+            title="Zoom Out (−)"
+            className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-700 bg-slate-900/80 text-cyan-300 transition-all hover:border-cyan-400 hover:bg-cyan-500/20 text-xs font-black"
+          >
+            −
+          </button>
+          {/* Rotate / Orbit */}
+          <button
+            type="button"
+            onClick={() => setIsAutoRotate((v) => !v)}
+            title="Rotate / Orbit View"
+            className={cn(
+              "flex h-7 items-center gap-1 rounded-lg border px-2 text-[9.5px] font-bold uppercase transition-all",
+              isAutoRotate
+                ? "border-cyan-400 bg-cyan-500/30 text-cyan-200 shadow-[0_0_12px_rgba(0,217,255,0.4)]"
+                : "border-slate-700 bg-slate-900/80 text-slate-300 hover:border-cyan-400 hover:text-cyan-300"
+            )}
+          >
+            <RotateCw className="h-3 w-3 text-cyan-400" /> Rotate
+          </button>
+          {/* Focus Building */}
+          <button
+            type="button"
+            onClick={handleFocusBuilding}
+            title="Focus Selected Building"
+            className="flex h-7 items-center gap-1 rounded-lg border border-slate-700 bg-slate-900/80 px-2 text-[9.5px] font-bold uppercase text-slate-300 transition-all hover:border-cyan-400 hover:text-cyan-300"
+          >
+            <Crosshair className="h-3 w-3 text-cyan-400" /> Focus
+          </button>
+          {/* Fullscreen */}
+          <button
+            type="button"
+            onClick={handleToggleFullscreen}
+            title="Toggle Fullscreen View"
+            className="flex h-7 items-center gap-1 rounded-lg border border-slate-700 bg-slate-900/80 px-2 text-[9.5px] font-bold uppercase text-slate-300 transition-all hover:border-cyan-400 hover:text-cyan-300"
+          >
+            <Maximize className="h-3 w-3 text-cyan-400" /> Fullscreen
+          </button>
+          {/* Day / Night Mode */}
+          <button
+            type="button"
+            onClick={() => setIsNightMode((v) => !v)}
+            title="Toggle Day / Night Mode"
+            className={cn(
+              "flex h-7 items-center gap-1 rounded-lg border px-2 text-[9.5px] font-bold uppercase transition-all",
+              isNightMode
+                ? "border-blue-500/50 bg-blue-950/60 text-cyan-200"
+                : "border-amber-500/50 bg-amber-500/20 text-amber-300"
+            )}
+          >
+            {isNightMode ? <Moon className="h-3 w-3 text-cyan-300" /> : <Sun className="h-3 w-3 text-amber-400" />}
+            {isNightMode ? "Night" : "Day"}
+          </button>
+          {/* Reset Camera */}
+          <button
+            type="button"
+            onClick={handleResetAll}
+            title="Reset Camera to Overview"
+            className="flex h-7 items-center gap-1 rounded-lg border border-slate-700 bg-slate-900/80 px-2 text-[9.5px] font-bold uppercase text-slate-300 transition-all hover:border-cyan-400 hover:text-cyan-300"
+          >
+            <RotateCcw className="h-3 w-3 text-cyan-400" /> Reset
+          </button>
+        </div>
+
         <Canvas
           shadows="soft"
           dpr={[1, tier === "low" ? 1.2 : 1.75]}
@@ -1643,7 +1899,7 @@ export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Townshi
           gl={{ antialias: true, powerPreference: "high-performance" }}
           onPointerMissed={() => onSelectTower(null)}
         >
-          {/* Phase 7 3D raycast click receiver for measurement */}
+          {/* Measurement Raycast Plane */}
           {measurementMode && onMeasureClick && (
             <mesh
               position={[0, 0, 0]}
@@ -1657,24 +1913,53 @@ export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Townshi
               <meshBasicMaterial visible={false} />
             </mesh>
           )}
-          {/* neutral daylight */}
-          <color attach="background" args={["#bfd3e2"]} />
-          <fog attach="fog" args={["#bfd3e2", 540, 1250]} />
-          <hemisphereLight args={["#cfe3ee", "#55684a", 0.85]} />
-          <ambientLight intensity={0.3} />
-          <directionalLight
-            position={sunPos}
-            intensity={2.1}
-            castShadow={layers.shadows || shadowAnalysis}
-            shadow-mapSize={tier === "low" ? [1024, 1024] : [2048, 2048]}
-            shadow-camera-left={-250}
-            shadow-camera-right={250}
-            shadow-camera-top={250}
-            shadow-camera-bottom={-250}
-            shadow-camera-near={20}
-            shadow-camera-far={800}
-            shadow-bias={-0.00035}
-          />
+
+          {/* Dynamic Sky Atmosphere & Lighting based on isNightMode */}
+          {isNightMode ? (
+            <>
+              <color attach="background" args={["#040914"]} />
+              <fog attach="fog" args={["#040914", 340, 980]} />
+              <hemisphereLight args={["#0b192c", "#020710", 0.8]} />
+              <ambientLight intensity={0.28} color="#1e3a8a" />
+              {/* Key Moonlight Direction */}
+              <directionalLight
+                position={[160, 220, 140]}
+                intensity={1.65}
+                color="#38bdf8"
+                castShadow={layers.shadows || shadowAnalysis}
+                shadow-mapSize={tier === "low" ? [1024, 1024] : [2048, 2048]}
+                shadow-camera-left={-250}
+                shadow-camera-right={250}
+                shadow-camera-top={250}
+                shadow-camera-bottom={-250}
+                shadow-camera-near={20}
+                shadow-camera-far={800}
+                shadow-bias={-0.00035}
+              />
+              {/* Cyan Accent Horizon Fill */}
+              <directionalLight position={[-140, 90, -140]} intensity={0.35} color="#00e5ff" />
+            </>
+          ) : (
+            <>
+              <color attach="background" args={["#bfd3e2"]} />
+              <fog attach="fog" args={["#bfd3e2", 540, 1250]} />
+              <hemisphereLight args={["#cfe3ee", "#55684a", 0.85]} />
+              <ambientLight intensity={0.35} />
+              <directionalLight
+                position={sunPos}
+                intensity={2.2}
+                castShadow={layers.shadows || shadowAnalysis}
+                shadow-mapSize={tier === "low" ? [1024, 1024] : [2048, 2048]}
+                shadow-camera-left={-250}
+                shadow-camera-right={250}
+                shadow-camera-top={250}
+                shadow-camera-bottom={-250}
+                shadow-camera-near={20}
+                shadow-camera-far={800}
+                shadow-bias={-0.00035}
+              />
+            </>
+          )}
 
           {layers.terrain && (
             <SceneErrorBoundary>
@@ -1711,6 +1996,8 @@ export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Townshi
           {layers.amenities && (
             <SceneErrorBoundary>
               <Amenity />
+              <CommunityCenter />
+              <SportsArena />
               <Benches />
             </SceneErrorBoundary>
           )}
@@ -1756,15 +2043,16 @@ export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Townshi
             <DiscrepancyMarkersOverlay conflicts={conflicts} />
           )}
 
-          <MapLabels selectedTowerId={layers.buildings ? selectedTowerId : null} />
           <CameraController preset={preset} flightNonce={flightNonce} apiRef={apiRef} />
           <OrbitControls
             makeDefault
             enableDamping
             dampingFactor={0.08}
-            minDistance={30}
-            maxDistance={760}
-            maxPolarAngle={Math.PI / 2.15}
+            minDistance={18}
+            maxDistance={450}
+            maxPolarAngle={Math.PI / 2.1}
+            autoRotate={isAutoRotate}
+            autoRotateSpeed={0.85}
             target={[0, 6, 0]}
           />
         </Canvas>

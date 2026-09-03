@@ -102,10 +102,10 @@ from `PERMISSION_MATRIX` in `src/lib/auth/permissions.ts`.
 Route rules live in `ROUTE_RULES` (`src/lib/auth/permissions.ts`) and are
 enforced in **two layers**:
 
-1. **Edge middleware** (`src/middleware.ts`) — cheap cookie-presence gate:
+1. **Request proxy** (`src/proxy.ts`) — cheap cookie-presence gate:
    unauthenticated requests to protected pages are redirected to
    `/auth/login?next=…`; public paths (`/`, `/auth/*`, `/unauthorized`) pass
-   through. (Edge middleware cannot reach the in-memory session store, so the
+      through. (Proxy cannot reach the in-memory session store, so the
    authoritative check is #2.)
 2. **Page-level `ProtectedRoute`** — every protected page validates the real
    session via `AuthContext` (server-backed) and the permission map, then

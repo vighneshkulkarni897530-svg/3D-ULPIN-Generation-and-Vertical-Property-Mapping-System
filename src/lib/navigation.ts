@@ -15,7 +15,6 @@ import {
   Building2,
   Building,
   Layers,
-  ScanLine,
   ShieldCheck,
   AlertTriangle,
   BarChart3,
@@ -23,7 +22,6 @@ import {
   AlertCircle,
   ClipboardCheck,
   Bell,
-  Workflow,
   Users,
   History,
   Clock,
@@ -62,13 +60,9 @@ export const NAV_SECTIONS: NavSection[] = [
     id: 'platform',
     label: 'Property & GIS',
     items: [
-      { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, match: ['/dashboard'] },
+      { label: 'Dashboard', href: '/dashboard/citizen', icon: LayoutDashboard, match: ['/dashboard'] },
       { label: '3D Map', href: '/map', icon: Box, match: ['#/map', '/map'] },
       { label: 'Properties', href: '/properties', icon: Building2, match: ['/properties'] },
-      { label: 'Society', href: '/society/register', icon: Landmark, match: ['/society'] },
-      { label: 'My Residency', href: '/resident/dashboard', icon: Home, match: ['/resident/dashboard'] },
-      { label: 'My Property', href: '/resident/property', icon: Building2, match: ['/resident/property'] },
-      { label: 'My Cases', href: '/resident/cases', icon: Scale, match: ['/resident/cases'] },
       { label: 'Buildings', href: '/buildings', icon: Building, match: ['/buildings'] },
       {
         label: 'Floor Explorer',
@@ -80,128 +74,202 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    id: 'verification',
-    label: 'Verification & Renewal',
+    id: 'personal',
+    label: 'Personal',
     items: [
-      {
-        label: 'Periodic Verification',
-        href: '/renewals',
-        icon: Clock,
-        match: ['/renewals'],
-        permission: PERMISSIONS.MANAGE_SOCIETY_RENEWALS,
-      },
-      {
-        label: 'Gov Portal',
-        href: '/government/dashboard',
-        icon: Landmark,
-        match: ['/government'],
-        permission: PERMISSIONS.VIEW_VERIFICATION_QUEUE,
-      },
-      {
-        label: 'AI Extraction',
-        href: '/ai-extraction',
-        icon: ScanLine,
-        match: ['/ai-extraction'],
-        permission: PERMISSIONS.RUN_SPATIAL_VALIDATION,
-      },
-      {
-        label: 'AI Document Analysis',
-        href: '/government/ai-analysis',
-        icon: FileSearch,
-        match: ['/government/ai-analysis'],
-        permission: PERMISSIONS.VIEW_VERIFICATION_QUEUE,
-      },
-      {
-        label: 'Verification',
-        href: '/verification',
-        icon: ShieldCheck,
-        match: ['/verification'],
-        badge: 'verification',
-        permission: PERMISSIONS.VIEW_VERIFICATION_QUEUE,
-      },
-      {
-        label: 'Field Verification',
-        href: '/field-verification/request',
-        icon: ClipboardCheck,
-        match: ['/field-verification'],
-        permission: PERMISSIONS.SEND_TO_FIELD_VERIFICATION,
-      },
-      {
-        label: 'Conflicts',
-        href: '/conflicts',
-        icon: AlertTriangle,
-        match: ['/conflicts'],
-        badge: 'conflicts',
-        permission: PERMISSIONS.MANAGE_CONFLICTS,
-      },
+      { label: 'My Residency', href: '/resident/dashboard', icon: Home, match: ['/resident/dashboard'] },
+      { label: 'My Property', href: '/resident/property', icon: Building2, match: ['/resident/property'] },
+      { label: 'My Cases', href: '/resident/cases', icon: Scale, match: ['/resident/cases'] },
     ],
   },
   {
     id: 'operations',
     label: 'Operations',
     items: [
-      {
-        label: 'Workflow',
-        href: '/workflow',
-        icon: Workflow,
-        match: ['/workflow'],
-        permission: PERMISSIONS.MANAGE_WORKFLOW_TASKS,
-      },
       { label: 'Notifications', href: '/notifications', icon: Bell, match: ['/notifications'] },
       { label: 'Report Dispute', href: '/disputes/new', icon: AlertCircle, match: ['/disputes'] },
     ],
   },
   {
     id: 'analytics',
-    label: 'Analytics',
+    label: 'Reports',
     items: [
-      {
-        label: 'Gov Analytics',
-        href: '/government/analytics',
-        icon: Landmark,
-        match: ['/government/analytics'],
-        permission: PERMISSIONS.VIEW_VERIFICATION_QUEUE,
-      },
       { label: 'Reports', href: '/reports', icon: BarChart3, match: ['/reports'] },
-    ],
-  },
-  {
-    id: 'administration',
-    label: 'Society Administration',
-    permission: PERMISSIONS.SYSTEM_ADMIN,
-    items: [
-      {
-        label: 'Users',
-        href: '/admin/users',
-        icon: Users,
-        match: ['/admin/users'],
-        permission: PERMISSIONS.USER_MANAGEMENT,
-      },
-      {
-        label: 'Audit Log',
-        href: '/admin/audit-log',
-        icon: History,
-        match: ['/admin/audit-log'],
-        permission: PERMISSIONS.VIEW_ACTIVITY_LOG,
-      },
-      {
-        label: 'Settings',
-        href: '/settings',
-        icon: Settings,
-        match: ['/settings'],
-        permission: PERMISSIONS.SYSTEM_ADMIN,
-      },
     ],
   },
 ];
 
 /**
+ * Dynamic role-based navigation sections.
+ * Returns the exact tailored navigation tree for:
+ *   - Citizen (Property & GIS, Personal, Operations, Reports)
+ *   - Society Admin / Secretary (Property & GIS, Management, Reports & Settings)
+ *   - Government Officer (Property & GIS, Verification & Cases, Analytics & Reports)
+ *   - Cadastre Admin (Property & GIS, Administration & Cadastre)
+ */
+export function getNavSectionsForRole(role?: string | null): NavSection[] {
+  if (role === 'OFFICER') {
+    return [
+      {
+        id: 'platform',
+        label: 'Property & GIS',
+        items: [
+          { label: 'Dashboard', href: '/dashboard/officer', icon: LayoutDashboard, match: ['/dashboard'] },
+          { label: '3D Map', href: '/map', icon: Box, match: ['/map'] },
+          { label: 'Properties', href: '/properties', icon: Building2, match: ['/properties'] },
+          { label: 'Society', href: '/government/societies', icon: Landmark, match: ['/government/societies', '/society'] },
+          { label: 'Buildings', href: '/buildings', icon: Building, match: ['/buildings'] },
+          {
+            label: 'Floor Explorer',
+            href: '/floors',
+            icon: Layers,
+            customActive: (p) => p.startsWith('/floors') || /^\/buildings\/[^/]+\/floors(\/|$)/.test(p),
+          },
+        ],
+      },
+      {
+        id: 'verification',
+        label: 'Verification & Cases',
+        items: [
+          { label: 'Verification', href: '/verification', icon: ShieldCheck, match: ['/verification'], badge: 'verification' },
+          { label: 'Field Verification', href: '/field-verification/request', icon: ClipboardCheck, match: ['/field-verification', '/verification/field'] },
+          { label: 'Disputes', href: '/conflicts', icon: AlertTriangle, match: ['/conflicts', '/disputes'], badge: 'conflicts' },
+          { label: 'Evidence', href: '/government/ai-analysis', icon: FileSearch, match: ['/government/ai-analysis'] },
+          { label: 'Notifications', href: '/notifications', icon: Bell, match: ['/notifications'] },
+        ],
+      },
+      {
+        id: 'analytics',
+        label: 'Analytics & Reports',
+        items: [
+          { label: 'Gov Analytics', href: '/government/analytics', icon: Landmark, match: ['/government/analytics'] },
+          { label: 'Reports', href: '/reports', icon: BarChart3, match: ['/reports'] },
+        ],
+      },
+    ];
+  }
+
+  if (role === 'ADMIN') {
+    return [
+      {
+        id: 'platform',
+        label: 'Property & GIS',
+        items: [
+          { label: 'Dashboard', href: '/dashboard/admin', icon: LayoutDashboard, match: ['/dashboard'] },
+          { label: '3D Map', href: '/map', icon: Box, match: ['/map'] },
+          { label: 'Properties', href: '/properties', icon: Building2, match: ['/properties'] },
+          { label: 'Society', href: '/society', icon: Landmark, match: ['/society'] },
+          { label: 'Buildings', href: '/buildings', icon: Building, match: ['/buildings'] },
+          {
+            label: 'Floor Explorer',
+            href: '/floors',
+            icon: Layers,
+            customActive: (p) => p.startsWith('/floors') || /^\/buildings\/[^/]+\/floors(\/|$)/.test(p),
+          },
+        ],
+      },
+      {
+        id: 'management',
+        label: 'Management',
+        items: [
+          { label: 'Residents', href: '/resident/dashboard', icon: Users, match: ['/resident/dashboard'] },
+          { label: 'Requests', href: '/resident/pending', icon: Clock, match: ['/resident/pending'] },
+          { label: 'Notifications', href: '/notifications', icon: Bell, match: ['/notifications'] },
+        ],
+      },
+      {
+        id: 'reports_settings',
+        label: 'Reports & Settings',
+        items: [
+          { label: 'Reports', href: '/reports', icon: BarChart3, match: ['/reports'] },
+          { label: 'Settings', href: '/settings', icon: Settings, match: ['/settings'] },
+        ],
+      },
+    ];
+  }
+
+  if (role === 'SUPER_ADMIN') {
+    return [
+      {
+        id: 'platform',
+        label: 'Property & GIS',
+        items: [
+          { label: 'Dashboard', href: '/dashboard/admin', icon: LayoutDashboard, match: ['/dashboard'] },
+          { label: '3D Map', href: '/map', icon: Box, match: ['/map'] },
+          { label: 'Properties', href: '/properties', icon: Building2, match: ['/properties'] },
+          { label: 'Societies', href: '/government/societies', icon: Landmark, match: ['/government/societies', '/society'] },
+          { label: 'Buildings', href: '/buildings', icon: Building, match: ['/buildings'] },
+          {
+            label: 'Floor Explorer',
+            href: '/floors',
+            icon: Layers,
+            customActive: (p) => p.startsWith('/floors') || /^\/buildings\/[^/]+\/floors(\/|$)/.test(p),
+          },
+        ],
+      },
+      {
+        id: 'administration',
+        label: 'Administration & Cadastre',
+        items: [
+          { label: 'Verification', href: '/verification', icon: ShieldCheck, match: ['/verification'] },
+          { label: 'Disputes', href: '/conflicts', icon: AlertTriangle, match: ['/conflicts'] },
+          { label: 'Officers', href: '/admin/users', icon: ShieldCheck, match: ['/admin/users'] },
+          { label: 'Users', href: '/admin/users', icon: Users, match: ['/admin/users'] },
+          { label: 'Audit Logs', href: '/admin/audit-log', icon: History, match: ['/admin/audit-log'] },
+          { label: 'Reports', href: '/reports', icon: BarChart3, match: ['/reports'] },
+          { label: 'System Settings', href: '/settings', icon: Settings, match: ['/settings'] },
+        ],
+      },
+    ];
+  }
+
+  // Default: CITIZEN
+  return [
+    {
+      id: 'platform',
+      label: 'Property & GIS',
+      items: [
+        { label: 'Dashboard', href: '/dashboard/citizen', icon: LayoutDashboard, match: ['/dashboard'] },
+        { label: '3D Map', href: '/map', icon: Box, match: ['/map'] },
+        { label: 'Properties', href: '/properties', icon: Building2, match: ['/properties'] },
+        { label: 'Buildings', href: '/buildings', icon: Building, match: ['/buildings'] },
+        {
+          label: 'Floor Explorer',
+          href: '/floors',
+          icon: Layers,
+          customActive: (p) => p.startsWith('/floors') || /^\/buildings\/[^/]+\/floors(\/|$)/.test(p),
+        },
+      ],
+    },
+    {
+      id: 'personal',
+      label: 'Personal',
+      items: [
+        { label: 'My Residency', href: '/resident/dashboard', icon: Home, match: ['/resident/dashboard'] },
+        { label: 'My Property', href: '/resident/property', icon: Building2, match: ['/resident/property'] },
+        { label: 'My Cases', href: '/resident/cases', icon: Scale, match: ['/resident/cases'] },
+      ],
+    },
+    {
+      id: 'operations',
+      label: 'Operations',
+      items: [
+        { label: 'Notifications', href: '/notifications', icon: Bell, match: ['/notifications'] },
+        { label: 'Report Dispute', href: '/disputes/new', icon: AlertCircle, match: ['/disputes'] },
+      ],
+    },
+    {
+      id: 'analytics',
+      label: 'Reports',
+      items: [
+        { label: 'Reports', href: '/reports', icon: BarChart3, match: ['/reports'] },
+      ],
+    },
+  ];
+}
+
+/**
  * Active-state resolution used by the sidebar.
- *
- * `match` prefixes keep child routes highlighted (e.g. `/properties/PROP-1`
- * keeps "Properties" active). `customActive` covers hierarchical routes such
- * as `/buildings/:id/floors`, which highlights both "Buildings" (via prefix
- * match) and "Floor Explorer" (via the floors-path regex).
  */
 export function isNavItemActive(pathname: string, item: NavItem): boolean {
   if (item.customActive) return item.customActive(pathname);

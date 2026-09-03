@@ -311,19 +311,16 @@ function tower(
  * The 5 core towers correspond directly to Towers A, B, C, D, E.
  */
 export const TOWERS: TowerDef[] = [
-  tower("B-LR-A", "Tower A", "A", [-108, -92], 0.1, 24, [18, 16]),
-  tower("B-LR-B", "Tower B", "B", [-38, -102], -0.06, 20, [26, 16]),
-  tower("B-LR-E", "Tower E", "A", [44, -96], 0.12, 23, [18, 16]),
-  tower("B-LR-C", "Tower C", "C", [116, -90], -0.08, 22, [30, 16]),
-  tower("twr-b2", "Residential Wing 2", "B", [-132, -18], 0.18, 18, [24, 17]),
-  tower("B-LR-D", "Tower D", "D", [-64, -34], -0.1, 18, [22, 15]),
-  tower("twr-a3", "Central Tower", "A", [0, -52], 0.05, 24, [18, 16]),
-  tower("twr-c2", "East Wing 1", "C", [68, -40], 0.1, 20, [30, 16]),
-  tower("twr-d2", "South Wing 1", "D", [128, -14], -0.15, 12, [22, 15]),
-  tower("twr-b3", "West Tower 2", "B", [-104, 58], -0.12, 19, [24, 16]),
-  tower("twr-c3", "South-West Tower", "C", [-24, 66], 0.07, 21, [30, 16]),
-  tower("twr-a4", "South-East Tower", "A", [108, 52], 0.16, 23, [18, 16]),
-  tower("twr-d3", "Entrance Tower", "D", [44, 96], -0.06, 11, [22, 15]),
+  tower("B-LR-B", "Tower B", "B", [18, 72], -0.05, 20, [24, 16]),
+  tower("twr-b3", "Tower F", "A", [-32, 40], -0.08, 22, [20, 16]),
+  tower("B-LR-D", "Tower D", "D", [-72, 8], -0.1, 22, [22, 16]),
+  tower("twr-b2", "Tower G", "B", [-110, -28], -0.12, 21, [24, 16]),
+  tower("B-LR-A", "Tower A", "A", [-104, -94], 0.05, 24, [20, 16]),
+  tower("twr-a3", "Tower H", "A", [-48, -116], 0.0, 22, [20, 16]),
+  tower("B-LR-E", "Tower E", "A", [10, -122], 0.0, 24, [20, 16]),
+  tower("B-LR-C", "Tower C", "C", [68, -114], -0.05, 23, [28, 16]),
+  tower("twr-c2", "Tower I", "C", [122, -86], -0.1, 22, [28, 16]),
+  tower("twr-a4", "Tower J", "A", [140, -8], -0.12, 24, [20, 16]),
 ];
 
 /** The township's pre-selected (featured) tower — Tower B. */
@@ -331,13 +328,6 @@ export const SELECTED_TOWER_ID = "B-LR-B";
 
 /* -------------------------- Building clusters ------------------------- */
 
-/**
- * Organized residential clusters (Part 2 composition reference).
- * Each cluster groups existing illustrative towers by site position:
- * north = background row, west = left, central = around the plaza,
- * south = entrance-side. NO invented property data — every tower remains
- * dataStatus: "illustrative" unless linked to a verified record.
- */
 export interface BuildingClusterDef {
   id: string;
   label: string;
@@ -346,10 +336,9 @@ export interface BuildingClusterDef {
 }
 
 export const BUILDING_CLUSTERS: BuildingClusterDef[] = [
-  { id: "cluster-north", label: "North Residential Cluster", towerIds: ["B-LR-A", "B-LR-B", "B-LR-E", "B-LR-C"] },
-  { id: "cluster-west", label: "West Residential Cluster", towerIds: ["twr-b2", "B-LR-D", "twr-b3"] },
-  { id: "cluster-central", label: "Central Residential Cluster", towerIds: ["twr-a3", "twr-c2", "twr-d2"] },
-  { id: "cluster-south", label: "Entrance-side Cluster", towerIds: ["twr-c3", "twr-a4", "twr-d3"] },
+  { id: "cluster-north", label: "North Residential Row", towerIds: ["B-LR-A", "twr-a3", "B-LR-E", "B-LR-C", "twr-c2"] },
+  { id: "cluster-west", label: "West Residential Curved Row", towerIds: ["twr-b2", "B-LR-D", "twr-b3"] },
+  { id: "cluster-south", label: "Foreground Residential Sector", towerIds: ["B-LR-B", "twr-a4"] },
 ];
 
 /* ------------------------- Roads & pavements ------------------------- */
@@ -428,21 +417,24 @@ export const CENTRAL_MEADOW_RADIUS = 62;
 /* --------------------------- Water feature --------------------------- */
 
 export const WATER_FEATURE = {
-  /** Illustrative water feature — right / lower-right of the composition
-   *  (matching the reference township layout). NOT a surveyed lake. */
-  center: [80, 108] as [number, number],
-  /** Irregular blobby outline radii (meters) sampled around the circle. */
-  radii: [16, 19, 16.5, 21, 18, 15.5, 17.5, 15],
+  /** Central organic lake located in the central-right park matching reference image */
+  center: [36, 16] as [number, number],
+  /** Organic curved outline radii (meters) sampled around the circle */
+  radii: [22, 28, 25, 32, 28, 22, 26, 23],
   dataStatus: "illustrative" as const,
 };
 
 /* --------------------------- Central amenity -------------------------- */
 
 export const AMENITY = {
-  center: [0, 0] as [number, number],
-  plazaRadius: 34,
-  podium: [40, 22, 8] as [number, number, number],
-  glass: [34, 16, 5] as [number, number, number],
+  /** Circular glass pavilion located in north-central plaza matching reference image */
+  center: [-16, -46] as [number, number],
+  plazaRadius: 36,
+  innerRadius: 10,
+  outerRadius: 24,
+  height: 7.5,
+  podium: [36, 20, 7.5] as [number, number, number],
+  glass: [30, 15, 5] as [number, number, number],
   dataStatus: "illustrative" as const,
 };
 
@@ -452,31 +444,20 @@ export const SITE_BOUNDARY = {
   half: [176, 146] as [number, number],
   radius: 40,
   y: 0.3,
-  gateZ: 143,
-  gateX: 8,
+  gateZ: 138,
+  gateX: -56,
   dataStatus: "illustrative" as const,
 };
 
 /* ------------------------------ Entrance ------------------------------ */
 
-/**
- * Main township gateway — Part 2. Lane, median, apron and security-booth
- * placement are all ILLUSTRATIVE visualization geometry; no official
- * branding, approvals, RERA numbers or survey numbers are invented.
- */
 export const ENTRANCE = {
-  /** Gate-line position (south spine). */
-  gate: { z: SITE_BOUNDARY.gateZ, halfWidth: SITE_BOUNDARY.gateX },
-  /** Entry/exit lane half-width — the median splits the approach. */
-  laneHalfWidth: 3.4,
-  /** Approach apron just outside the boundary (sits on the context ground). */
-  apron: { z: SITE_BOUNDARY.gateZ + 10, width: 26, depth: 20 },
-  /** Slip connection from the spine stub to the gate. */
-  apronInside: { z: SITE_BOUNDARY.gateZ - 5.5, width: 9, depth: 11 },
-  /** Median divider along the approach (inbound/outbound separation). */
-  median: { z: SITE_BOUNDARY.gateZ + 1, width: 0.7, depth: 26 },
-  /** Security booth beside the gate (visualization only). */
-  booth: { x: SITE_BOUNDARY.gateX + 6, z: SITE_BOUNDARY.gateZ - 2.5, size: [2.4, 2.6, 2.4] as [number, number, number] },
+  gate: { x: -56, z: 138, width: 28, halfWidth: 14, height: 7.5 },
+  laneHalfWidth: 4.0,
+  apron: { x: -56, z: 152, width: 34, depth: 26 },
+  apronInside: { x: -56, z: 126, width: 26, depth: 16 },
+  median: { x: -56, z: 138, width: 1.2, depth: 32 },
+  booth: { x: -40, z: 136, size: [3.2, 3.0, 3.2] as [number, number, number] },
   dataStatus: "illustrative" as const,
 };
 

@@ -87,7 +87,7 @@ export const ROUTE_RULES: RouteRule[] = [
   { prefix: '/disputes', permission: null, reason: 'Sign in to access dispute services.' },
   { prefix: '/field-verification', permission: null, reason: 'Sign in to access field verification services.' },
   { prefix: '/resident', permission: null, reason: 'Sign in to access resident and property services.' },
-  { prefix: '/society', permission: null, reason: 'Sign in to access society services.' },
+  { prefix: '/society', permission: PERMISSIONS.REGISTER_BUILDING, reason: 'Society registration and management are restricted to Society Administrators.' },
 ];
 
 /** Paths that never require authentication. */

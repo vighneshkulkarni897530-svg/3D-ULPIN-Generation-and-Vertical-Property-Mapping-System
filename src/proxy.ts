@@ -1,13 +1,13 @@
 /**
- * Edge Middleware (Phase 10)
- * ===========================
+ * Request Proxy (Phase 10)
+ * =========================
  * Server-side gate running before every request:
  *   - public paths (/auth/*, /unauthorized, /, /api/auth/*, static assets) pass through
  *   - protected paths require the Phase 10 session cookie; requests without
  *     it are redirected to /auth/login?next=<path> (pages) or rejected with
  *     401 JSON (API routes other than the auth endpoints themselves).
  *
- * ⚠ The cookie's PRESENCE is all this edge check can verify (it cannot access
+ * ⚠ The cookie's PRESENCE is all this proxy check can verify (it cannot access
  *   the in-memory session store). Full session validation + authorization
  *   happen in every API route via `requireAuth`/`requirePermission`, and in
  *   the React tree via <ProtectedRoute>. This layer exists so unauthenticated
@@ -15,6 +15,12 @@
  *
  * Authorization is NOT evaluated here — that happens in ProtectedRoute and at
  * the API boundary.
+ *
+ * NOTE (Next.js 16+): the file convention is `proxy.ts` and the exported
+ * handler must be named `proxy`. The legacy `middleware` convention is
+ * deprecated. Proxy runs on the Node.js runtime; the `runtime` config option
+ * is intentionally omitted (it is not supported and throws in proxy files).
+ *
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -45,7 +51,7 @@ function isPublicApi(pathname: string): boolean {
   return PUBLIC_API_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   if (isStaticAsset(pathname) || pathname.startsWith('/api/gis-selftest')) {
