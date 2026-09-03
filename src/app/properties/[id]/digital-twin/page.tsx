@@ -475,11 +475,33 @@ function BuildingDigitalTwinPageContent() {
                 {/* scene identity header — LIFE REPUBLIC / MARUNJI • PUNE */}
                 <TownshipSceneHeader className="absolute left-3 top-3 z-20" />
 
-                {/* Phase 7 — 3D Inspection Toolbar */}
+                {/* Phase 7 & 19 — 3D Inspection Toolbar with On-Demand Dropdowns */}
                 <InspectionToolbar
                   className="absolute left-1/2 top-3 z-30 hidden -translate-x-1/2 md:flex"
                   onResetCamera={handleReset}
                   openDiscrepancyCount={conflicts.length}
+                  towers={TOWERS}
+                  selectedTower={selectedTower}
+                  onSelectTower={handleSelectTower}
+                  linkedBuilding={linkedTowerData.building}
+                  linkedFloors={linkedTowerData.floors}
+                  linkedUnits={linkedTowerData.units}
+                  parcel={linkedTowerData.parcel}
+                  property={routeProperty}
+                  explicitFloors={explicitFloors}
+                  selectedLevel={selectedLevel}
+                  onSelectLevel={handleSelectLevel}
+                  selectedUnitId={selectedUnitId}
+                  onSelectUnit={(uid) => {
+                    setSelectedUnitId(uid);
+                    inspection.selectFlat(uid);
+                  }}
+                  floorMode={floorMode}
+                  onFloorModeChange={handleFloorMode}
+                  onFocusTower={(t) => {
+                    viewerHandleRef.current?.focusTower?.(t);
+                  }}
+                  onOpenProperty={() => router.push(`/properties/${routeProperty?.id ?? "PROP-LR-B-0402"}`)}
                 />
 
                 {/* Phase 7 — Solar & Shadow Analysis Floating Panel */}
@@ -538,59 +560,6 @@ function BuildingDigitalTwinPageContent() {
                       onToggle={handleToggleLayer}
                       onClose={handleLayers}
                       className="absolute left-3 top-[122px] z-30"
-                    />
-                  )}
-                </AnimatePresence>
-
-                {/* location information panel & legend */}
-                <TownshipLocationPanel className="absolute bottom-16 left-3 z-20 sm:bottom-3" />
-
-                {/* Phase 15C & 16 — database-driven floor explorer (real floors & units) */}
-                <AnimatePresence>
-                  {selectedTower && (
-                    <TownshipFloorExplorer
-                      towerLabel={selectedTower.name}
-                      floors={explicitFloors}
-                      units={linkedTowerData.units}
-                      selectedUnitId={selectedUnitId}
-                      onSelectUnit={(uid) => {
-                        setSelectedUnitId(uid);
-                        inspection.selectFlat(uid);
-                      }}
-                      linked={towerLinkedToDb}
-                      selectedLevel={selectedLevel}
-                      mode={floorMode}
-                      onModeChange={handleFloorMode}
-                      onSelectLevel={handleSelectLevel}
-                      className="absolute bottom-[188px] left-3 z-30 hidden w-[258px] lg:block"
-                    />
-                  )}
-                </AnimatePresence>
-
-                {/* Phase 18 — Interactive Building Details Panel */}
-                <AnimatePresence>
-                  {selectedTower && showTowerPanel && (
-                    <TownshipBuildingPanel
-                      tower={selectedTower}
-                      linkedBuilding={linkedTowerData.building}
-                      linkedFloors={linkedTowerData.floors}
-                      linkedUnits={linkedTowerData.units}
-                      parcel={linkedTowerData.parcel}
-                      property={routeProperty}
-                      onClose={handleCloseTowerPanel}
-                      onViewBuilding={() => {
-                        viewerHandleRef.current?.focusTower?.(selectedTower);
-                      }}
-                      onToggleIsolate={() => inspection.toggleBuildingIsolation()}
-                      isIsolated={inspection.buildingIsolation}
-                      onViewFloors={() => {
-                        setSelectedLevel(4);
-                        handleFloorMode("isolate");
-                      }}
-                      onToggleExplode={() => handleFloorMode(floorMode === "explode" ? "all" : "explode")}
-                      isExploded={floorMode === "explode"}
-                      onOpenProperty={() => router.push(`/properties/${routeProperty?.id ?? "PROP-LR-B-0402"}`)}
-                      className="absolute right-3 top-[56px] z-30 hidden max-h-[calc(100%-70px)] overflow-y-auto lg:block"
                     />
                   )}
                 </AnimatePresence>
