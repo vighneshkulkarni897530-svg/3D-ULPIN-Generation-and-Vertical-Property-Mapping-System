@@ -132,6 +132,20 @@ export interface SocietyRegistrationPayload {
   location: SocietyLocation;
 }
 
+/** Update payload for editing an existing society. */
+export interface SocietyUpdatePayload {
+  name?: string;
+  type?: SocietyType;
+  registrationNumber?: string | null;
+  establishedYear?: number | null;
+  description?: string | null;
+  address?: Partial<SocietyAddress>;
+  location?: Partial<SocietyLocation>;
+  imageUrl?: string | null;
+  logoUrl?: string | null;
+  status?: SocietyStatus;
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // Phase 2 — Buildings → Floors → Flats
 // ══════════════════════════════════════════════════════════════════════════════

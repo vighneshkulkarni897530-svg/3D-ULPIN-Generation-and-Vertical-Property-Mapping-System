@@ -13,7 +13,6 @@ import {
   RotateCcw,
   Maximize2,
   Compass,
-  MapPin,
   X,
   CheckCircle2,
   ChevronDown,
@@ -21,9 +20,6 @@ import {
   Home,
   Eye,
   EyeOff,
-  Sparkles,
-  ExternalLink,
-  ShieldCheck,
   Check,
 } from "lucide-react";
 import { useDigitalTwinInspection } from "@/context/DigitalTwinInspectionContext";

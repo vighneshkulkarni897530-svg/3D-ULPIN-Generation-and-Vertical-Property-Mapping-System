@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
         if (gasRes.ok) {
           const gasData = await gasRes.json().catch(() => ({}));
           if (gasData.success) {
-                        console.log(`[Google Apps Script] OTP verified successfully for ${email}`);
+            console.log(`[Google Apps Script] OTP verified successfully for ${email}`);
             return NextResponse.json({
               success: true,
               verified: true,
@@ -76,15 +76,9 @@ export async function POST(req: NextRequest) {
               sessionClaim: createOtpSessionClaim(email),
               message: gasData.message || 'OTP verified successfully.',
             });
-          } else {
-            // Check if it's incorrect OTP
-            if (gasData.message && gasData.message.toLowerCase().includes('incorrect')) {
-              return NextResponse.json(
-                { error: 'Incorrect verification code. Please check your email and try again.' },
-                { status: 400 }
-              );
-            }
           }
+          // Note: If GAS fails/rejects (e.g. devOtp or local fallback was submitted),
+          // continue to step 2 to check local token and fallback store.
         }
       } catch (err) {
         console.warn(`[Google Apps Script] Verify network notice:`, err);

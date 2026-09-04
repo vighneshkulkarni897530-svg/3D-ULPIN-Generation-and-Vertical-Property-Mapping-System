@@ -49,10 +49,12 @@ export function buildingDocRef(societyId: string, buildingId: string) {
   return doc(db, 'societies', societyId, BUILDINGS_COLLECTION, buildingId);
 }
 
+import { getActiveSessionUid } from '@/lib/auth/clientSession';
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function requireUid(): string {
-  const uid = auth.currentUser?.uid;
+  const uid = getActiveSessionUid() || auth.currentUser?.uid;
   if (!uid) {
     throw new SocietyServiceError(
       'AUTH_EXPIRED',

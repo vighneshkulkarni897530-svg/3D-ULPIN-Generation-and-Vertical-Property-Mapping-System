@@ -15,6 +15,7 @@ import {
   requestEmailOtp,
   verifyEmailOtp,
 } from '@/lib/firebase/auth';
+import { setActiveSessionUser } from '@/lib/auth/clientSession';
 
 export type AuthStatus = 'initializing' | 'authenticated' | 'unauthenticated';
 
@@ -98,10 +99,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
 
       setSessionUser(mapped);
+      setActiveSessionUser(mapped);
       setSessionExpiresAt(new Date().toISOString());
       setAuthStatus('authenticated');
     } else {
       setSessionUser(null);
+      setActiveSessionUser(null);
       setSessionExpiresAt(null);
       setAuthStatus('unauthenticated');
     }
@@ -147,18 +150,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const data = await res.json().catch(() => ({}));
         if (data.user) {
-          setSessionUser({
+          const userObj: User = {
             id: data.user.id,
             name: data.user.name,
             email: data.user.email,
             role: data.user.role,
             phone: data.user.phone || '',
             aadhaarOrGovId: data.user.aadhaarOrGovId || 'PENDING-KYC',
-          });
+          };
+          setSessionUser(userObj);
+          setActiveSessionUser(userObj);
           setSessionExpiresAt(new Date(Date.now() + 3600 * 24 * 365 * 1000).toISOString());
           setAuthStatus('authenticated');
         } else {
-                  applySession(userToUse);
+          applySession(userToUse);
         }
         return { ok: true, role: data?.user?.role };
       }
@@ -191,18 +196,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const data = await res.json().catch(() => ({}));
         if (data.user) {
-          setSessionUser({
+          const userObj: User = {
             id: data.user.id,
             name: data.user.name,
             email: data.user.email,
             role: data.user.role,
             phone: data.user.phone || '',
             aadhaarOrGovId: data.user.aadhaarOrGovId || 'PENDING-KYC',
-          });
+          };
+          setSessionUser(userObj);
+          setActiveSessionUser(userObj);
           setSessionExpiresAt(new Date(Date.now() + 3600 * 24 * 365 * 1000).toISOString());
           setAuthStatus('authenticated');
         } else {
-                  applySession(emailUser);
+          applySession(emailUser);
         }
         return { ok: true, role: data?.user?.role };
       }
@@ -243,7 +250,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (response.ok && mounted) {
           const data = await response.json();
           if (data.user) {
-            setSessionUser({
+            const userObj: User = {
               id: data.user.id,
               name: data.user.name,
               email: data.user.email,
@@ -256,7 +263,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               department: data.user.department,
               designation: data.user.designation,
               avatarUrl: data.user.avatarUrl,
-            });
+            };
+            setSessionUser(userObj);
+            setActiveSessionUser(userObj);
             setSessionExpiresAt(data.expiresAt);
             setAuthStatus('authenticated');
             return; // Session restored from server
@@ -271,6 +280,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // are NOT falsely displayed or automatically restored!
       if (mounted) {
         setSessionUser(null);
+        setActiveSessionUser(null);
         setSessionExpiresAt(null);
         setAuthStatus('unauthenticated');
         try {
@@ -322,7 +332,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (serverRes.ok) {
           const data = await serverRes.json();
           if (data.user) {
-            setSessionUser({
+            const userObj: User = {
               id: data.user.id,
               name: data.user.name,
               email: data.user.email,
@@ -335,7 +345,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               department: data.user.department,
               designation: data.user.designation,
               avatarUrl: data.user.avatarUrl,
-            });
+            };
+            setSessionUser(userObj);
+            setActiveSessionUser(userObj);
             setSessionExpiresAt(new Date(Date.now() + 3600 * 24 * 365 * 1000).toISOString());
             setAuthStatus('authenticated');
             return { ok: true, otpRequired: false, email: data.user.email, role: data.user.role };
@@ -446,16 +458,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const verifyOtp = useCallback(
     async (email: string, code: string, token?: string, challengeId?: string): Promise<AuthActionResult> => {
       try {
-                    const claim = await verifyEmailOtp(email, code, auth.currentUser?.uid, token, challengeId);
-          const sessionRes = await completeLoginSession(
-            auth.currentUser,
-            email,
-            typeof claim === 'string' ? claim : undefined,
-          );
+        const claim = await verifyEmailOtp(email, code, auth.currentUser?.uid, token, challengeId);
+        const sessionRes = await completeLoginSession(
+          undefined,
+          email,
+          typeof claim === 'string' ? claim : undefined
+        );
         if (!sessionRes.ok) {
           return { ok: false, error: sessionRes.error || 'Failed to establish session.' };
         }
-        return { ok: true, otpRequired: false, email, role: sessionRes.role };
+        return { ok: true, otpRequired: false, role: sessionRes.role };
       } catch (err) {
         return { ok: false, error: err instanceof Error ? err.message : 'OTP verification failed.', errorCode: 'OTP_FAILED' };
       }
@@ -475,11 +487,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (!response.ok) {
-        const payload = await response.json().catch(() => ({}));
+        const errPayload: { error?: { message?: string } } = await response.json().catch(() => ({}));
         return {
           ok: false,
-          error: payload?.error || 'Demo sign-in failed.',
-          errorCode: payload?.code || 'DEMO_LOGIN_FAILED',
+          error: errPayload.error?.message ?? 'Demo sign-in failed.',
+          errorCode: 'DEMO_LOGIN_FAILED',
         };
       }
 
@@ -501,6 +513,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           avatarUrl: data.user.avatarUrl,
         };
         setSessionUser(mapped);
+        setActiveSessionUser(mapped);
         setSessionExpiresAt(data.expiresAt ?? null);
         setAuthStatus('authenticated');
         return { ok: true };

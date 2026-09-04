@@ -482,18 +482,34 @@ export function checkRoleCredentials(
     return { ok: false, error: 'INVALID_CREDENTIALS', roleMismatch: true };
   }
 
-  if (expectedRole === 'OFFICER' && extra?.badgeNumber) {
+  if (expectedRole === 'OFFICER' && extra?.badgeNumber && extra.badgeNumber.trim()) {
     const normEntered = extra.badgeNumber.trim().toUpperCase();
     const normStored = (user.badgeNumber || user.aadhaarOrGovId || '').trim().toUpperCase();
-    if (normEntered !== normStored && !normStored.includes(normEntered)) {
+    const cleanEntered = normEntered.replace(/[^A-Z0-9]/g, '');
+    const cleanStored = normStored.replace(/[^A-Z0-9]/g, '');
+    if (
+      normEntered !== normStored &&
+      !normStored.includes(normEntered) &&
+      cleanEntered !== cleanStored &&
+      !cleanStored.includes(cleanEntered) &&
+      !cleanEntered.includes(cleanStored)
+    ) {
       return { ok: false, error: 'INVALID_CREDENTIALS', idMismatch: true };
     }
   }
 
-  if (expectedRole === 'ADMIN' && extra?.societyRegNo) {
+  if (expectedRole === 'ADMIN' && extra?.societyRegNo && extra.societyRegNo.trim()) {
     const normEntered = extra.societyRegNo.trim().toUpperCase();
     const normStored = (user.societyRegNo || user.badgeNumber || user.aadhaarOrGovId || '').trim().toUpperCase();
-    if (normEntered !== normStored && !normStored.includes(normEntered)) {
+    const cleanEntered = normEntered.replace(/[^A-Z0-9]/g, '');
+    const cleanStored = normStored.replace(/[^A-Z0-9]/g, '');
+    if (
+      normEntered !== normStored &&
+      !normStored.includes(normEntered) &&
+      cleanEntered !== cleanStored &&
+      !cleanStored.includes(cleanEntered) &&
+      !cleanEntered.includes(cleanStored)
+    ) {
       return { ok: false, error: 'INVALID_CREDENTIALS', idMismatch: true };
     }
   }

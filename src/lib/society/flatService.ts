@@ -8,7 +8,7 @@
  *   societies/{societyId}/buildings/{buildingId}/floors/{floorId}/flats/{flatId}
  *
  * Security invariants:
- *   - `createdBy` is ALWAYS taken from the authenticated Firebase user.
+ *   - `createdBy` is ALWAYS taken from the authenticated Firebase user or active session.
  *   - Duplicate flat numbers within the same floor are prevented.
  */
 
@@ -30,6 +30,7 @@ import {
 } from 'firebase/firestore';
 
 import { auth, db } from '@/lib/firebase';
+import { getActiveSessionUid } from '@/lib/auth/clientSession';
 import {
   type Flat,
   type FlatDocument,
@@ -81,7 +82,7 @@ export function flatDocRef(
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function requireUid(): string {
-  const uid = auth.currentUser?.uid;
+  const uid = getActiveSessionUid() || auth.currentUser?.uid;
   if (!uid) {
     throw new SocietyServiceError(
       'AUTH_EXPIRED',

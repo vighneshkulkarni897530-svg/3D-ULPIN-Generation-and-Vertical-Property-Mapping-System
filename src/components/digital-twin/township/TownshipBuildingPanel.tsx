@@ -3,10 +3,9 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Building2,
-  Database,
   MapPinned,
   X,
   Eye,
@@ -19,16 +18,13 @@ import {
   ShieldCheck,
   Ruler,
   Compass,
-  FileCheck,
   Flame,
   Building,
   CheckCircle2,
-  Info,
 } from "lucide-react";
 import type { PropertyItem } from "@/types";
 import type { Building as GisBuilding, Floor, LandParcel, PropertyUnit } from "@/types/gis";
 import type { TowerDef } from "./townshipConfig";
-import { dbField } from "./townshipData";
 import { cn } from "@/lib/utils";
 
 interface TownshipBuildingPanelProps {

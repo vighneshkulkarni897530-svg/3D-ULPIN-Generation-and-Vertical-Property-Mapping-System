@@ -26,13 +26,16 @@ import {
   AlertTriangle,
   Building2,
   CalendarDays,
+  Camera,
   CheckCircle2,
   Circle,
+  Edit3,
   Hash,
   Info,
   Loader2,
   Lock,
   MapPin,
+  Pencil,
   RefreshCcw,
   ShieldCheck,
   UserCheck,
@@ -45,6 +48,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { SafeImage } from '@/components/ui/SafeImage';
+import { SocietyEditModal } from '@/components/society/SocietyEditModal';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { getSocietyById, getSocietyMembership, SocietyServiceError } from '@/lib/society/service';
@@ -117,6 +121,13 @@ function SocietyDashboardContent() {
   const [state, setState] = React.useState<LoadState>('loading');
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [reloadKey, setReloadKey] = React.useState(0);
+  const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
+  const [editModalTab, setEditModalTab] = React.useState<'general' | 'address' | 'location' | 'image'>('general');
+
+  const openEdit = (tab: 'general' | 'address' | 'location' | 'image' = 'general') => {
+    setEditModalTab(tab);
+    setIsEditModalOpen(true);
+  };
 
   React.useEffect(() => {
     let cancelled = false;
@@ -270,6 +281,16 @@ function SocietyDashboardContent() {
             <Badge variant="success" className="px-3 py-1 text-xs">
               <span aria-hidden="true">●</span> {statusLabel}
             </Badge>
+            {isAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => openEdit('general')}
+                className="gap-1.5 border-cyan-400/80 bg-cyan-50/70 text-cyan-950 font-bold hover:bg-cyan-100 hover:border-cyan-500 shadow-sm"
+              >
+                <Edit3 className="h-3.5 w-3.5 text-cyan-700" aria-hidden="true" /> Edit Society
+              </Button>
+            )}
             <Button variant="default" size="sm" asChild>
               <Link href={`/map?society=${societyId}&ulpin=${baseUlpin}`}>
                 <Layers className="h-3.5 w-3.5" aria-hidden="true" /> View on 2D GIS Map
@@ -298,18 +319,42 @@ function SocietyDashboardContent() {
       <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-3">
         {/* ── LEFT · SOCIETY PROFILE ── */}
         <div className="space-y-5 lg:col-span-2">
-          <Card>
+          <Card className="group relative overflow-hidden">
             <CardContent className="p-0">
               {society.imageUrl ? (
-                <SafeImage
-                  src={society.imageUrl}
-                  alt={`Society image of ${society.name}`}
-                  className="aspect-[16/9] w-full rounded-xl object-cover"
-                />
+                <div className="relative">
+                  <SafeImage
+                    src={society.imageUrl}
+                    alt={`Society image of ${society.name}`}
+                    className="aspect-[16/9] w-full rounded-xl object-cover"
+                  />
+                  {isAdmin && (
+                    <div className="absolute top-3 right-3">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => openEdit('image')}
+                        className="gap-1.5 bg-slate-900/80 text-white hover:bg-slate-900 text-xs font-bold backdrop-blur-sm border border-slate-700 shadow-md"
+                      >
+                        <Camera className="h-3.5 w-3.5 text-cyan-400" /> Change Cover Photo
+                      </Button>
+                    </div>
+                  )}
+                </div>
               ) : (
-                <div className="flex aspect-[16/9] w-full flex-col items-center justify-center gap-2 rounded-xl bg-slate-100 text-slate-400">
-                  <Building2 className="h-8 w-8" aria-hidden="true" />
-                  <p className="text-[11px] font-semibold">No society image uploaded yet</p>
+                <div className="flex aspect-[16/9] w-full flex-col items-center justify-center gap-3 rounded-xl bg-slate-100 text-slate-400 p-6">
+                  <Building2 className="h-10 w-10 text-slate-300" aria-hidden="true" />
+                  <p className="text-xs font-semibold text-slate-500">No society image uploaded yet</p>
+                  {isAdmin && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openEdit('image')}
+                      className="gap-1.5 border-slate-300 bg-white text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 hover:text-cyan-700"
+                    >
+                      <Camera className="h-3.5 w-3.5 text-cyan-600" /> Upload Society Image
+                    </Button>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -320,6 +365,18 @@ function SocietyDashboardContent() {
               <SectionHeader
                 icon={<Hash className="h-4 w-4" aria-hidden="true" />}
                 title="Registration & Cadastre Details"
+                action={
+                  isAdmin ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openEdit('general')}
+                      className="h-7 px-2.5 text-xs text-slate-500 hover:text-cyan-700 hover:bg-cyan-50 gap-1 font-semibold"
+                    >
+                      <Edit3 className="h-3 w-3" /> Edit
+                    </Button>
+                  ) : undefined
+                }
               />
               <dl className="mt-3">
                 <DetailRow label="Society Type" value={society.type} />
@@ -358,6 +415,18 @@ function SocietyDashboardContent() {
               <SectionHeader
                 icon={<MapPin className="h-4 w-4" aria-hidden="true" />}
                 title="Registered Address"
+                action={
+                  isAdmin ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openEdit('address')}
+                      className="h-7 px-2.5 text-xs text-slate-500 hover:text-cyan-700 hover:bg-cyan-50 gap-1 font-semibold"
+                    >
+                      <Edit3 className="h-3 w-3" /> Edit Address
+                    </Button>
+                  ) : undefined
+                }
               />
               <div className="mt-3 space-y-1 text-sm">
                 <p className="font-bold text-slate-900">{society.address.line1 || '—'}</p>
@@ -381,9 +450,19 @@ function SocietyDashboardContent() {
                 title="Location"
                 description="Approximate location recorded at registration."
                 action={
-                  <div className="flex gap-1.5">
+                  <div className="flex items-center gap-1.5">
                     <Badge variant="secondary">user-provided</Badge>
                     <Badge variant="outline">illustrative</Badge>
+                    {isAdmin && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEdit('location')}
+                        className="h-7 px-2 text-xs text-slate-500 hover:text-cyan-700 hover:bg-cyan-50 gap-1 font-semibold ml-1"
+                      >
+                        <Edit3 className="h-3 w-3" /> Edit
+                      </Button>
+                    )}
                   </div>
                 }
               />
@@ -406,6 +485,18 @@ function SocietyDashboardContent() {
                 <SectionHeader
                   icon={<Info className="h-4 w-4" aria-hidden="true" />}
                   title="Description"
+                  action={
+                    isAdmin ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEdit('general')}
+                        className="h-7 px-2.5 text-xs text-slate-500 hover:text-cyan-700 hover:bg-cyan-50 gap-1 font-semibold"
+                      >
+                        <Edit3 className="h-3 w-3" /> Edit
+                      </Button>
+                    ) : undefined
+                  }
                 />
                 <p className="mt-3 whitespace-pre-line text-xs leading-relaxed text-slate-600">
                   {society.description}
@@ -559,6 +650,19 @@ function SocietyDashboardContent() {
           </Card>
         </div>
       </div>
+
+      {/* Society Edit Modal */}
+      {society && isEditModalOpen && (
+        <SocietyEditModal
+          society={society}
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          initialTab={editModalTab}
+          onUpdated={(updated) => {
+            setSociety(updated);
+          }}
+        />
+      )}
     </div>
   );
 }

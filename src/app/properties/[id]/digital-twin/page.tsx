@@ -12,12 +12,8 @@ import {
   TownshipSceneHeader,
   TownshipSelectedChip,
 } from "@/components/digital-twin/township/TownshipOverlays";
-import { TownshipLayerPanel, TownshipLocationPanel } from "@/components/digital-twin/township/TownshipPanels";
-import { TownshipBuildingPanel } from "@/components/digital-twin/township/TownshipBuildingPanel";
-import { TownshipFloorExplorer } from "@/components/digital-twin/township/TownshipFloorExplorer";
+import { TownshipLayerPanel } from "@/components/digital-twin/township/TownshipPanels";
 import { InspectionToolbar } from "@/components/digital-twin/inspection/InspectionToolbar";
-import { InspectionPanel } from "@/components/digital-twin/inspection/InspectionPanel";
-import { InspectionLegend } from "@/components/digital-twin/inspection/InspectionLegend";
 import { InspectionSummary } from "@/components/digital-twin/inspection/InspectionSummary";
 import { SolarShadowControls } from "@/components/digital-twin/analysis/SolarShadowControls";
 import { MeasurementTool } from "@/components/digital-twin/analysis/MeasurementTool";
@@ -87,7 +83,6 @@ function BuildingDigitalTwinPageContent() {
   const [floorMode, setFloorMode] = useState<TownshipFloorMode>("all");
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
-  const [showTowerPanel, setShowTowerPanel] = useState(true);
   const [showInspectionSummary, setShowInspectionSummary] = useState(false);
   const viewerShellRef = useRef<HTMLDivElement>(null);
   const viewerHandleRef = useRef<Township3DViewerHandle>(null);
@@ -151,9 +146,8 @@ function BuildingDigitalTwinPageContent() {
 
   const place = resolvePlace(PLACE_ID);
 
-  // Reset floor state + reopen the building panel whenever the selection changes
+  // Reset floor state whenever the selection changes
   useEffect(() => {
-    setShowTowerPanel(true);
     setFloorMode("all");
     setSelectedLevel(null);
   }, [selectedTowerId]);
@@ -244,7 +238,6 @@ function BuildingDigitalTwinPageContent() {
     setSelectedLevel(level);
     inspection.selectFloor(level);
   }, [inspection]);
-  const handleCloseTowerPanel = useCallback(() => setShowTowerPanel(false), []);
 
   // ── Phase 19 — canonical twin view (single source of truth) ────────────────
   // Derives ALL presentation data (header / info panel / floor explorer /
@@ -477,7 +470,7 @@ function BuildingDigitalTwinPageContent() {
 
                 {/* Phase 7 & 19 — 3D Inspection Toolbar with On-Demand Dropdowns */}
                 <InspectionToolbar
-                  className="absolute left-1/2 top-3 z-30 hidden -translate-x-1/2 md:flex"
+                  className="absolute left-1/2 top-3 z-30 flex -translate-x-1/2 max-w-[calc(100%-24px)] overflow-x-auto scrollbar-none"
                   onResetCamera={handleReset}
                   openDiscrepancyCount={conflicts.length}
                   towers={TOWERS}

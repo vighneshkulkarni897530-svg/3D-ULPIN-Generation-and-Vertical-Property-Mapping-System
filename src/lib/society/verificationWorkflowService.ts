@@ -32,6 +32,7 @@ import {
 } from 'firebase/storage';
 
 import { auth, db, firebaseApp } from '@/lib/firebase';
+import { getActiveSessionUid, getActiveSessionUser } from '@/lib/auth/clientSession';
 
 const storage = getStorage(firebaseApp);
 import {
@@ -65,15 +66,22 @@ export const VERIFICATION_HISTORY_COLLECTION = 'verificationHistory';
 
 function requireUserUid(): { uid: string; displayName: string; email: string } {
   const user = auth.currentUser;
-  if (!user?.uid) {
+  const sessionUser = getActiveSessionUser();
+  const uid = user?.uid || sessionUser?.id || getActiveSessionUid();
+  if (!uid) {
     throw new SocietyServiceError(
       'AUTH_EXPIRED',
       'You must be signed in to perform this verification workflow action.',
     );
   }
   const displayName =
-    user.displayName || user.email?.split('@')[0] || 'Authorized User';
-  return { uid: user.uid, displayName, email: user.email || '' };
+    user?.displayName ||
+    sessionUser?.name ||
+    user?.email?.split('@')[0] ||
+    sessionUser?.email?.split('@')[0] ||
+    'Authorized User';
+  const email = user?.email || sessionUser?.email || '';
+  return { uid, displayName, email };
 }
 
 // ── Normalization Helpers ────────────────────────────────────────────────────

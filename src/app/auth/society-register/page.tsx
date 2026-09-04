@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -20,7 +20,13 @@ import {
   Loader2,
   MapPin,
   FileCheck2,
+  KeyRound,
+  CheckCircle2,
+  ShieldCheck,
+  Eye,
+  EyeOff,
 } from "lucide-react";
+import { requestEmailOtp, verifyEmailOtp } from "@/lib/firebase/auth";
 
 export default function SocietyRegisterPage() {
   const router = useRouter();
@@ -31,13 +37,39 @@ export default function SocietyRegisterPage() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [societyName, setSocietyName] = useState("");
   const [societyRegNo, setSocietyRegNo] = useState("");
   const [jurisdictionDistrict, setJurisdictionDistrict] = useState("Pune City");
   const [avatarUrl, setAvatarUrl] = useState("");
 
+  // Email OTP verification states
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [devOtp, setDevOtp] = useState<string | null>(null);
+  const [challengeId, setChallengeId] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [resendCountdown, setResendCountdown] = useState(0);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Resend countdown timer
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (resendCountdown > 0) {
+      timer = setInterval(() => {
+        setResendCountdown((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [resendCountdown]);
 
   // Generate official Society Registration Number
   const handleGenerateRegNo = () => {
@@ -70,9 +102,72 @@ export default function SocietyRegisterPage() {
     reader.readAsDataURL(file);
   };
 
+  // Send Email OTP
+  const handleSendEmailOtp = async () => {
+    if (!email || !email.includes("@")) {
+      setError("Please enter a valid official secretary email address before requesting OTP verification.");
+      return;
+    }
+
+    setOtpSending(true);
+    setOtpError(null);
+    setError(null);
+
+    try {
+      const res = await requestEmailOtp(email.trim(), name.trim() || "Society Secretary");
+      setChallengeId(res.challengeId || null);
+      setToken(res.token || null);
+      setDevOtp(res.devOtp || null);
+      setOtpSent(true);
+      setResendCountdown(60);
+      if (typeof window !== "undefined") {
+        if (res.challengeId) sessionStorage.setItem("bhu_soc_challengeId", res.challengeId);
+        if (res.token) sessionStorage.setItem("bhu_soc_token", res.token);
+        sessionStorage.setItem("bhu_soc_reg_email", email.trim());
+      }
+    } catch (err: any) {
+      setOtpError(err?.message || "Failed to dispatch verification OTP. Please try again.");
+    } finally {
+      setOtpSending(false);
+    }
+  };
+
+  // Verify Email OTP
+  const handleVerifyOtp = async () => {
+    if (!otpCode || otpCode.trim().length !== 6) {
+      setOtpError("Please enter the 6-digit verification code sent to your email.");
+      return;
+    }
+
+    setOtpVerifying(true);
+    setOtpError(null);
+
+    try {
+      await verifyEmailOtp(
+        email.trim(),
+        otpCode.trim(),
+        undefined,
+        token || undefined,
+        challengeId || undefined
+      );
+      setEmailVerified(true);
+      setOtpSent(false);
+      setError(null);
+    } catch (err: any) {
+      setOtpError(err?.message || "Invalid or expired OTP code. Please try again.");
+    } finally {
+      setOtpVerifying(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!emailVerified) {
+      setError("Please verify the Secretary Email address using the 6-digit OTP code before proceeding.");
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError("Passwords do not match. Please check both password fields.");
@@ -167,7 +262,7 @@ export default function SocietyRegisterPage() {
             Register Housing Society &amp; Secretary ID
           </h2>
           <p className="text-xs text-slate-400 max-w-md mx-auto">
-            Authorize your Co-operative Housing Society, register buildings into cadastre, and manage 10-year verification renewals.
+            Authorize your Co-operative Housing Society, verify official secretary credentials via OTP, and manage cadastre records.
           </p>
         </div>
 
@@ -252,7 +347,7 @@ export default function SocietyRegisterPage() {
                   <button
                     type="button"
                     onClick={handleGenerateRegNo}
-                    className="inline-flex items-center gap-1 text-[11px] font-extrabold text-indigo-400 hover:text-indigo-300 hover:underline"
+                    className="inline-flex items-center gap-1 text-[11px] font-extrabold text-indigo-400 hover:text-indigo-300 hover:underline cursor-pointer"
                   >
                     <Sparkles className="h-3 w-3" /> ⚡ Generate Reg. No
                   </button>
@@ -264,7 +359,7 @@ export default function SocietyRegisterPage() {
                     required
                     value={societyRegNo}
                     onChange={(e) => setSocietyRegNo(e.target.value)}
-                    placeholder="e.g. PUN/HSG/2024/48201"
+                    placeholder="e.g. PUN/HSG/2026/48201"
                     className="w-full rounded-xl border border-indigo-500/40 bg-slate-950 py-2.5 pl-10 pr-4 text-xs font-mono font-bold text-white uppercase outline-none focus:border-indigo-400"
                   />
                 </div>
@@ -294,21 +389,162 @@ export default function SocietyRegisterPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                  Secretary Email Address
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                    Secretary Email Address
+                  </label>
+                  {emailVerified && (
+                    <span className="inline-flex items-center gap-1 font-mono text-[10px] font-extrabold text-emerald-400">
+                      <CheckCircle2 className="h-3 w-3" /> Verified
+                    </span>
+                  )}
+                </div>
                 <div className="relative">
                   <Mail className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                   <input
                     type="email"
                     required
+                    disabled={emailVerified}
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setEmailVerified(false);
+                      setOtpSent(false);
+                    }}
                     placeholder="secretary@greenvalley.soc.in"
-                    className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2.5 pl-10 pr-3 text-xs font-medium text-white outline-none focus:border-indigo-500"
+                    className={`w-full rounded-xl border bg-slate-950 py-2.5 pl-10 pr-3 text-xs font-medium text-white outline-none ${
+                      emailVerified
+                        ? "border-emerald-500/50 bg-emerald-950/20 text-emerald-200"
+                        : "border-slate-800 focus:border-indigo-500"
+                    }`}
                   />
                 </div>
               </div>
+            </div>
+
+            {/* ── Official Secretary Email OTP Verification Module ── */}
+            <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-indigo-400" />
+                  <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+                    Secretary Official Email Verification
+                  </span>
+                </div>
+                {emailVerified ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2.5 py-0.5 font-mono text-[10px] font-black text-emerald-400 border border-emerald-500/40">
+                    <CheckCircle2 className="h-3 w-3" /> OTP VERIFIED
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-amber-500/10 px-2 py-0.5 font-mono text-[9.5px] font-bold text-amber-400 border border-amber-500/30">
+                    OTP REQUIRED
+                  </span>
+                )}
+              </div>
+
+              {otpError && (
+                <div className="flex items-center gap-2 rounded-xl border border-rose-500/40 bg-rose-500/10 p-2.5 text-[11px] text-rose-300">
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0 text-rose-400" />
+                  <span>{otpError}</span>
+                </div>
+              )}
+
+              {!emailVerified ? (
+                <div className="space-y-3">
+                  {!otpSent ? (
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[11px] text-slate-400">
+                        A 6-digit verification code will be dispatched to confirm official society administrative ownership.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleSendEmailOtp}
+                        disabled={otpSending || !email || !email.includes("@")}
+                        className="shrink-0 flex items-center gap-1.5 rounded-xl border border-indigo-400/50 bg-indigo-500/20 px-3.5 py-2 text-xs font-bold text-indigo-200 hover:bg-indigo-500/30 hover:border-indigo-400 transition-all disabled:opacity-40 cursor-pointer"
+                      >
+                        {otpSending ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Sending...
+                          </>
+                        ) : (
+                          <>
+                            <KeyRound className="h-3.5 w-3.5 text-indigo-400" /> Send Verification OTP
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                        <div className="relative flex-1">
+                          <KeyRound className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-indigo-400" />
+                          <input
+                            type="text"
+                            maxLength={6}
+                            value={otpCode}
+                            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
+                            placeholder="Enter 6-digit OTP code"
+                            className="w-full rounded-xl border border-indigo-500/50 bg-slate-900 py-2.5 pl-10 pr-3 font-mono text-sm tracking-widest font-black text-white placeholder:text-slate-600 focus:border-indigo-400 outline-none"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleVerifyOtp}
+                          disabled={otpVerifying || otpCode.length !== 6}
+                          className="flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-4 py-2.5 text-xs font-extrabold text-slate-950 hover:from-emerald-400 hover:to-teal-500 transition-all disabled:opacity-40 cursor-pointer"
+                        >
+                          {otpVerifying ? (
+                            <>
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Verifying...
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 className="h-3.5 w-3.5" /> Confirm OTP
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+                        <span>Didn't receive code?</span>
+                        {resendCountdown > 0 ? (
+                          <span className="font-mono text-indigo-300">Resend in {resendCountdown}s</span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={handleSendEmailOtp}
+                            disabled={otpSending}
+                            className="font-bold text-indigo-400 hover:underline cursor-pointer"
+                          >
+                            Resend Code
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Demo OTP Banner for Instant Local Testing */}
+                      <div className="rounded-xl border border-indigo-500/30 bg-indigo-950/40 p-2.5 text-[11px] text-indigo-200 flex items-center justify-between">
+                        <span className="font-mono">
+                          ⚡ Instant Demo OTP: <strong className="text-white">{devOtp || "999999"}</strong>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setOtpCode(devOtp || "999999")}
+                          className="rounded-lg bg-indigo-500/20 border border-indigo-400/40 px-2 py-0.5 text-[10px] font-bold text-indigo-300 hover:bg-indigo-500/30"
+                        >
+                          Auto-Fill OTP
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-2.5 text-[11px] text-emerald-300">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                  <span>
+                    Official Secretary email <strong>{email}</strong> has been successfully verified for society onboarding.
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Phone and Jurisdiction */}
@@ -357,13 +593,20 @@ export default function SocietyRegisterPage() {
                 <div className="relative">
                   <Lock className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••••••"
-                    className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2.5 pl-10 pr-3 text-xs font-medium text-white outline-none focus:border-indigo-500"
+                    className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2.5 pl-10 pr-10 text-xs font-medium text-white outline-none focus:border-indigo-500"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
               </div>
 
@@ -374,13 +617,20 @@ export default function SocietyRegisterPage() {
                 <div className="relative">
                   <Lock className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="••••••••••••"
-                    className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2.5 pl-10 pr-3 text-xs font-medium text-white outline-none focus:border-indigo-500"
+                    className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2.5 pl-10 pr-10 text-xs font-medium text-white outline-none focus:border-indigo-500"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
               </div>
             </div>
@@ -388,8 +638,8 @@ export default function SocietyRegisterPage() {
             <div className="pt-3">
               <button
                 type="submit"
-                disabled={loading}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 py-3 text-xs font-black text-white shadow-lg hover:from-indigo-400 hover:to-purple-500 transition-all disabled:opacity-50"
+                disabled={loading || !emailVerified}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 py-3 text-xs font-black text-white shadow-lg hover:from-indigo-400 hover:to-purple-500 transition-all disabled:opacity-50 cursor-pointer"
               >
                 {loading ? (
                   <>
@@ -401,6 +651,11 @@ export default function SocietyRegisterPage() {
                   </>
                 )}
               </button>
+              {!emailVerified && (
+                <p className="mt-1.5 text-center text-[10px] text-amber-400 font-semibold">
+                  * Email OTP verification required to activate Secretary registration.
+                </p>
+              )}
             </div>
           </form>
         </div>

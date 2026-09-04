@@ -8,7 +8,7 @@
  *   societies/{societyId}/buildings/{buildingId}/floors/{floorId}
  *
  * Security invariants:
- *   - `createdBy` is ALWAYS taken from the authenticated Firebase user.
+ *   - `createdBy` is ALWAYS taken from the authenticated Firebase user or active session.
  *   - Duplicate floor numbers within the same building are prevented.
  *   - Delete protection: floors with child flats cannot be deleted.
  */
@@ -32,6 +32,7 @@ import {
 } from 'firebase/firestore';
 
 import { auth, db } from '@/lib/firebase';
+import { getActiveSessionUid } from '@/lib/auth/clientSession';
 import {
   type Floor,
   type FloorDocument,
@@ -70,7 +71,7 @@ export function floorDocRef(societyId: string, buildingId: string, floorId: stri
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function requireUid(): string {
-  const uid = auth.currentUser?.uid;
+  const uid = getActiveSessionUid() || auth.currentUser?.uid;
   if (!uid) {
     throw new SocietyServiceError(
       'AUTH_EXPIRED',

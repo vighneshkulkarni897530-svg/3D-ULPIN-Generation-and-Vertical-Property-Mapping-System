@@ -64,6 +64,14 @@ export default function LoginPage() {
     setError(null);
   };
 
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handleFillDemo = () => {
+    setEmail('rajesh.sharma@example.com');
+    setPassword(DEMO_PASSWORD);
+    setError(null);
+  };
+
   const handleCredentialsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -128,6 +136,25 @@ export default function LoginPage() {
           </Link>
         </div>
 
+        {/* Quick Demo Fill Card */}
+        <div className="rounded-2xl border border-cyan-500/30 bg-cyan-950/20 p-3.5 flex items-center justify-between gap-3 text-xs">
+          <div>
+            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-cyan-400 block">
+              ⚡ Quick Test Credentials
+            </span>
+            <span className="text-[11px] text-slate-300 font-mono">
+              rajesh.sharma@example.com
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={handleFillDemo}
+            className="shrink-0 rounded-xl border border-cyan-400/40 bg-cyan-500/20 px-3 py-1.5 font-bold text-cyan-300 hover:bg-cyan-500/30 hover:border-cyan-400 transition-colors cursor-pointer"
+          >
+            Auto-Fill
+          </button>
+        </div>
+
         <div className="bg-slate-900/90 border border-slate-800 p-7 rounded-3xl shadow-2xl backdrop-blur-xl space-y-5">
           {error && (
             <div
@@ -142,7 +169,7 @@ export default function LoginPage() {
           <form onSubmit={handleCredentialsSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                Official Email / Aadhaar ID
+                Citizen Registered Email
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
@@ -176,13 +203,20 @@ export default function LoginPage() {
                   <Lock className="w-4 h-4" />
                 </div>
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   placeholder="••••••••••••"
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-400 text-white rounded-xl pl-10 pr-4 py-2.5 text-xs font-medium focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-400 text-white rounded-xl pl-10 pr-10 py-2.5 text-xs font-medium focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 hover:text-slate-300 cursor-pointer"
+                >
+                  {showPassword ? <span className="text-[10px] font-bold text-cyan-400">HIDE</span> : <span className="text-[10px] font-bold text-slate-400">SHOW</span>}
+                </button>
               </div>
             </div>
 

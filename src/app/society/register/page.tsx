@@ -216,8 +216,8 @@ function SocietyRegisterPageContent() {
     setUploadProgress(null);
 
     try {
-      // 1 · Society + `society-admin` membership (atomic; createdBy = Firebase UID).
-      const { societyId } = await createSocietyWithAdmin(toRegistrationPayload(values));
+      // 1 · Society + `society-admin` membership (atomic; createdBy = Authenticated UID).
+      const { societyId } = await createSocietyWithAdmin(toRegistrationPayload(values), currentUser?.id);
 
       // 2 · Image upload — best-effort; failure must NOT lose the registration.
       if (imageFile) {

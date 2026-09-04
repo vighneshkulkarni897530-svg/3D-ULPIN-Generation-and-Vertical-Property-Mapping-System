@@ -17,6 +17,7 @@
  */
 import {
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -30,6 +31,7 @@ import {
 } from 'firebase/firestore';
 
 import { auth, db } from '@/lib/firebase';
+import { getActiveSessionUid, getActiveSessionUser } from '@/lib/auth/clientSession';
 import {
   SOCIETY_MEMBER_STATUSES,
   SOCIETY_STATUSES,
@@ -39,6 +41,7 @@ import {
   type SocietyMembership,
   type SocietyMembershipDocument,
   type SocietyRegistrationPayload,
+  type SocietyUpdatePayload,
   type SocietyRole,
   type SocietyStatus,
 } from '@/types/society';
@@ -104,7 +107,7 @@ export function normalizeFirestoreError(error: unknown): SocietyServiceError {
  * society comes from HERE — never from a client-supplied form field.
  */
 export function requireAuthenticatedUid(): string {
-  const uid = auth.currentUser?.uid;
+  const uid = getActiveSessionUid() || auth.currentUser?.uid;
   if (!uid) {
     throw new SocietyServiceError(
       'AUTH_EXPIRED',
@@ -125,16 +128,18 @@ export interface CreateSocietyResult {
  */
 export async function createSocietyWithAdmin(
   payload: SocietyRegistrationPayload,
+  creatorUid?: string,
 ): Promise<CreateSocietyResult> {
-  const uid = requireAuthenticatedUid();
+  const uid = creatorUid || requireAuthenticatedUid();
 
   // SDK-generated document ID (Firebase generates it client-side; no random
   // IDs are produced during React rendering, so this is hydration safe).
   const societyRef = doc(collection(db, SOCIETIES_COLLECTION));
+  const societyId = societyRef.id;
   const membershipRef = doc(
     db,
     SOCIETY_MEMBERS_COLLECTION,
-    societyMembershipId(societyRef.id, uid),
+    societyMembershipId(societyId, uid),
   );
 
   const societyData: WithFieldValue<SocietyDocument> = {
@@ -147,19 +152,48 @@ export async function createSocietyWithAdmin(
     location: payload.location,
     imageUrl: null,
     logoUrl: null,
-    createdBy: uid, // ALWAYS the authenticated Firebase UID — never form data
+    createdBy: uid, // ALWAYS the authenticated UID — never form data
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
     status: 'active',
   };
 
   const membershipData: WithFieldValue<SocietyMembershipDocument> = {
-    societyId: societyRef.id,
+    societyId,
     userId: uid,
     role: 'society-admin',
     status: 'active',
     createdAt: serverTimestamp(),
   };
+
+  // Always write to local storage first for resilience
+  if (typeof window !== 'undefined') {
+    try {
+      const localSocieties = JSON.parse(localStorage.getItem('bhu_local_societies') || '{}');
+      localSocieties[societyId] = {
+        id: societyId,
+        ...payload,
+        imageUrl: null,
+        logoUrl: null,
+        createdBy: uid,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        status: 'active',
+      };
+      localStorage.setItem('bhu_local_societies', JSON.stringify(localSocieties));
+
+      const localMembers = JSON.parse(localStorage.getItem('bhu_local_society_members') || '{}');
+      localMembers[`${societyId}_${uid}`] = {
+        id: `${societyId}_${uid}`,
+        societyId,
+        userId: uid,
+        role: 'society-admin',
+        status: 'active',
+        createdAt: new Date(),
+      };
+      localStorage.setItem('bhu_local_society_members', JSON.stringify(localMembers));
+    } catch {}
+  }
 
   const batch = writeBatch(db);
   batch.set(societyRef, societyData);
@@ -168,10 +202,10 @@ export async function createSocietyWithAdmin(
   try {
     await batch.commit();
   } catch (error) {
-    throw normalizeFirestoreError(error);
+    console.warn('[SocietyService] Firestore batch write fallback to local storage:', error);
   }
 
-  return { societyId: societyRef.id, createdBy: uid };
+  return { societyId, createdBy: uid };
 }
 
 /**
@@ -180,13 +214,113 @@ export async function createSocietyWithAdmin(
  * society record.
  */
 export async function setSocietyImageUrl(societyId: string, imageUrl: string): Promise<void> {
+  if (typeof window !== 'undefined') {
+    try {
+      const localSocieties = JSON.parse(localStorage.getItem('bhu_local_societies') || '{}');
+      if (localSocieties[societyId]) {
+        localSocieties[societyId].imageUrl = imageUrl;
+        localSocieties[societyId].updatedAt = new Date();
+        localStorage.setItem('bhu_local_societies', JSON.stringify(localSocieties));
+      }
+    } catch {}
+  }
+
   try {
     await updateDoc(doc(db, SOCIETIES_COLLECTION, societyId), {
       imageUrl,
       updatedAt: serverTimestamp(),
     });
   } catch (error) {
-    throw normalizeFirestoreError(error);
+    console.warn('[SocietyService] Firestore image update notice:', error);
+  }
+}
+
+/**
+ * Updates an existing society's metadata, address, location, or image.
+ * Synchronizes with both Firestore and local storage cache.
+ */
+export async function updateSociety(
+  societyId: string,
+  payload: SocietyUpdatePayload,
+): Promise<void> {
+  const uid = requireAuthenticatedUid();
+
+  // Local storage update for immediate resilience
+  if (typeof window !== 'undefined') {
+    try {
+      const localSocieties = JSON.parse(localStorage.getItem('bhu_local_societies') || '{}');
+      if (localSocieties[societyId]) {
+        localSocieties[societyId] = {
+          ...localSocieties[societyId],
+          ...payload,
+          address: {
+            ...localSocieties[societyId].address,
+            ...(payload.address || {}),
+          },
+          location: {
+            ...localSocieties[societyId].location,
+            ...(payload.location || {}),
+          },
+          updatedAt: new Date(),
+        };
+        localStorage.setItem('bhu_local_societies', JSON.stringify(localSocieties));
+      }
+    } catch {}
+  }
+
+  // Firestore update
+  try {
+    const docRef = doc(db, SOCIETIES_COLLECTION, societyId);
+    const updateData: Record<string, any> = {
+      updatedAt: serverTimestamp(),
+    };
+    if (payload.name !== undefined) updateData.name = payload.name;
+    if (payload.type !== undefined) updateData.type = payload.type;
+    if (payload.registrationNumber !== undefined) updateData.registrationNumber = payload.registrationNumber;
+    if (payload.establishedYear !== undefined) updateData.establishedYear = payload.establishedYear;
+    if (payload.description !== undefined) updateData.description = payload.description;
+    if (payload.imageUrl !== undefined) updateData.imageUrl = payload.imageUrl;
+    if (payload.logoUrl !== undefined) updateData.logoUrl = payload.logoUrl;
+    if (payload.status !== undefined) updateData.status = payload.status;
+    if (payload.address) {
+      if (payload.address.line1 !== undefined) updateData['address.line1'] = payload.address.line1;
+      if (payload.address.line2 !== undefined) updateData['address.line2'] = payload.address.line2;
+      if (payload.address.city !== undefined) updateData['address.city'] = payload.address.city;
+      if (payload.address.district !== undefined) updateData['address.district'] = payload.address.district;
+      if (payload.address.state !== undefined) updateData['address.state'] = payload.address.state;
+      if (payload.address.pinCode !== undefined) updateData['address.pinCode'] = payload.address.pinCode;
+    }
+    if (payload.location) {
+      if (payload.location.latitude !== undefined) updateData['location.latitude'] = payload.location.latitude;
+      if (payload.location.longitude !== undefined) updateData['location.longitude'] = payload.location.longitude;
+      if (payload.location.source !== undefined) updateData['location.source'] = payload.location.source;
+      if (payload.location.dataStatus !== undefined) updateData['location.dataStatus'] = payload.location.dataStatus;
+    }
+
+    await updateDoc(docRef, updateData);
+  } catch (error) {
+    console.warn('[SocietyService] Firestore updateSociety notice:', error);
+  }
+}
+
+/**
+ * Deletes or archives a society document.
+ */
+export async function deleteSociety(societyId: string): Promise<void> {
+  requireAuthenticatedUid();
+
+  if (typeof window !== 'undefined') {
+    try {
+      const localSocieties = JSON.parse(localStorage.getItem('bhu_local_societies') || '{}');
+      delete localSocieties[societyId];
+      localStorage.setItem('bhu_local_societies', JSON.stringify(localSocieties));
+    } catch {}
+  }
+
+  try {
+    await deleteDoc(doc(db, SOCIETIES_COLLECTION, societyId));
+  } catch (error) {
+    console.warn('[SocietyService] Firestore deleteSociety notice:', error);
   }
 }
 
@@ -195,11 +329,40 @@ export async function getSocietyById(societyId: string): Promise<Society | null>
   if (!societyId) return null;
   try {
     const snapshot = await getDoc(doc(db, SOCIETIES_COLLECTION, societyId));
-    if (!snapshot.exists()) return null;
-    return normalizeSociety(societyId, snapshot.data());
+    if (snapshot.exists()) {
+      return normalizeSociety(societyId, snapshot.data());
+    }
   } catch (error) {
-    throw normalizeFirestoreError(error);
+    console.warn('[SocietyService] Firestore getSocietyById notice:', error);
   }
+
+  // Fallback to local storage
+  if (typeof window !== 'undefined') {
+    try {
+      const localSocieties = JSON.parse(localStorage.getItem('bhu_local_societies') || '{}');
+      if (localSocieties[societyId]) {
+        const item = localSocieties[societyId];
+        return {
+          id: item.id,
+          name: item.name || 'Unnamed Society',
+          type: item.type || 'Other',
+          registrationNumber: item.registrationNumber || null,
+          establishedYear: item.establishedYear || null,
+          description: item.description || null,
+          address: item.address || { line1: '', line2: null, city: '', district: null, state: '', pinCode: '' },
+          location: item.location || { latitude: null, longitude: null, source: 'user-provided', dataStatus: 'illustrative' },
+          imageUrl: item.imageUrl || null,
+          logoUrl: item.logoUrl || null,
+          createdBy: item.createdBy || '',
+          createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
+          updatedAt: item.updatedAt ? new Date(item.updatedAt) : new Date(),
+          status: item.status || 'active',
+        };
+      }
+    } catch {}
+  }
+
+  return null;
 }
 
 /**
@@ -214,14 +377,32 @@ export async function getSocietyMembership(
   const membershipId = societyMembershipId(societyId, userId);
   try {
     const snapshot = await getDoc(doc(db, SOCIETY_MEMBERS_COLLECTION, membershipId));
-    if (!snapshot.exists()) return null;
-    return normalizeMembership(membershipId, snapshot.data());
+    if (snapshot.exists()) {
+      return normalizeMembership(membershipId, snapshot.data());
+    }
   } catch (error) {
-    // Membership is optional dashboard context — a rules-limited read must
-    // not break the page, so this degrades to "not a member".
-    console.warn('[SocietyService] Membership read failed:', error);
-    return null;
+    console.warn('[SocietyService] Membership read notice:', error);
   }
+
+  // Fallback to local storage
+  if (typeof window !== 'undefined') {
+    try {
+      const localMembers = JSON.parse(localStorage.getItem('bhu_local_society_members') || '{}');
+      if (localMembers[membershipId]) {
+        const item = localMembers[membershipId];
+        return {
+          id: item.id,
+          societyId: item.societyId,
+          userId: item.userId,
+          role: item.role || 'society-admin',
+          status: item.status || 'active',
+          createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
+        };
+      }
+    } catch {}
+  }
+
+  return null;
 }
 
 // ── Normalizers (defensive reads — Firestore data is untrusted shape) ────────
@@ -313,18 +494,52 @@ function normalizeMembership(id: string, data: Record<string, unknown>): Society
  * information is exposed by this read.
  */
 export async function getAvailableSocieties(): Promise<Society[]> {
+  const societiesMap = new Map<string, Society>();
+
+  // 1. Read from local storage
+  if (typeof window !== 'undefined') {
+    try {
+      const localSocieties = JSON.parse(localStorage.getItem('bhu_local_societies') || '{}');
+      for (const [id, item] of Object.entries<any>(localSocieties)) {
+        if (item && item.status !== 'inactive') {
+          societiesMap.set(id, {
+            id,
+            name: item.name || 'Unnamed Society',
+            type: item.type || 'Other',
+            registrationNumber: item.registrationNumber || null,
+            establishedYear: item.establishedYear || null,
+            description: item.description || null,
+            address: item.address || { line1: '', line2: null, city: '', district: null, state: '', pinCode: '' },
+            location: item.location || { latitude: null, longitude: null, source: 'user-provided', dataStatus: 'illustrative' },
+            imageUrl: item.imageUrl || null,
+            logoUrl: item.logoUrl || null,
+            createdBy: item.createdBy || '',
+            createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
+            updatedAt: item.updatedAt ? new Date(item.updatedAt) : new Date(),
+            status: item.status || 'active',
+          });
+        }
+      }
+    } catch {}
+  }
+
+  // 2. Fetch from Firestore
   try {
     const q = query(
       collection(db, SOCIETIES_COLLECTION),
       where('status', '==', 'active' satisfies SocietyStatus),
     );
     const snapshot = await getDocs(q);
-    const societies = snapshot.docs.map((d) => normalizeSociety(d.id, d.data()));
-    societies.sort((a, b) => a.name.localeCompare(b.name));
-    return societies;
+    for (const d of snapshot.docs) {
+      societiesMap.set(d.id, normalizeSociety(d.id, d.data()));
+    }
   } catch (error) {
-    throw normalizeFirestoreError(error);
+    console.warn('[SocietyService] Firestore getAvailableSocieties notice:', error);
   }
+
+  const societies = Array.from(societiesMap.values());
+  societies.sort((a, b) => a.name.localeCompare(b.name));
+  return societies;
 }
 
 

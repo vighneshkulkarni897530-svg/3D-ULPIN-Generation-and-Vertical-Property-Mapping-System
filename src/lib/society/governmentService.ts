@@ -36,6 +36,7 @@ import {
 } from 'firebase/firestore';
 
 import { auth, db } from '@/lib/firebase';
+import { getActiveSessionUid, getActiveSessionUser } from '@/lib/auth/clientSession';
 import {
   type CreateDiscrepancyPayload,
   type Discrepancy,
@@ -90,7 +91,7 @@ export function discrepancyDocRef(discrepancyId: string) {
 // ── Authentication Helpers ───────────────────────────────────────────────────
 
 function requireOfficerUid(): string {
-  const uid = auth.currentUser?.uid;
+  const uid = getActiveSessionUid() || auth.currentUser?.uid;
   if (!uid) {
     throw new SocietyServiceError(
       'AUTH_EXPIRED',
@@ -101,9 +102,12 @@ function requireOfficerUid(): string {
 }
 
 function getOfficerDisplayName(): string {
+  const sessionUser = getActiveSessionUser();
   return (
     auth.currentUser?.displayName ||
+    sessionUser?.name ||
     auth.currentUser?.email?.split('@')[0] ||
+    sessionUser?.email?.split('@')[0] ||
     'Authorized Officer'
   );
 }
@@ -311,7 +315,7 @@ export async function ensureGovernmentOfficerProfile(
 
   const now = serverTimestamp();
   const name = defaults?.name || getOfficerDisplayName();
-  const email = defaults?.email || auth.currentUser?.email || '';
+  const email = defaults?.email || auth.currentUser?.email || getActiveSessionUser()?.email || '';
 
   const data: WithFieldValue<GovernmentOfficerDocument> = {
     userId,

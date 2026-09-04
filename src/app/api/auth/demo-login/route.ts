@@ -17,18 +17,22 @@ const DEMO_EMAILS: Record<string, string> = {
   citizen: MOCK_USERS.citizen.email,
   officer: MOCK_USERS.officer.email,
   admin: MOCK_USERS.admin.email,
+  government_officer: MOCK_USERS.officer.email,
+  gov_officer: MOCK_USERS.officer.email,
+  society_admin: MOCK_USERS.admin.email,
+  super_admin: MOCK_USERS.admin.email,
 };
 
 export async function POST(req: NextRequest) {
   const body = await readJsonBody(req);
   if (!body) return jsonError(400, 'INVALID_BODY', 'Request body must be a JSON object.');
 
-  const role = requireString(body, 'role', 5, 10);
+  const role = requireString(body, 'role', 3, 30);
   if ('error' in role) return jsonError(400, 'INVALID_FIELD', role.error);
-  const roleKey = role.value.toLowerCase();
+  const roleKey = role.value.toLowerCase().trim().replace(/-/g, '_');
   const demoEmail = DEMO_EMAILS[roleKey];
   if (!demoEmail) {
-    return jsonError(400, 'INVALID_ROLE', 'Role must be one of: citizen, officer, admin.');
+    return jsonError(400, 'INVALID_ROLE', 'Role must be one of: citizen, officer, admin, government_officer, society_admin, super_admin.');
   }
 
   // 1) Try Supabase if configured

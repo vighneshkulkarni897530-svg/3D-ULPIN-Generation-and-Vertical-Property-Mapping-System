@@ -30,6 +30,15 @@ export default function OfficerLoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handleFillDemo = () => {
+    setEmail('ananya.iyer@rev.gov.in');
+    setBadgeNumber('KA-REV-7782');
+    setPassword(DEMO_PASSWORD);
+    setError(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -81,6 +90,25 @@ export default function OfficerLoginPage() {
           <p className="text-xs text-slate-400 max-w-sm mx-auto">
             Ministry of Revenue &amp; Cadastral Land Administration · Officer Credential Authentication
           </p>
+        </div>
+
+        {/* Quick Demo Fill Card */}
+        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-3.5 flex items-center justify-between gap-3 text-xs">
+          <div>
+            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-emerald-400 block">
+              ⚡ Demo Officer Credentials
+            </span>
+            <span className="text-[11px] text-slate-300 font-mono">
+              ananya.iyer@rev.gov.in (KA-REV-7782)
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={handleFillDemo}
+            className="shrink-0 rounded-xl border border-emerald-400/40 bg-emerald-500/20 px-3 py-1.5 font-bold text-emerald-300 hover:bg-emerald-500/30 hover:border-emerald-400 transition-colors cursor-pointer"
+          >
+            Auto-Fill
+          </button>
         </div>
 
         <div className="bg-slate-900/90 border border-slate-800 p-7 rounded-3xl shadow-2xl backdrop-blur-xl space-y-5">
@@ -136,13 +164,20 @@ export default function OfficerLoginPage() {
               <div className="relative">
                 <Lock className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••••"
-                  className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2.5 pl-10 pr-4 text-xs font-medium text-white outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                  className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2.5 pl-10 pr-10 text-xs font-medium text-white outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 hover:text-slate-300 cursor-pointer"
+                >
+                  {showPassword ? <span className="text-[10px] font-bold text-emerald-400">HIDE</span> : <span className="text-[10px] font-bold text-slate-400">SHOW</span>}
+                </button>
               </div>
             </div>
 

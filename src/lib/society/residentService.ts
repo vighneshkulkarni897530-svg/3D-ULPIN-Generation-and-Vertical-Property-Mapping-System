@@ -42,6 +42,7 @@ import {
 } from 'firebase/firestore';
 
 import { auth, db } from '@/lib/firebase';
+import { getActiveSessionUid, getActiveSessionUser } from '@/lib/auth/clientSession';
 import {
   type Resident,
   type ResidentDocument,
@@ -92,7 +93,7 @@ export function societyMemberDocRef(societyId: string, userId: string) {
 
 /** Resolves the authenticated Firebase UID or throws. */
 function requireUid(): string {
-  const uid = auth.currentUser?.uid;
+  const uid = getActiveSessionUid() || auth.currentUser?.uid;
   if (!uid) {
     throw new SocietyServiceError(
       'AUTH_EXPIRED',
@@ -108,7 +109,7 @@ function requireUid(): string {
  * in that case rather than blocking registration.
  */
 function getAuthenticatedEmail(): string {
-  return auth.currentUser?.email ?? '';
+  return auth.currentUser?.email || getActiveSessionUser()?.email || '';
 }
 
 function isResidentStatus(value: unknown): value is ResidentStatus {

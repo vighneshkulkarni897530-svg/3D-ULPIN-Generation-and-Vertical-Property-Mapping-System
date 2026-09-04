@@ -27,6 +27,7 @@ import {
 } from 'firebase/storage';
 
 import { auth, db, firebaseApp } from '@/lib/firebase';
+import { getActiveSessionUid, getActiveSessionUser } from '@/lib/auth/clientSession';
 import {
   type PropertyDocument,
   type PropertyDocumentDocument,
@@ -160,10 +161,17 @@ export interface UploadAndAnalyzeInput {
 export async function uploadAndAnalyzeDocument(
   input: UploadAndAnalyzeInput,
 ): Promise<{ document: PropertyDocument; analysis: DocumentAnalysis }> {
-  const user = auth.currentUser;
-  if (!user) {
+  const sessionUser = getActiveSessionUser();
+  const uid = auth.currentUser?.uid || sessionUser?.id || getActiveSessionUid();
+  if (!uid) {
     throw new SocietyServiceError('AUTH_EXPIRED', 'Must be signed in to upload and analyze documents.');
   }
+  const userName =
+    auth.currentUser?.displayName ||
+    sessionUser?.name ||
+    auth.currentUser?.email?.split('@')[0] ||
+    sessionUser?.email?.split('@')[0] ||
+    'User';
 
   const { file } = input;
 
@@ -197,7 +205,7 @@ export async function uploadAndAnalyzeDocument(
           societyId: input.societyId,
           documentId,
           analysisId,
-          uploadedBy: user.uid,
+          uploadedBy: uid,
         },
       });
       downloadUrl = await getDownloadURL(uploadTask.ref);
@@ -256,8 +264,8 @@ export async function uploadAndAnalyzeDocument(
       mimeType: file.type || 'application/pdf',
       storagePath,
       downloadUrl,
-      uploadedBy: user.uid,
-      uploadedByName: user.displayName || user.email?.split('@')[0] || 'User',
+      uploadedBy: uid,
+      uploadedByName: userName,
       uploadedByRole: 'government-officer',
       analysisId,
       status: finalStatus,
@@ -290,7 +298,7 @@ export async function uploadAndAnalyzeDocument(
       convertedDiscrepancyId: null,
       convertedCaseId: null,
       disclaimer: MANDATORY_AI_DISCLAIMER,
-      uploadedBy: user.uid,
+      uploadedBy: uid,
       createdAt: now,
       updatedAt: now,
       completedAt: now,
@@ -299,9 +307,9 @@ export async function uploadAndAnalyzeDocument(
     await setDoc(analysisRef, analysisData);
 
     // Notify User
-    if (user.uid) {
+    if (uid) {
       createNotification({
-        recipientUid: user.uid,
+        recipientUid: uid,
         societyId: input.societyId,
         type: 'GENERAL_SYSTEM',
         title: `Document Analysis Completed: ${file.name}`,
@@ -362,15 +370,23 @@ export async function updateOfficerReviewStatus(
   reviewStatus: OfficerReviewStatus,
   officerNotes?: string,
 ): Promise<void> {
-  const user = auth.currentUser;
-  if (!user) throw new SocietyServiceError('AUTH_EXPIRED', 'Must be signed in as an officer.');
+  const sessionUser = getActiveSessionUser();
+  const uid = auth.currentUser?.uid || sessionUser?.id || getActiveSessionUid();
+  if (!uid) throw new SocietyServiceError('AUTH_EXPIRED', 'Must be signed in as an officer.');
 
   try {
     const now = serverTimestamp();
+    const officerName =
+      auth.currentUser?.displayName ||
+      sessionUser?.name ||
+      auth.currentUser?.email?.split('@')[0] ||
+      sessionUser?.email?.split('@')[0] ||
+      'Government Officer';
+
     await updateDoc(doc(db, DOCUMENT_ANALYSES_COLLECTION, analysisId), {
       officerReviewStatus: reviewStatus,
-      reviewedBy: user.uid,
-      reviewedByName: user.displayName || user.email?.split('@')[0] || 'Government Officer',
+      reviewedBy: uid,
+      reviewedByName: officerName,
       reviewedAt: now,
       officerNotes: officerNotes?.trim() || null,
       updatedAt: now,

@@ -15,6 +15,9 @@ import {
   Sparkles,
   ArrowLeft,
   FileCheck,
+  CheckCircle2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { DEMO_PASSWORD } from "@/lib/auth/authConstants";
 import { MOCK_USERS } from "@/data/mockUsers";
@@ -26,8 +29,16 @@ export default function SocietyLoginPage() {
   const [societyRegNo, setSocietyRegNo] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleFillDemoSecretary = () => {
+    setSocietyRegNo("PUN/HSG/2016/48201");
+    setEmail(MOCK_USERS.admin.email);
+    setPassword(DEMO_PASSWORD);
+    setError(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,6 +91,28 @@ export default function SocietyLoginPage() {
           <p className="text-xs text-slate-400 max-w-sm mx-auto">
             Authorized Co-operative Housing Society Management · Building Registration &amp; Periodic Renewals
           </p>
+        </div>
+
+        {/* Demo Persona Quick-Fill Banner */}
+        <div className="rounded-2xl border border-indigo-500/30 bg-indigo-950/30 p-3.5 backdrop-blur-md">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-400 font-bold text-xs">
+                ⚡
+              </span>
+              <div>
+                <p className="text-xs font-bold text-indigo-200">Demo Secretary Account</p>
+                <p className="font-mono text-[10px] text-slate-400">Green Valley CHS · PUN/HSG/2016/48201</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleFillDemoSecretary}
+              className="rounded-xl border border-indigo-400/50 bg-indigo-500/20 px-2.5 py-1 text-[11px] font-black text-indigo-300 hover:bg-indigo-500/30 hover:border-indigo-400 transition-all cursor-pointer"
+            >
+              Fill Credentials
+            </button>
+          </div>
         </div>
 
         <div className="bg-slate-900/90 border border-slate-800 p-7 rounded-3xl shadow-2xl backdrop-blur-xl space-y-5">
@@ -136,13 +169,20 @@ export default function SocietyLoginPage() {
               <div className="relative">
                 <Lock className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••••"
-                  className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2.5 pl-10 pr-4 text-xs font-medium text-white outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                  className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2.5 pl-10 pr-10 text-xs font-medium text-white outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
             </div>
 
@@ -150,7 +190,7 @@ export default function SocietyLoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 py-3 text-xs font-black text-white shadow-lg hover:from-indigo-400 hover:to-purple-500 transition-all disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 py-3 text-xs font-black text-white shadow-lg hover:from-indigo-400 hover:to-purple-500 transition-all disabled:opacity-50 cursor-pointer"
               >
                 {loading ? (
                   <>

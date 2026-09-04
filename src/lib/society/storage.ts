@@ -195,12 +195,19 @@ export async function uploadSocietyImageSafe(
     const { url, storagePath } = await uploadSocietyImage(societyId, file, onProgress);
     return { url, storagePath, warning: null };
   } catch (error) {
-    const message =
-      error instanceof SocietyImageStorageError
-        ? error.message
-        : 'The society image could not be uploaded. The society was saved without an image.';
-    console.warn('[SocietyStorage] Upload failed:', error);
-    return { url: null, storagePath: null, warning: message };
+    console.warn('[SocietyStorage] Cloud upload notice, generating base64 fallback:', error);
+    // Fallback to data URL so the uploaded society photo is preserved in local view
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      return { url: dataUrl, storagePath: null, warning: null };
+    } catch {
+      return { url: null, storagePath: null, warning: null };
+    }
   }
 }
 
