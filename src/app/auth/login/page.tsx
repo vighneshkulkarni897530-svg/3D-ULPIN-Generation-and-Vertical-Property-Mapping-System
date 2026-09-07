@@ -73,29 +73,18 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-10rem)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden bg-slate-950">
-      {/* Background glow accents */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[350px] bg-cyan-500/10 blur-[110px] rounded-full pointer-events-none" />
-      <div className="absolute top-1/3 right-1/4 w-[300px] h-[200px] bg-blue-500/10 blur-[90px] rounded-full pointer-events-none" />
-
+    <div className="min-h-[calc(100vh-10rem)] flex items-center justify-center py-6 px-4 sm:px-6 lg:px-8 relative">
       <div className="max-w-md w-full space-y-6 relative z-10 mx-auto">
-        {/* Big Centered Rotating Earth Globe Visual on Y-Axis */}
-        <div className="flex flex-col items-center justify-center text-center mb-1">
-          <RotatingEarthGlobe
-            size="lg"
-            showAtmosphere
-            showOrbitalRing
-            rotationDurationSeconds={16}
-          />
-        </div>
-
         {/* Header Branding */}
         <div className="text-center space-y-2">
+          <div className="w-14 h-14 rounded-2xl overflow-hidden border border-cyan-500/40 bg-slate-950 p-0.5 mx-auto shadow-tech-cyan flex items-center justify-center">
+            <img src="/logo.jpeg" alt="CyberSpark Logo" className="w-full h-full object-cover rounded-[14px]" />
+          </div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/90 border border-cyan-500/30 text-[11px] font-mono font-bold text-cyan-300 shadow-inner">
             <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
             <span>SIH 2026 · Digital Cadastre 3D Earth</span>
           </div>
-          <h2 className="text-2xl font-extrabold tracking-tight text-white mt-1">
+          <h2 className="text-2xl font-extrabold tracking-tight text-white">
             Citizen Portal Sign In
           </h2>
           <p className="text-xs text-slate-400">

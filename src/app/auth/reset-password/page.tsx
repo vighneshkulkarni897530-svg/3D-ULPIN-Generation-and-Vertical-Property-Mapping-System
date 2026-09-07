@@ -84,13 +84,15 @@ function ResetPasswordForm() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-10rem)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-950 relative overflow-hidden">
+    <div className="min-h-[calc(100vh-10rem)] flex items-center justify-center py-6 px-4 sm:px-6 lg:px-8 relative">
       <div className="max-w-md w-full space-y-6 relative z-10">
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 p-0.5 mx-auto shadow-tech-cyan flex items-center justify-center">
-            <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-              <Building className="w-6 h-6 text-cyan-400" />
-            </div>
+          <div className="w-14 h-14 rounded-2xl overflow-hidden border border-cyan-500/40 bg-slate-950 p-0.5 mx-auto shadow-tech-cyan flex items-center justify-center">
+            <img src="/logo.jpeg" alt="CyberSpark Logo" className="w-full h-full object-cover rounded-[14px]" />
+          </div>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/90 border border-cyan-500/30 text-[11px] font-mono font-bold text-cyan-300 shadow-inner">
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+            <span>SIH 2026 · Digital Cadastre 3D Earth</span>
           </div>
           <h2 className="text-2xl font-extrabold tracking-tight text-white">Create New Password</h2>
           <p className="text-xs text-slate-400">
