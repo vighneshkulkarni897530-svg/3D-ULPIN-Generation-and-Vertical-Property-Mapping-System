@@ -80,22 +80,28 @@ export default function OfficerLoginPage() {
           </span>
         </div>
 
-        {/* Header Branding with Rotating Earth Globe */}
-        <div className="text-center space-y-3">
-          <div className="flex items-center justify-center gap-3">
-            <div className="w-12 h-12 rounded-2xl overflow-hidden border border-emerald-500/40 bg-slate-950 p-0.5 shadow-lg flex items-center justify-center">
-              <img src="/logo.jpeg" alt="CyberSpark Logo" className="w-full h-full object-cover rounded-[14px]" />
-            </div>
-            <RotatingEarthGlobe size="sm" showAtmosphere showOrbitalRing rotationDurationSeconds={35} />
+        {/* Big Centered Rotating Earth Globe Visual on Y-Axis */}
+        <div className="flex flex-col items-center justify-center text-center mb-1">
+          <RotatingEarthGlobe
+            size="lg"
+            showAtmosphere
+            showOrbitalRing
+            rotationDurationSeconds={16}
+          />
+        </div>
+
+        {/* Header Branding */}
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/90 border border-emerald-500/30 text-[11px] font-mono font-bold text-emerald-300 shadow-inner">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+            <span>SIH 2026 · Digital Cadastre 3D Earth</span>
           </div>
-          <div>
-            <h2 className="text-2xl font-black tracking-tight text-white">
-              Government Officer Portal
-            </h2>
-            <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
-              Ministry of Revenue &amp; Cadastral Land Administration · Officer Credential Authentication
-            </p>
-          </div>
+          <h2 className="text-2xl font-black tracking-tight text-white mt-1">
+            Government Officer Portal
+          </h2>
+          <p className="text-xs text-slate-400 max-w-sm mx-auto">
+            Ministry of Revenue &amp; Cadastral Land Administration · Officer Credential Authentication
+          </p>
         </div>
 
         {/* Quick Demo Fill Card */}

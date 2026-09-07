@@ -199,22 +199,28 @@ export default function RegisterPage() {
   return (
     <div className="min-h-[calc(100vh-10rem)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-950 relative overflow-hidden">
       <div className="max-w-md w-full space-y-6 relative z-10">
-        {/* Header Branding with Rotating Earth Globe */}
-        <div className="text-center space-y-3">
-          <div className="flex items-center justify-center gap-3">
-            <div className="w-12 h-12 rounded-2xl overflow-hidden border border-cyan-500/40 bg-slate-950 p-0.5 shadow-tech-cyan flex items-center justify-center">
-              <img src="/logo.jpeg" alt="CyberSpark Logo" className="w-full h-full object-cover rounded-[14px]" />
-            </div>
-            <RotatingEarthGlobe size="sm" showAtmosphere showOrbitalRing rotationDurationSeconds={35} />
+        {/* Big Centered Rotating Earth Globe Visual on Y-Axis */}
+        <div className="flex flex-col items-center justify-center text-center mb-1">
+          <RotatingEarthGlobe
+            size="lg"
+            showAtmosphere
+            showOrbitalRing
+            rotationDurationSeconds={16}
+          />
+        </div>
+
+        {/* Header Branding */}
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/90 border border-cyan-500/30 text-[11px] font-mono font-bold text-cyan-300 shadow-inner">
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+            <span>SIH 2026 · Digital Cadastre 3D Earth</span>
           </div>
-          <div>
-            <h2 className="text-2xl font-extrabold tracking-tight text-white">
-              Create Cadastre Account
-            </h2>
-            <p className="text-xs text-slate-400 mt-1">
-              Register your digital profile for transparent property verification &amp; dispute resolution.
-            </p>
-          </div>
+          <h2 className="text-2xl font-extrabold tracking-tight text-white mt-1">
+            Create Cadastre Account
+          </h2>
+          <p className="text-xs text-slate-400">
+            Register your digital profile for transparent property verification &amp; dispute resolution.
+          </p>
         </div>
 
         <div className="bg-slate-900/90 border border-slate-800 p-7 rounded-3xl shadow-2xl backdrop-blur-xl space-y-5">
