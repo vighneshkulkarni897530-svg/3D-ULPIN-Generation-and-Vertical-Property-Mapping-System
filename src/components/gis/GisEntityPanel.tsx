@@ -94,7 +94,7 @@ export function GisEntityPanel({ selectedConflict, onVisualizeIn3D, onClose, cla
             onSelectProperty={(id) => selectProperty(id)}
           />
         )}
-        {!selectedConflict && property && <PropertyCard property={property} />}
+        {!selectedConflict && property && <PropertyCard property={property} floors={floors} />}
         {!selectedConflict && !property && building && (
           <BuildingCard
             buildingId={building.id}
@@ -175,7 +175,22 @@ function CardShell({
 
 // ── Property ────────────────────────────────────────────────────────────────
 
-function PropertyCard({ property }: { property: ReturnType<typeof useGIS>["properties"][number] }) {
+function PropertyCard({
+  property,
+  floors,
+}: {
+  property: ReturnType<typeof useGIS>["properties"][number];
+  floors: ReturnType<typeof useGIS>["floors"];
+}) {
+  // Phase 21 — canonical Digital Twin deep link. The twin route resolves its
+  // [id] segment to a featured registry unit (GISContext property id), so the
+  // link must point at the UNIT id — never the parcel id — and carry the
+  // resolved floor number + unit number for full automatic selection
+  // (tower → isolate → floor → flat → property details).
+  const unitFloorNumber = floors.find((f) => f.id === property.floorId)?.floorNumber ?? null;
+  const twinHref = `/properties/${property.id}/digital-twin?building=${property.buildingId}${
+    unitFloorNumber !== null ? `&floor=${unitFloorNumber}` : ""
+  }&flat=${property.unitNumber}`;
   const { conflicts } = useGIS();
   const openConflicts = conflicts.filter(
     (c) => c.affectedPropertyIds.includes(property.id) && c.status !== "Resolved",
@@ -229,7 +244,7 @@ function PropertyCard({ property }: { property: ReturnType<typeof useGIS>["prope
       {/* Quick Action Links */}
       <div className="mt-3 flex flex-col gap-1.5">
         <Link
-          href={`/properties/${property.parcelId}/digital-twin?building=${property.buildingId}&flat=${property.id}`}
+          href={twinHref}
           className="flex items-center justify-center gap-1.5 rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-[10px] font-bold text-cyan-300 hover:bg-cyan-500/20"
         >
           <Box className="h-3.5 w-3.5" /> Open Unit in 3D Digital Twin
@@ -317,6 +332,19 @@ function BuildingCard({
   const verified = units.filter((u) => u.verificationStatus === "Verified").length;
   const pending = units.filter((u) => u.verificationStatus === "Pending").length;
 
+  // Phase 21 — canonical Digital Twin deep link. The twin route's [id] must be
+  // a registry UNIT id so the viewer auto-resolves tower → floor → flat.
+  // Falls back to the parcel-scoped link only when the building has no units.
+  const firstUnit = units[0] ?? null;
+  const firstUnitFloor = firstUnit
+    ? floors.find((f) => f.id === firstUnit.floorId)?.floorNumber ?? null
+    : null;
+  const twinHref = firstUnit
+    ? `/properties/${firstUnit.id}/digital-twin?building=${building.id}${
+        firstUnitFloor !== null ? `&floor=${firstUnitFloor}` : ""
+      }&flat=${firstUnit.unitNumber}`
+    : `/properties/${parcelNumber ?? building.parcelId}/digital-twin?building=${building.id}`;
+
   return (
     <CardShell
       eyebrow="Building Information"
@@ -369,7 +397,7 @@ function BuildingCard({
           <ExternalLink className="h-3.5 w-3.5" /> Open Building Details
         </Link>
         <Link
-          href={`/properties/${parcelNumber ?? building.parcelId}/digital-twin?building=${building.id}`}
+          href={twinHref}
           className="flex items-center justify-center gap-1.5 rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-[10.5px] font-bold text-cyan-300 transition-colors hover:bg-cyan-500/20"
         >
           <Box className="h-3.5 w-3.5" /> Launch in 3D Digital Twin

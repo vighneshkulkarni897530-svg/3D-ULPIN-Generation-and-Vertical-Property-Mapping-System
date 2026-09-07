@@ -2,8 +2,15 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { TWIN_ANALYTICS } from "@/data/mockDigitalTwin";
+import type { TwinBuildingInfo, TwinFloor } from "@/data/mockDigitalTwin";
 import { fadeUp, staggerContainer } from "./motion";
+
+interface BuildingAnalyticsProps {
+  /** Canonical twin building (Phase 20 — real values, never the mock strip). */
+  building: TwinBuildingInfo;
+  /** Canonical twin floors — unit verification states are derived from these. */
+  floors: TwinFloor[];
+}
 
 /** Mini animated line chart — pure SVG with glowing stroke. */
 function MiniChart({ points, color }: { points: number[]; color: string }) {
@@ -49,8 +56,27 @@ function MiniChart({ points, color }: { points: number[]; color: string }) {
   );
 }
 
-/** Analytics strip — Total Floors, Units, Verified, Pending, Disputed. */
-export function BuildingAnalytics() {
+/** Deterministic illustrative sparkline ramping to the REAL value. */
+function sparkline(value: number): number[] {
+  const v = Math.max(0, value);
+  return [0.7, 0.78, 0.86, 0.93, 1].map((f) => Math.round(v * f));
+}
+
+/** Analytics strip — derived from the canonical twin view (Phase 20). */
+export function BuildingAnalytics({ building, floors }: BuildingAnalyticsProps) {
+  const units = React.useMemo(() => floors.flatMap((f) => f.units), [floors]);
+  const verified = units.filter((u) => u.status === "VERIFIED").length;
+  const pending = units.filter((u) => u.status === "PENDING" || u.status === "UNDER_REVIEW").length;
+  const disputed = units.filter((u) => u.status === "DISPUTED").length;
+
+  const data: { label: string; value: number; color: string }[] = [
+    { label: "Total Floors", value: building.totalFloors, color: "#00D9FF" },
+    { label: "Property Units", value: building.totalUnits, color: "#008CFF" },
+    { label: "Verified Units", value: verified, color: "#22C55E" },
+    { label: "Pending Units", value: pending, color: "#FACC15" },
+    { label: "Disputed Units", value: disputed, color: "#EF4444" },
+  ];
+
   return (
     <motion.div
       variants={staggerContainer}
@@ -58,7 +84,7 @@ export function BuildingAnalytics() {
       animate="show"
       className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5"
     >
-      {TWIN_ANALYTICS.map((item, i) => (
+      {data.map((item, i) => (
         <motion.div
           key={item.label}
           variants={fadeUp}
@@ -74,7 +100,7 @@ export function BuildingAnalytics() {
               {item.value}
             </span>
           </div>
-          <MiniChart points={item.sparkline} color={item.color} />
+          <MiniChart points={sparkline(item.value)} color={item.color} />
         </motion.div>
       ))}
     </motion.div>

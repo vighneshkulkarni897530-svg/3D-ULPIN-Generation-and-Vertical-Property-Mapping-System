@@ -72,6 +72,10 @@ export default function BuildingsPage() {
   const [archiveTarget, setArchiveTarget] = React.useState<Building | null>(null);
   const [deleting, setDeleting] = React.useState(false);
   const [archiving, setArchiving] = React.useState(false);
+  // Phase 21 — archive confirmation must show affected floor/unit counts and
+  // REQUIRE an archive reason before the soft-delete is committed.
+  const [archiveReason, setArchiveReason] = React.useState('');
+  const [archiveCounts, setArchiveCounts] = React.useState<{ floors: number; flats: number } | null>(null);
   const [showArchived, setShowArchived] = React.useState(false);
   const [formErrors, setFormErrors] = React.useState<Record<string, string>>({});
 
@@ -167,9 +171,11 @@ export default function BuildingsPage() {
 
   const handleArchiveConfirm = async () => {
     if (!archiveTarget) return;
+    const trimmedReason = archiveReason.trim();
+    if (!trimmedReason) return; // reason is mandatory (UI also disables the button)
     setArchiving(true);
     try {
-      await archiveBuilding(societyId, archiveTarget.id, 'Archived by society administrator');
+      await archiveBuilding(societyId, archiveTarget.id, trimmedReason);
       toast({ title: 'Building archived', description: `${archiveTarget.name} has been archived safely. Historical floors and units are preserved.` });
       setArchiveTarget(null);
       loadAll();
@@ -183,6 +189,31 @@ export default function BuildingsPage() {
       setArchiving(false);
     }
   };
+
+  // Phase 21 — when an archive target is chosen, load its affected floor/flat
+  // counts so the confirmation dialog shows exactly what will be preserved.
+  React.useEffect(() => {
+    if (!archiveTarget) {
+      setArchiveCounts(null);
+      setArchiveReason('');
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const floors = await getFloors(societyId, archiveTarget.id);
+        const perFloorFlats = await Promise.all(floors.map((f) => getFlats(societyId, archiveTarget.id, f.id)));
+        if (!cancelled) {
+          setArchiveCounts({ floors: floors.length, flats: perFloorFlats.flat().length });
+        }
+      } catch {
+        if (!cancelled) setArchiveCounts({ floors: 0, flats: 0 });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [archiveTarget, societyId]);
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
@@ -316,10 +347,16 @@ export default function BuildingsPage() {
                       </div>
                       <div className="flex flex-wrap justify-end gap-2 pt-2 border-t">
                         <Link
+                          href={`/properties/default-township/digital-twin?societyId=${societyId}&buildingId=${b.id}`}
+                          className="inline-flex h-8 items-center justify-center gap-1 whitespace-nowrap rounded-lg border border-cyan-500/40 bg-cyan-50 px-3 text-xs font-bold text-cyan-800 shadow-sm transition-colors hover:bg-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+                        >
+                          <Building2 className="h-3.5 w-3.5 text-cyan-600 mr-1" />3D Twin
+                        </Link>
+                        <Link
                           href={`/society/${societyId}/buildings/${b.id}`}
                           className="inline-flex h-8 items-center justify-center gap-1 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
                         >
-                          <Eye className="h-3.5 w-3.5 mr-1" />View
+                          <Eye className="h-3.5 w-3.5 mr-1" />Manage
                         </Link>
                         <Button size="sm" variant="outline" onClick={() => setEditingBuilding(b)}>
                           <Edit3 className="h-3.5 w-3.5 mr-1" />Edit
@@ -386,15 +423,56 @@ export default function BuildingsPage() {
           open={!!archiveTarget}
           onOpenChange={(o) => !o && setArchiveTarget(null)}
           title="Archive Building (Safe Soft-Delete)"
-          description={archiveTarget
-            ? `Are you sure you want to archive "${archiveTarget.name}" (${archiveTarget.code})? This will preserve all historical floor slabs, flat records, and audit logs while marking the building inactive.`
-            : ''}
+          description={
+            archiveTarget
+              ? `You are about to archive "${archiveTarget.name}" (code: ${archiveTarget.code}). This is a SOFT archive — all historical floor slabs, flat records, and audit logs are preserved. The building will be hidden from active lists, GIS and 3D views.`
+              : ''
+          }
           confirmLabel="Archive Building"
           cancelLabel="Cancel"
           tone="default"
           onConfirm={handleArchiveConfirm}
           loading={archiving}
-        />
+          confirmDisabled={archiveReason.trim().length === 0}
+        >
+          {archiveTarget && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+                  <p className="text-[10px] uppercase tracking-wide text-slate-500">Building</p>
+                  <p className="font-semibold text-slate-900">{archiveTarget.name}</p>
+                  <p className="font-mono text-[11px] text-slate-500">{archiveTarget.code}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+                  <p className="text-[10px] uppercase tracking-wide text-slate-500">Affected (preserved)</p>
+                  <p className="font-semibold text-slate-900">
+                    {archiveCounts ? `${archiveCounts.floors} floor${archiveCounts.floors === 1 ? '' : 's'}` : 'Counting floors…'}
+                  </p>
+                  <p className="font-semibold text-slate-900">
+                    {archiveCounts ? `${archiveCounts.flats} unit${archiveCounts.flats === 1 ? '' : 's'}` : 'Counting units…'}
+                  </p>
+                </div>
+              </div>
+              <div>
+                <label htmlFor="archive-reason" className="mb-1 block text-xs font-medium text-slate-700">
+                  Archive reason <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  id="archive-reason"
+                  value={archiveReason}
+                  onChange={(e) => setArchiveReason(e.target.value)}
+                  rows={3}
+                  required
+                  placeholder="e.g. Redevelopment of Tower as per society AGM resolution 2026-04"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                />
+                {archiveReason.trim().length === 0 && (
+                  <p className="mt-1 text-[11px] text-red-500">An archive reason is required before confirming.</p>
+                )}
+              </div>
+            </div>
+          )}
+        </ConfirmationDialog>
 
         <ConfirmationDialog
           open={!!deleteTarget}

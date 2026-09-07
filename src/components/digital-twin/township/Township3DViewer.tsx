@@ -123,6 +123,14 @@ export interface Township3DViewerProps {
     description: string;
     affectedPropertyIds: string[];
   }>;
+  /** Custom / dynamic towers to render in the scene (e.g. from real society buildings or AI generation). */
+  towers?: TowerDef[];
+  /** Uploaded 2D image (aerial/drone/building photo) to project onto ground. */
+  societyImageUrl?: string | null;
+  /** Society or property title for branding & AI massing labels. */
+  societyName?: string;
+  /** True when scene is synthesized from uploaded image. */
+  isAiReconstructed?: boolean;
   className?: string;
 }
 
@@ -1727,6 +1735,97 @@ function DiscrepancyMarkersOverlay({
   );
 }
 
+/* ------------------- Orthophoto 2D Ground Projection -------------------- */
+
+/**
+ * Projects the user's uploaded 2D drone/aerial/site photo directly onto
+ * the Three.js ground plane, aligning with the 3D extruded massing.
+ */
+function OrthophotoGroundImage({
+  imageUrl,
+  width = 160,
+  depth = 130,
+  opacity = 0.95,
+  visible = true,
+  societyName,
+}: {
+  imageUrl?: string | null;
+  width?: number;
+  depth?: number;
+  opacity?: number;
+  visible?: boolean;
+  societyName?: string;
+}) {
+  const [texture, setTexture] = React.useState<THREE.Texture | null>(null);
+
+  React.useEffect(() => {
+    if (!imageUrl) {
+      setTexture(null);
+      return;
+    }
+    const loader = new THREE.TextureLoader();
+    loader.setCrossOrigin("anonymous");
+    let active = true;
+
+    loader.load(
+      imageUrl,
+      (tex) => {
+        if (!active) return;
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.generateMipmaps = true;
+        tex.minFilter = THREE.LinearMipmapLinearFilter;
+        tex.magFilter = THREE.LinearFilter;
+        setTexture(tex);
+      },
+      undefined,
+      (err) => {
+        console.warn("[Township3DViewer] Ground texture load notice:", err);
+      }
+    );
+
+    return () => {
+      active = false;
+    };
+  }, [imageUrl]);
+
+  if (!visible || !texture) return null;
+
+  const halfW = width / 2;
+  const halfD = depth / 2;
+  const borderPoints: Array<[number, number, number]> = [
+    [-halfW, 0.18, -halfD],
+    [halfW, 0.18, -halfD],
+    [halfW, 0.18, halfD],
+    [-halfW, 0.18, halfD],
+    [-halfW, 0.18, -halfD],
+  ];
+
+  return (
+    <group position={[0, 0.12, 0]}>
+      {/* Uploaded 2D Image Texture Ground Projection */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[width, depth]} />
+        <meshStandardMaterial
+          map={texture}
+          roughness={0.7}
+          metalness={0.05}
+          transparent
+          opacity={opacity}
+        />
+      </mesh>
+      {/* Neon Holographic Border around the Uploaded Image Site */}
+      <Line points={borderPoints} color="#00D9FF" lineWidth={2.2} />
+      {/* Holographic Scan Marker */}
+      <Html position={[-halfW + 16, 1.4, -halfD + 8]} center distanceFactor={260} style={{ pointerEvents: "none" }}>
+        <div className="flex items-center gap-1.5 rounded-lg bg-slate-950/95 border border-cyan-400/80 px-2.5 py-1 font-mono text-[8.5px] font-black text-cyan-300 shadow-[0_0_15px_rgba(0,217,255,0.5)] backdrop-blur-md">
+          <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
+          <span>{societyName ? `${societyName.toUpperCase()} · ` : ""}AI 2D→3D PROJECTION</span>
+        </div>
+      </Html>
+    </group>
+  );
+}
+
 /* --------------------------- Main component ----------------------------- */
 
 export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Township3DViewerProps>(
@@ -1748,6 +1847,10 @@ export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Townshi
       onMeasureClick,
       discrepancyOverlay = false,
       conflicts = [],
+      towers,
+      societyImageUrl,
+      societyName,
+      isAiReconstructed = false,
       className,
     },
     ref
@@ -1758,7 +1861,13 @@ export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Townshi
     const [flightNonce, setFlightNonce] = React.useState(0);
     const [isNightMode, setIsNightMode] = React.useState(true);
     const [isAutoRotate, setIsAutoRotate] = React.useState(false);
+    const [showImageOverlay, setShowImageOverlay] = React.useState(true);
     const tier = useMobileTier();
+
+    const activeTowers = React.useMemo(() => {
+      if (towers && towers.length > 0) return towers;
+      return TOWERS;
+    }, [towers]);
 
     // Dynamic Sun Calculation for Day mode
     const sunPos = React.useMemo(() => {
@@ -1787,7 +1896,7 @@ export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Townshi
     );
 
     const handleFocusBuilding = () => {
-      const target = TOWERS.find((t) => t.id === selectedTowerId) ?? TOWERS[1]; // default Tower B
+      const target = activeTowers.find((t) => t.id === selectedTowerId) ?? activeTowers[0];
       apiRef.current?.focusTower(target);
       if (!selectedTowerId) onSelectTower(target.id);
     };
@@ -1866,6 +1975,22 @@ export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Townshi
           >
             <Maximize className="h-3 w-3 text-cyan-400" /> Fullscreen
           </button>
+          {/* Uploaded 2D Image Ground Plan Toggle */}
+          {societyImageUrl && (
+            <button
+              type="button"
+              onClick={() => setShowImageOverlay((v) => !v)}
+              title="Toggle Uploaded 2D Image Orthophoto Plan"
+              className={cn(
+                "flex h-7 items-center gap-1 rounded-lg border px-2 text-[9.5px] font-bold uppercase transition-all",
+                showImageOverlay
+                  ? "border-cyan-400 bg-cyan-500/30 text-cyan-200 shadow-[0_0_12px_rgba(0,217,255,0.4)]"
+                  : "border-slate-700 bg-slate-900/80 text-slate-400 hover:border-cyan-400 hover:text-cyan-300"
+              )}
+            >
+              <Layers className="h-3 w-3 text-cyan-400" /> Image Plan
+            </button>
+          )}
           {/* Day / Night Mode */}
           <button
             type="button"
@@ -1961,7 +2086,21 @@ export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Townshi
             </>
           )}
 
-          {layers.terrain && (
+          {/* Uploaded 2D Drone/Aerial/Site Orthophoto Image Projection */}
+          {societyImageUrl && (
+            <SceneErrorBoundary>
+              <OrthophotoGroundImage
+                imageUrl={societyImageUrl}
+                width={160}
+                depth={130}
+                opacity={0.92}
+                visible={showImageOverlay}
+                societyName={societyName}
+              />
+            </SceneErrorBoundary>
+          )}
+
+          {layers.terrain && (!societyImageUrl || !showImageOverlay) && (
             <SceneErrorBoundary>
               <Terrain />
               <Berms />
@@ -2009,7 +2148,7 @@ export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Townshi
             </SceneErrorBoundary>
           )}
           {layers.buildings &&
-            TOWERS.map((t) => (
+            activeTowers.map((t) => (
               <Tower
                 key={t.id}
                 tower={t}

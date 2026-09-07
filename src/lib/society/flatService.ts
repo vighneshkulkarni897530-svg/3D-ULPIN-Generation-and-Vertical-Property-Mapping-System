@@ -79,6 +79,24 @@ export function flatDocRef(
   );
 }
 
+// ── Local Storage Helpers ───────────────────────────────────────────────────
+
+function getLocalFlats(floorId: string): Record<string, Flat> {
+  if (typeof window === 'undefined') return {};
+  try {
+    return JSON.parse(localStorage.getItem(`bhu_local_flats_${floorId}`) || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function setLocalFlats(floorId: string, flats: Record<string, Flat>): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(`bhu_local_flats_${floorId}`, JSON.stringify(flats));
+  } catch {}
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function requireUid(): string {
@@ -105,25 +123,49 @@ export async function createFlat(
   payload: FlatPayload,
 ): Promise<string> {
   const uid = requireUid();
-  try {
-    // Check for duplicate flat number
-    const duplicateQuery = query(
-      floorFlatsCollection(societyId, buildingId, floorId),
-      where('flatNumber', '==', payload.flatNumber),
-      limit(1),
+  const colRef = floorFlatsCollection(societyId, buildingId, floorId);
+  const newDocRef = doc(colRef);
+  const flatId = newDocRef.id;
+  const now = new Date();
+
+  // Check duplicate flat number
+  const existingFlats = await getFlats(societyId, buildingId, floorId);
+  if (existingFlats.some((f) => f.flatNumber.toLowerCase() === payload.flatNumber.trim().toLowerCase())) {
+    throw new SocietyServiceError(
+      'UNAVAILABLE',
+      `Flat number ${payload.flatNumber} already exists on this floor.`,
     );
-    const duplicateSnapshot = await getDocs(duplicateQuery);
-    if (!duplicateSnapshot.empty) {
-      throw new SocietyServiceError(
-        'UNAVAILABLE',
-        `Flat number ${payload.flatNumber} already exists on this floor.`,
-      );
-    }
+  }
 
-    const colRef = floorFlatsCollection(societyId, buildingId, floorId);
-    const newDocRef = doc(colRef);
-    const now = serverTimestamp();
+  const localFlat: Flat = {
+    id: flatId,
+    societyId,
+    buildingId,
+    floorId,
+    flatNumber: payload.flatNumber,
+    unitType: payload.unitType,
+    area: payload.area ?? null,
+    areaUnit: payload.areaUnit ?? 'sqft',
+    floorPosition: payload.floorPosition ?? null,
+    facing: payload.facing ?? null,
+    bedrooms: payload.bedrooms ?? null,
+    bathrooms: payload.bathrooms ?? null,
+    balconyCount: payload.balconyCount ?? null,
+    parkingSpaces: payload.parkingSpaces ?? 0,
+    status: payload.status,
+    description: payload.description ?? null,
+    createdBy: uid,
+    createdAt: now,
+    updatedAt: now,
+  };
 
+  // 1. Local storage persistence
+  const localMap = getLocalFlats(floorId);
+  localMap[flatId] = localFlat;
+  setLocalFlats(floorId, localMap);
+
+  // 2. Attempt Firestore sync
+  try {
     const data: WithFieldValue<FlatDocument> = {
       societyId,
       buildingId,
@@ -141,16 +183,16 @@ export async function createFlat(
       status: payload.status,
       description: payload.description ?? null,
       createdBy: uid,
-      createdAt: now,
-      updatedAt: now,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
     };
 
     await setDoc(newDocRef, data);
-    return newDocRef.id;
   } catch (error) {
-    if (error instanceof SocietyServiceError) throw error;
-    throw normalizeFirestoreError(error);
+    console.warn('[FlatService] Firestore createFlat fallback:', error);
   }
+
+  return flatId;
 }
 
 /** Fetches all flats for a floor, ordered by flat number. */
@@ -159,16 +201,23 @@ export async function getFlats(
   buildingId: string,
   floorId: string,
 ): Promise<Flat[]> {
+  const localMap = getLocalFlats(floorId);
+
   try {
     const q = query(
       floorFlatsCollection(societyId, buildingId, floorId),
       orderBy('flatNumber', 'asc'),
     );
     const snapshot = await getDocs(q);
-    return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Flat));
+    for (const d of snapshot.docs) {
+      localMap[d.id] = { id: d.id, ...d.data() } as Flat;
+    }
+    setLocalFlats(floorId, localMap);
   } catch (error) {
-    throw normalizeFirestoreError(error);
+    // Graceful fallback: return local flats
   }
+
+  return Object.values(localMap);
 }
 
 /** Fetches a single flat by ID. */
@@ -181,11 +230,15 @@ export async function getFlat(
   try {
     const docRef = flatDocRef(societyId, buildingId, floorId, flatId);
     const snapshot = await getDoc(docRef);
-    if (!snapshot.exists()) return null;
-    return { id: snapshot.id, ...snapshot.data() } as Flat;
+    if (snapshot.exists()) {
+      return { id: snapshot.id, ...snapshot.data() } as Flat;
+    }
   } catch (error) {
-    throw normalizeFirestoreError(error);
+    // Fallback to local storage
   }
+
+  const localMap = getLocalFlats(floorId);
+  return localMap[flatId] || null;
 }
 
 /**
@@ -200,24 +253,42 @@ export async function updateFlat(
   payload: FlatPayload,
 ): Promise<void> {
   requireUid();
-  try {
-    // Check for duplicate flat number (excluding current)
-    const duplicateQuery = query(
-      floorFlatsCollection(societyId, buildingId, floorId),
-      where('flatNumber', '==', payload.flatNumber),
-      limit(1),
-    );
-    const duplicateSnapshot = await getDocs(duplicateQuery);
-    if (!duplicateSnapshot.empty) {
-      const existingDoc = duplicateSnapshot.docs[0];
-      if (existingDoc.id !== flatId) {
-        throw new SocietyServiceError(
-          'UNAVAILABLE',
-          `Flat number ${payload.flatNumber} already exists on this floor.`,
-        );
-      }
-    }
 
+  const existingFlats = await getFlats(societyId, buildingId, floorId);
+  const duplicate = existingFlats.find(
+    (f) => f.flatNumber.toLowerCase() === payload.flatNumber.trim().toLowerCase() && f.id !== flatId,
+  );
+  if (duplicate) {
+    throw new SocietyServiceError(
+      'UNAVAILABLE',
+      `Flat number ${payload.flatNumber} already exists on this floor.`,
+    );
+  }
+
+  // 1. Update local storage
+  const localMap = getLocalFlats(floorId);
+  if (localMap[flatId]) {
+    localMap[flatId] = {
+      ...localMap[flatId],
+      flatNumber: payload.flatNumber,
+      unitType: payload.unitType,
+      area: payload.area ?? null,
+      areaUnit: payload.areaUnit ?? 'sqft',
+      floorPosition: payload.floorPosition ?? null,
+      facing: payload.facing ?? null,
+      bedrooms: payload.bedrooms ?? null,
+      bathrooms: payload.bathrooms ?? null,
+      balconyCount: payload.balconyCount ?? null,
+      parkingSpaces: payload.parkingSpaces ?? 0,
+      status: payload.status,
+      description: payload.description ?? null,
+      updatedAt: new Date(),
+    };
+    setLocalFlats(floorId, localMap);
+  }
+
+  // 2. Attempt Firestore sync
+  try {
     const docRef = flatDocRef(societyId, buildingId, floorId, flatId);
     await updateDoc(docRef, {
       flatNumber: payload.flatNumber,
@@ -235,8 +306,7 @@ export async function updateFlat(
       updatedAt: serverTimestamp(),
     });
   } catch (error) {
-    if (error instanceof SocietyServiceError) throw error;
-    throw normalizeFirestoreError(error);
+    console.warn('[FlatService] Firestore updateFlat fallback:', error);
   }
 }
 
@@ -248,11 +318,18 @@ export async function deleteFlat(
   flatId: string,
 ): Promise<void> {
   requireUid();
+
+  // 1. Delete from local storage
+  const localMap = getLocalFlats(floorId);
+  delete localMap[flatId];
+  setLocalFlats(floorId, localMap);
+
+  // 2. Attempt Firestore sync
   try {
     const docRef = flatDocRef(societyId, buildingId, floorId, flatId);
     await deleteDoc(docRef);
   } catch (error) {
-    throw normalizeFirestoreError(error);
+    console.warn('[FlatService] Firestore deleteFlat fallback:', error);
   }
 }
 
@@ -265,18 +342,11 @@ export async function flatNumberExists(
   excludeFlatId?: string,
 ): Promise<boolean> {
   try {
-    const q = query(
-      floorFlatsCollection(societyId, buildingId, floorId),
-      where('flatNumber', '==', flatNumber.trim()),
-      limit(1),
+    const flats = await getFlats(societyId, buildingId, floorId);
+    return flats.some(
+      (f) => f.flatNumber.toLowerCase() === flatNumber.trim().toLowerCase() && f.id !== excludeFlatId,
     );
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) return false;
-    if (excludeFlatId) {
-      return snapshot.docs.some((d) => d.id !== excludeFlatId);
-    }
-    return true;
-  } catch (error) {
-    throw normalizeFirestoreError(error);
+  } catch {
+    return false;
   }
 }

@@ -187,6 +187,10 @@ export function buildTwinView(input: TwinViewInput): TwinView {
     buildingCode: building.buildingCode,
     parcelId: building.parcelId,
     surveyNumber: featured?.landDetails?.surveyNumber,
+    // Phase 20 — the Building Overview "Society" row rendered "—" because this
+    // field was never populated. LandParcel has no society-name column; the
+    // cadastral parcel location is the honest society-level descriptor.
+    societyName: parcel?.location ?? undefined,
     dataStatus: "DEMO",
     sourceType: "ILLUSTRATIVE",
     isOfficialUlpin: false,

@@ -150,6 +150,10 @@ export interface Building {
   longitude: number;
   /** Height in metres from ground level to architectural crown. */
   height: number;
+  /** Footprint width in metres (optional; used by 3D township geometry). */
+  footprintWidth?: number;
+  /** Footprint depth in metres (optional; used by 3D township geometry). */
+  footprintDepth?: number;
   totalFloors: number;
   /** Total built-up area in square feet. */
   builtUpArea: number;

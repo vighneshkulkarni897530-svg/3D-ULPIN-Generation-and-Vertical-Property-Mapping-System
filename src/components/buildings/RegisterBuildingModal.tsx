@@ -35,7 +35,7 @@ export const RegisterBuildingModal: React.FC<RegisterBuildingModalProps> = ({
   onSuccess,
 }) => {
   const { role, currentUser } = useAuth();
-  const { parcels, addBuilding } = useGIS();
+  const { parcels, buildings, addBuilding } = useGIS();
   const { toast } = useToast();
 
   const [buildingName, setBuildingName] = useState("");
@@ -47,6 +47,13 @@ export const RegisterBuildingModal: React.FC<RegisterBuildingModalProps> = ({
   const [constructionYear, setConstructionYear] = useState<number>(2024);
   const [selectedParcelId, setSelectedParcelId] = useState(parcels[0]?.id || "parcel-pune-001");
   const [address, setAddress] = useState("Survey No. 42/B, Shivaji Nagar, Pune, Maharashtra 411005");
+  const [height, setHeight] = useState<number>(19.2);
+  const [latitude, setLatitude] = useState<number>(parcels[0]?.latitude ?? 18.5204);
+  const [longitude, setLongitude] = useState<number>(parcels[0]?.longitude ?? 73.8567);
+  const [footprintWidth, setFootprintWidth] = useState<number>(18);
+  const [footprintDepth, setFootprintDepth] = useState<number>(16);
+  const [status, setStatus] = useState<Building["status"]>("ACTIVE");
+  const [validationError, setValidationError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   if (!isOpen) return null;
@@ -77,29 +84,76 @@ export const RegisterBuildingModal: React.FC<RegisterBuildingModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Phase 21 — explicit field validation. The form is `noValidate` so every
+    // rejection path surfaces through the visible error box (native tooltips
+    // are not testable and whitespace/empty inputs slip past `required`).
+    const trimmedName = buildingName.trim();
+    const finalCode = buildingCode.trim() || `B-${Math.floor(100 + Math.random() * 900)}`;
+    if (!trimmedName) {
+      setValidationError("Building name is required.");
+      return;
+    }
+    if (buildings.some((b) => b.buildingCode.trim().toLowerCase() === finalCode.toLowerCase())) {
+      setValidationError(
+        `Building code "${finalCode}" is already registered in the cadastre registry. Codes must be unique.`,
+      );
+      return;
+    }
+    if (!Number.isInteger(totalFloors) || totalFloors < 1 || totalFloors > 200) {
+      setValidationError("Total floors must be a whole number between 1 and 200.");
+      return;
+    }
+    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
+      setValidationError("Latitude must be a valid coordinate between -90 and 90.");
+      return;
+    }
+    if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+      setValidationError("Longitude must be a valid coordinate between -180 and 180.");
+      return;
+    }
+    if (!Number.isFinite(height) || height <= 0 || height > 500) {
+      setValidationError("Height must be a positive value up to 500 metres.");
+      return;
+    }
+    if (!Number.isFinite(footprintWidth) || footprintWidth <= 0 || footprintWidth > 500) {
+      setValidationError("Footprint width must be a positive value up to 500 metres.");
+      return;
+    }
+    if (!Number.isFinite(footprintDepth) || footprintDepth <= 0 || footprintDepth > 500) {
+      setValidationError("Footprint depth must be a positive value up to 500 metres.");
+      return;
+    }
+    if (!Number.isFinite(builtUpArea) || builtUpArea < 100 || builtUpArea > 10000000) {
+      setValidationError("Built-up area must be between 100 and 10,000,000 sq.ft.");
+      return;
+    }
+
+    setValidationError(null);
     setSubmitting(true);
 
     const generatedId = `bldg-${Date.now().toString(36)}`;
-    const finalCode = buildingCode.trim() || `B-${Math.floor(100 + Math.random() * 900)}`;
     const matchedParcel = parcels.find((p) => p.id === selectedParcelId) || parcels[0];
 
     const newBuilding: Building = {
       id: generatedId,
       parcelId: selectedParcelId,
-      name: buildingName.trim(),
+      name: trimmedName,
       buildingCode: finalCode,
       address: address.trim(),
-      latitude: matchedParcel?.latitude ?? 18.5204,
-      longitude: matchedParcel?.longitude ?? 73.8567,
-      height: totalFloors * 3.2,
+      latitude,
+      longitude,
+      height,
+      footprintWidth,
+      footprintDepth,
       totalFloors,
       builtUpArea,
       yearBuilt: constructionYear,
       geometry: {
         type: "Point",
-        coordinates: [matchedParcel?.longitude ?? 73.8567, matchedParcel?.latitude ?? 18.5204],
+        coordinates: [longitude, latitude],
       },
-      status: "ACTIVE",
+      status,
     };
 
     // Update GIS building registry
@@ -164,7 +218,21 @@ export const RegisterBuildingModal: React.FC<RegisterBuildingModalProps> = ({
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="space-y-4">
+          {validationError && (
+            <div
+              role="alert"
+              className="flex items-start gap-2.5 rounded-xl border border-rose-500/40 bg-rose-950/40 px-4 py-3"
+            >
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-400" />
+              <div>
+                <p className="text-[11px] font-extrabold uppercase tracking-wider text-rose-300">
+                  Cannot Register Building
+                </p>
+                <p className="mt-0.5 text-xs font-semibold text-rose-200/90">{validationError}</p>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
@@ -289,13 +357,134 @@ export const RegisterBuildingModal: React.FC<RegisterBuildingModalProps> = ({
             </div>
           </div>
 
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
+                Height (m)
+              </label>
+              <div className="relative">
+                <Ruler className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                <input
+                  type="number"
+                  step="0.1"
+                  min={1}
+                  max={500}
+                  value={Number.isFinite(height) ? height : ""}
+                  onChange={(e) => setHeight(e.target.valueAsNumber)}
+                  className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2.5 pl-9 pr-3 text-xs font-mono text-white outline-none focus:border-indigo-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
+                Footprint Width (m)
+              </label>
+              <div className="relative">
+                <Ruler className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                <input
+                  type="number"
+                  step="0.1"
+                  min={1}
+                  max={500}
+                  value={Number.isFinite(footprintWidth) ? footprintWidth : ""}
+                  onChange={(e) => setFootprintWidth(e.target.valueAsNumber)}
+                  className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2.5 pl-9 pr-3 text-xs font-mono text-white outline-none focus:border-indigo-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
+                Footprint Depth (m)
+              </label>
+              <div className="relative">
+                <Ruler className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                <input
+                  type="number"
+                  step="0.1"
+                  min={1}
+                  max={500}
+                  value={Number.isFinite(footprintDepth) ? footprintDepth : ""}
+                  onChange={(e) => setFootprintDepth(e.target.valueAsNumber)}
+                  className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2.5 pl-9 pr-3 text-xs font-mono text-white outline-none focus:border-indigo-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
+                Latitude
+              </label>
+              <div className="relative">
+                <MapPin className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                <input
+                  type="number"
+                  step="0.000001"
+                  min={-90}
+                  max={90}
+                  value={Number.isFinite(latitude) ? latitude : ""}
+                  onChange={(e) => setLatitude(e.target.valueAsNumber)}
+                  className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2.5 pl-9 pr-3 text-xs font-mono text-white outline-none focus:border-indigo-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
+                Longitude
+              </label>
+              <div className="relative">
+                <MapPin className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                <input
+                  type="number"
+                  step="0.000001"
+                  min={-180}
+                  max={180}
+                  value={Number.isFinite(longitude) ? longitude : ""}
+                  onChange={(e) => setLongitude(e.target.valueAsNumber)}
+                  className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2.5 pl-9 pr-3 text-xs font-mono text-white outline-none focus:border-indigo-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
+                Building Status
+              </label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value as Building["status"])}
+                className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2.5 px-3 text-xs font-semibold text-white outline-none focus:border-indigo-500"
+              >
+                <option value="ACTIVE">Active</option>
+                <option value="INACTIVE">Inactive</option>
+                <option value="UNDER_CONSTRUCTION">Under Construction</option>
+              </select>
+            </div>
+          </div>
+
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">
               Cadastral Base Parcel
             </label>
             <select
               value={selectedParcelId}
-              onChange={(e) => setSelectedParcelId(e.target.value)}
+              onChange={(e) => {
+                const nextParcelId = e.target.value;
+                setSelectedParcelId(nextParcelId);
+                // Prefill coordinates from the newly selected parcel so the
+                // building lands inside its cadastral boundary (manual edits
+                // made BEFORE the switch are intentionally overwritten — the
+                // parcel choice is the stronger intent signal).
+                const nextParcel = parcels.find((p) => p.id === nextParcelId);
+                if (nextParcel) {
+                  setLatitude(nextParcel.latitude);
+                  setLongitude(nextParcel.longitude);
+                }
+              }}
               className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2.5 px-3 text-xs font-semibold text-white outline-none focus:border-indigo-500"
             >
               {parcels.map((p) => (

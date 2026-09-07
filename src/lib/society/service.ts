@@ -332,8 +332,10 @@ export async function getSocietyById(societyId: string): Promise<Society | null>
     if (snapshot.exists()) {
       return normalizeSociety(societyId, snapshot.data());
     }
-  } catch (error) {
-    console.warn('[SocietyService] Firestore getSocietyById notice:', error);
+  } catch (error: any) {
+    if (error?.code !== 'permission-denied') {
+      console.warn('[SocietyService] Firestore getSocietyById notice:', error);
+    }
   }
 
   // Fallback to local storage
@@ -380,8 +382,10 @@ export async function getSocietyMembership(
     if (snapshot.exists()) {
       return normalizeMembership(membershipId, snapshot.data());
     }
-  } catch (error) {
-    console.warn('[SocietyService] Membership read notice:', error);
+  } catch (error: any) {
+    if (error?.code !== 'permission-denied') {
+      console.warn('[SocietyService] Membership read notice:', error);
+    }
   }
 
   // Fallback to local storage
@@ -533,8 +537,10 @@ export async function getAvailableSocieties(): Promise<Society[]> {
     for (const d of snapshot.docs) {
       societiesMap.set(d.id, normalizeSociety(d.id, d.data()));
     }
-  } catch (error) {
-    console.warn('[SocietyService] Firestore getAvailableSocieties notice:', error);
+  } catch (error: any) {
+    if (error?.code !== 'permission-denied') {
+      console.warn('[SocietyService] Firestore getAvailableSocieties notice:', error);
+    }
   }
 
   const societies = Array.from(societiesMap.values());

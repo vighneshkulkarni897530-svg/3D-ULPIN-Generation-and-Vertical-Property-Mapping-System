@@ -353,7 +353,7 @@ export function SocietyEditModal({
                 </p>
               </div>
             </div>
-            <Badge variant="outline" className="border-slate-700 bg-slate-800 text-cyan-300 font-mono text-[11px]">
+            <Badge variant="outline" className="border-slate-700 bg-slate-800 text-cyan-300 font-mono text-[11px] mr-8">
               ID: {society.id.slice(0, 8)}…
             </Badge>
           </div>

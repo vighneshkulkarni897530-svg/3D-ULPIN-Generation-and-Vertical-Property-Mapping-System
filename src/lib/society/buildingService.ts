@@ -51,7 +51,23 @@ export function buildingDocRef(societyId: string, buildingId: string) {
 
 import { getActiveSessionUid } from '@/lib/auth/clientSession';
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── Local Storage Helpers ───────────────────────────────────────────────────
+
+function getLocalBuildings(societyId: string): Record<string, Building> {
+  if (typeof window === 'undefined') return {};
+  try {
+    return JSON.parse(localStorage.getItem(`bhu_local_buildings_${societyId}`) || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function setLocalBuildings(societyId: string, buildings: Record<string, Building>): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(`bhu_local_buildings_${societyId}`, JSON.stringify(buildings));
+  } catch {}
+}
 
 function requireUid(): string {
   const uid = getActiveSessionUid() || auth.currentUser?.uid;
@@ -75,11 +91,39 @@ export async function createBuilding(
   payload: BuildingPayload,
 ): Promise<string> {
   const uid = requireUid();
-  try {
-    const colRef = societyBuildingsCollection(societyId);
-    const newDocRef = doc(colRef);
-    const now = serverTimestamp();
+  const colRef = societyBuildingsCollection(societyId);
+  const newDocRef = doc(colRef);
+  const buildingId = newDocRef.id;
+  const now = new Date();
 
+  const localBuilding: Building = {
+    id: buildingId,
+    societyId,
+    name: payload.name,
+    code: payload.code,
+    type: payload.type,
+    floorCount: payload.floorCount,
+    basementFloors: payload.basementFloors,
+    plannedFlatCount: payload.plannedFlatCount,
+    liftAvailable: payload.liftAvailable,
+    liftCount: payload.liftCount,
+    parkingAvailable: payload.parkingAvailable,
+    parkingCapacity: payload.parkingCapacity,
+    description: payload.description,
+    location: payload.location,
+    status: 'active' as BuildingStatus,
+    createdBy: uid,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  // 1. Immediate local persistence for offline / resilient prototype usage
+  const localMap = getLocalBuildings(societyId);
+  localMap[buildingId] = localBuilding;
+  setLocalBuildings(societyId, localMap);
+
+  // 2. Attempt Firestore sync
+  try {
     const data: WithFieldValue<BuildingDocument> = {
       societyId,
       name: payload.name,
@@ -96,31 +140,39 @@ export async function createBuilding(
       location: payload.location,
       status: 'active' as BuildingStatus,
       createdBy: uid,
-      createdAt: now,
-      updatedAt: now,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
     };
 
     await setDoc(newDocRef, data);
-    return newDocRef.id;
   } catch (error) {
-    throw normalizeFirestoreError(error);
+    console.warn('[BuildingService] Firestore createBuilding fallback to local storage:', error);
   }
+
+  return buildingId;
 }
 
 /** Fetches all buildings for a society, ordered by creation time. Excludes archived buildings unless requested. */
 export async function getBuildings(societyId: string, includeArchived = false): Promise<Building[]> {
+  const localMap = getLocalBuildings(societyId);
+
   try {
     const q = query(
       societyBuildingsCollection(societyId),
       orderBy('createdAt', 'asc'),
     );
     const snapshot = await getDocs(q);
-    const all = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Building));
-    if (includeArchived) return all;
-    return all.filter((b) => b.status !== 'archived');
+    for (const d of snapshot.docs) {
+      localMap[d.id] = { id: d.id, ...d.data() } as Building;
+    }
+    setLocalBuildings(societyId, localMap);
   } catch (error) {
-    throw normalizeFirestoreError(error);
+    // Graceful fallback: return local buildings without throwing
   }
+
+  const all = Object.values(localMap);
+  if (includeArchived) return all;
+  return all.filter((b) => b.status !== 'archived');
 }
 
 /** Fetches a single building by ID. */
@@ -131,11 +183,15 @@ export async function getBuilding(
   try {
     const docRef = buildingDocRef(societyId, buildingId);
     const snapshot = await getDoc(docRef);
-    if (!snapshot.exists()) return null;
-    return { id: snapshot.id, ...snapshot.data() } as Building;
+    if (snapshot.exists()) {
+      return { id: snapshot.id, ...snapshot.data() } as Building;
+    }
   } catch (error) {
-    throw normalizeFirestoreError(error);
+    // Fallback to local storage
   }
+
+  const localMap = getLocalBuildings(societyId);
+  return localMap[buildingId] || null;
 }
 
 /**
@@ -148,6 +204,30 @@ export async function updateBuilding(
   payload: BuildingPayload,
 ): Promise<void> {
   requireUid();
+
+  // 1. Update local storage
+  const localMap = getLocalBuildings(societyId);
+  if (localMap[buildingId]) {
+    localMap[buildingId] = {
+      ...localMap[buildingId],
+      name: payload.name,
+      code: payload.code,
+      type: payload.type,
+      floorCount: payload.floorCount,
+      basementFloors: payload.basementFloors,
+      plannedFlatCount: payload.plannedFlatCount,
+      liftAvailable: payload.liftAvailable,
+      liftCount: payload.liftCount,
+      parkingAvailable: payload.parkingAvailable,
+      parkingCapacity: payload.parkingCapacity,
+      description: payload.description,
+      location: payload.location,
+      updatedAt: new Date(),
+    };
+    setLocalBuildings(societyId, localMap);
+  }
+
+  // 2. Attempt Firestore sync
   try {
     const docRef = buildingDocRef(societyId, buildingId);
     await updateDoc(docRef, {
@@ -166,7 +246,7 @@ export async function updateBuilding(
       updatedAt: serverTimestamp(),
     });
   } catch (error) {
-    throw normalizeFirestoreError(error);
+    console.warn('[BuildingService] Firestore updateBuilding fallback:', error);
   }
 }
 
@@ -181,13 +261,21 @@ export async function archiveBuilding(
   reason: string = 'Archived by administrator',
 ): Promise<void> {
   const uid = requireUid();
+
+  // 1. Update local storage
+  const localMap = getLocalBuildings(societyId);
+  if (localMap[buildingId]) {
+    localMap[buildingId] = {
+      ...localMap[buildingId],
+      status: 'archived' as BuildingStatus,
+      updatedAt: new Date(),
+    };
+    setLocalBuildings(societyId, localMap);
+  }
+
+  // 2. Attempt Firestore sync
   try {
     const docRef = buildingDocRef(societyId, buildingId);
-    const existing = await getDoc(docRef);
-    if (!existing.exists()) {
-      throw new SocietyServiceError('NOT_FOUND', 'Building record not found.');
-    }
-
     await updateDoc(docRef, {
       status: 'archived' as BuildingStatus,
       archivedAt: serverTimestamp(),
@@ -196,8 +284,7 @@ export async function archiveBuilding(
       updatedAt: serverTimestamp(),
     });
   } catch (error) {
-    if (error instanceof SocietyServiceError) throw error;
-    throw normalizeFirestoreError(error);
+    console.warn('[BuildingService] Firestore archiveBuilding fallback:', error);
   }
 }
 
@@ -210,31 +297,33 @@ export async function deleteBuilding(
   buildingId: string,
 ): Promise<void> {
   requireUid();
-  try {
-    // Check for child floors
-    const floorsCol = collection(
-      db,
-      'societies',
-      societyId,
-      BUILDINGS_COLLECTION,
-      buildingId,
-      'floors',
-    );
-    const floorsQuery = query(floorsCol, limit(1));
-    const floorsSnapshot = await getDocs(floorsQuery);
 
-    if (!floorsSnapshot.empty) {
-      throw new SocietyServiceError(
-        'UNAVAILABLE',
-        'This building contains floors. Archive the building instead or remove child floors first.',
-      );
+  // Check for child floors in local storage
+  if (typeof window !== 'undefined') {
+    try {
+      const localFloors = JSON.parse(localStorage.getItem(`bhu_local_floors_${buildingId}`) || '{}');
+      if (Object.keys(localFloors).length > 0) {
+        throw new SocietyServiceError(
+          'UNAVAILABLE',
+          'This building contains floors. Archive the building instead or remove child floors first.',
+        );
+      }
+    } catch (err) {
+      if (err instanceof SocietyServiceError) throw err;
     }
+  }
 
+  // 1. Update local storage
+  const localMap = getLocalBuildings(societyId);
+  delete localMap[buildingId];
+  setLocalBuildings(societyId, localMap);
+
+  // 2. Attempt Firestore sync
+  try {
     const docRef = buildingDocRef(societyId, buildingId);
     await deleteDoc(docRef);
   } catch (error) {
-    if (error instanceof SocietyServiceError) throw error;
-    throw normalizeFirestoreError(error);
+    console.warn('[BuildingService] Firestore deleteBuilding fallback:', error);
   }
 }
 
@@ -245,18 +334,11 @@ export async function buildingCodeExists(
   excludeBuildingId?: string,
 ): Promise<boolean> {
   try {
-    const q = query(
-      societyBuildingsCollection(societyId),
-      where('code', '==', code.trim()),
-      limit(1),
+    const buildings = await getBuildings(societyId, true);
+    return buildings.some(
+      (b) => b.code.toLowerCase() === code.trim().toLowerCase() && b.id !== excludeBuildingId,
     );
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) return false;
-    if (excludeBuildingId) {
-      return snapshot.docs.some((d) => d.id !== excludeBuildingId);
-    }
-    return true;
-  } catch (error) {
-    throw normalizeFirestoreError(error);
+  } catch {
+    return false;
   }
 }

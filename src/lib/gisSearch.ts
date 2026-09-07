@@ -27,20 +27,28 @@ export interface GisSearchOutput {
   total: number;
 }
 
-/** 0 → starts-with/exact, 1 → contains, Infinity → no match. */
+/** 0 → starts-with/exact, 0.5 → whole-word, 1 → contains, Infinity → no match. */
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function scoreFor(q: string, ...fields: Array<string | number | undefined | null>): number {
   let best = Infinity;
-  const cleanQ = q.replace(/[^a-zA-Z0-9]/g, '');
+  const cleanQ = q.replace(/[^a-zA-Z0-9]/g, "");
   for (const field of fields) {
     if (field === undefined || field === null) continue;
     const s = String(field).toLowerCase();
-    const cleanS = s.replace(/[^a-zA-Z0-9]/g, '');
+    const cleanS = s.replace(/[^a-zA-Z0-9]/g, "");
 
     if (s === q || (cleanQ.length >= 4 && cleanS === cleanQ)) {
       return 0; // exact match
     }
     if (s.startsWith(q) || (cleanQ.length >= 4 && cleanS.startsWith(cleanQ))) {
       best = Math.min(best, 0);
+    } else if (q.length >= 2 && new RegExp(`\\b${escapeRegExp(q)}\\b`).test(s)) {
+      // Phase 21 — whole-word match (e.g. token "b" inside "tower b") ranks
+      // above a loose substring hit so "Tower B" outranks "Tower A/C/D/E".
+      best = Math.min(best, 0.5);
     } else if (s.includes(q) || (cleanQ.length >= 4 && cleanS.includes(cleanQ))) {
       best = Math.min(best, 1);
     }
@@ -54,6 +62,34 @@ function rankAndSlice<T>(scored: Array<Scored<T>>, limit: number): T[] {
     .sort((a, b) => a.score - b.score)
     .slice(0, limit)
     .map((r) => r.item);
+}
+
+/**
+ * Phase 21 — society display-name aliases for parcel search. The canonical
+ * LandParcel record has no society field (location stays the registry string),
+ * so the search indexes a display alias instead of mutating data.
+ */
+const PARCEL_SEARCH_ALIASES: Record<string, string> = {
+  'PARCEL-MH-PUN-074': 'Kolte Patil Life Republic Penthouses',
+};
+
+/**
+ * Phase 21 — multi-word query support (AND semantics). Every whitespace-
+ * separated token must match at least one field of the entity, otherwise the
+ * entity is excluded. Aggregate score is the WORST token score so entities
+ * matching all tokens strongly rank above weak matches. Single-token queries
+ * behave exactly as scoreFor always has.
+ */
+function scoreTokens(query: string, ...fields: Array<string | number | undefined | null>): number {
+  const tokens = query.split(/\s+/).filter((t) => t.length > 0);
+  if (tokens.length <= 1) return scoreFor(query, ...fields);
+  let worst = 0;
+  for (const token of tokens) {
+    const s = scoreFor(token, ...fields);
+    if (s === Infinity) return Infinity;
+    if (s > worst) worst = s;
+  }
+  return worst;
 }
 
 export function searchGisRegistry(
@@ -72,7 +108,15 @@ export function searchGisRegistry(
   const parcelResults = rankAndSlice(
     parcels.map((p) => ({
       item: p,
-      score: scoreFor(query, p.id, p.parcelNumber, p.location, p.district, p.state),
+      score: scoreTokens(
+        query,
+        p.id,
+        p.parcelNumber,
+        p.location,
+        p.district,
+        p.state,
+        PARCEL_SEARCH_ALIASES[p.id],
+      ),
     })),
     limit,
   );
@@ -80,7 +124,7 @@ export function searchGisRegistry(
   const buildingResults = rankAndSlice(
     buildings.map((b) => ({
       item: b,
-      score: scoreFor(query, b.id, b.buildingCode, b.name, b.address),
+      score: scoreTokens(query, b.id, b.buildingCode, b.name, b.address),
     })),
     limit,
   );
@@ -89,7 +133,7 @@ export function searchGisRegistry(
   const floorResults = rankAndSlice(
     floors.map((f) => ({
       item: f,
-      score: scoreFor(query, f.id, f.name, f.buildingId, `level ${f.floorNumber}`, String(f.floorNumber)),
+      score: scoreTokens(query, f.id, f.name, f.buildingId, `level ${f.floorNumber}`, String(f.floorNumber)),
     })),
     limit,
   );
@@ -97,7 +141,9 @@ export function searchGisRegistry(
   const propertyResults = rankAndSlice(
     properties.map((p) => ({
       item: p,
-      score: scoreFor(
+      // `flat ${unitNumber}` / `unit ${unitNumber}` pseudo-fields let natural
+      // queries like "Flat 402" match the unit without changing registry data.
+      score: scoreTokens(
         query,
         p.id,
         p.demoSpatialId,
@@ -107,6 +153,8 @@ export function searchGisRegistry(
         p.propertyType,
         p.buildingId,
         p.parcelId,
+        `flat ${p.unitNumber}`,
+        `unit ${p.unitNumber}`,
       ),
     })),
     limit,

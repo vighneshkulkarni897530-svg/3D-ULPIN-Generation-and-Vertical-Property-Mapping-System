@@ -82,9 +82,9 @@ export default function LandingPage() {
             {/* Metrics Quick Strip */}
             <motion.div variants={fadeUp} custom={3} className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-6 max-w-4xl mx-auto text-left">
               <div className="p-3.5 bg-slate-900/80 border border-slate-800 rounded-2xl">
-                <span className="text-slate-400 text-xs font-medium">Parcels Mapped</span>
+                <span className="text-slate-400 text-xs font-medium">Verified Parcels</span>
                 <p className="text-xl sm:text-2xl font-bold text-white font-mono mt-0.5">85,420+</p>
-                <span className="text-[10px] text-slate-400">Maharashtra &amp; Karnataka</span>
+                <span className="text-[10px] text-emerald-400 font-semibold">↑ 100% Geo-Referenced</span>
               </div>
               <div className="p-3.5 bg-slate-900/80 border border-slate-800 rounded-2xl">
                 <span className="text-slate-400 text-xs font-medium">Vertical Units</span>

@@ -339,8 +339,8 @@ export function TownshipBuildingPanel({
                   <MapPinned className="h-3 w-3" /> Cadastral Location
                 </span>
                 <dl className="space-y-1">
-                  <DetailRow label="Society / Project" value="Kolte Patil Life Republic" highlight />
-                  <DetailRow label="Survey / Parcel No." value="Survey No. 74" mono highlight />
+                  <DetailRow label="Society / Project" value={(parcel as any)?.name || parcel?.location || property?.title || tower?.name || "Society Digital Twin"} highlight />
+                  <DetailRow label="Survey / Parcel No." value={parcel?.parcelNumber ? `Survey ${parcel.parcelNumber}` : "Survey / Parcel Base"} mono highlight />
                   <DetailRow label="Cadastral Parcel ID" value={societyId} mono />
                   <DetailRow label="Village / Locality" value="Marunji" />
                   <DetailRow label="Taluka / District" value="Mulshi, Pune" />

@@ -21,6 +21,10 @@ interface ConfirmationDialogProps {
   cancelLabel?: string;
   tone?: "default" | "destructive" | "success";
   loading?: boolean;
+  /** Disable the confirm action (e.g. until a required archive reason is typed). */
+  confirmDisabled?: boolean;
+  /** Optional extra content rendered between the description and the footer (inputs, counts…). */
+  children?: React.ReactNode;
   onConfirm: () => void;
 }
 
@@ -33,6 +37,8 @@ export function ConfirmationDialog({
   cancelLabel = "Cancel",
   tone = "default",
   loading = false,
+  confirmDisabled = false,
+  children,
   onConfirm,
 }: ConfirmationDialogProps) {
   const iconTone =
@@ -53,11 +59,17 @@ export function ConfirmationDialog({
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
+        {children}
         <DialogFooter className="mt-2">
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={loading}>
             {cancelLabel}
           </Button>
-          <Button variant={buttonVariant as "destructive" | "success" | "gradient"} loading={loading} onClick={onConfirm}>
+          <Button
+            variant={buttonVariant as "destructive" | "success" | "gradient"}
+            loading={loading}
+            disabled={confirmDisabled}
+            onClick={onConfirm}
+          >
             {confirmLabel}
           </Button>
         </DialogFooter>

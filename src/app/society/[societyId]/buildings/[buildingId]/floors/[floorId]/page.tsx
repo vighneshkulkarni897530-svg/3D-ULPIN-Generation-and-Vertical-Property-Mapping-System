@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { Layers, Plus, Trash2, Edit3, Home, ChevronLeft, BarChart3 } from 'lucide-react';
 
@@ -379,7 +380,7 @@ export default function FloorDetailPage() {
       <div className="p-6 max-w-7xl mx-auto">
         <PageHeader
           title="Floor Detail"
-          description={floor ? `${floor.floorLabel || `Floor ${floor.floorNumber}`}` : 'Loading floor...'}
+          description={floor ? `${floor.floorLabel || `Floor ${floor.floorNumber}`}` : 'Loading floor...'}
           actions={
             <Button variant="outline" onClick={() => router.push(`/society/${societyId}/buildings/${buildingId}`)}>
               <ChevronLeft className="h-4 w-4 mr-1" />Back to Building
@@ -478,11 +479,13 @@ export default function FloorDetailPage() {
               <CardHeader><CardTitle>Floor Actions</CardTitle></CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-3">
+                  <Button variant="default" asChild className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold">
+                    <Link href={`/properties/default-township/digital-twin?societyId=${societyId}&buildingId=${buildingId}&floor=${floor?.floorNumber}`}>
+                      <BarChart3 className="h-4 w-4 mr-2" />View Floor in 3D
+                    </Link>
+                  </Button>
                   <Button variant="outline" onClick={() => { setEditingFloor(floor); setShowFloorForm(true); }}>
                     <Edit3 className="h-4 w-4 mr-2" />Edit Floor
-                  </Button>
-                  <Button variant="outline" disabled>
-                    <BarChart3 className="h-4 w-4 mr-2" />3D Floor Preview — Coming Soon
                   </Button>
                   <Button variant="outline" onClick={() => setFloorToDelete(floor)} className="text-red-600 border-red-200 hover:bg-red-50">
                     <Trash2 className="h-4 w-4 mr-2" />Delete Floor
@@ -520,7 +523,7 @@ export default function FloorDetailPage() {
           cancelLabel="Cancel"
           tone="destructive"
           onConfirm={handleDeleteFloorConfirm}
-          loading={deletingFloor}
+          loading={deletingFloor}
         />
 
         <ConfirmationDialog

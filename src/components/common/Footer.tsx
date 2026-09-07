@@ -41,7 +41,7 @@ export const Footer: React.FC = () => {
               </div>
               <div>
                 <h4 className="text-white font-semibold text-xs uppercase tracking-wider">
-                  Smart India Hackathon 2024
+                  Smart India Hackathon 2026
                 </h4>
                 <p className="text-xs text-slate-400">Next-Gen Digital Governance & 3D Twin Cadastre</p>
               </div>

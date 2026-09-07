@@ -17,9 +17,11 @@ export function DigitalTwinMiniMap({ building, className }: MiniMapProps) {
   const W = 340;
   const H = 200;
 
-  // Approximate road lines across the map
+  // Approximate road lines across the map — generic labels (Phase 20: the
+  // previous hardcoded "Baner-Pashan Link Rd" was Green Valley-specific and
+  // rendered on every township's twin page).
   const roads = [
-    { name: "Baner-Pashan Link Rd", y: H * 0.3 },
+    { name: "Main Road", y: H * 0.3 },
     { name: "Service Road", y: H * 0.78 },
   ];
   const verticalRoad = { x: W * 0.24 };
@@ -101,14 +103,18 @@ export function DigitalTwinMiniMap({ building, className }: MiniMapProps) {
           {/* Building label */}
           <g transform={`translate(${W / 2 + 52}, ${H / 2 - 46})`}>
             <rect x={-4} y={-11} width={92} height={16} rx={8} fill="rgba(2,11,24,0.85)" stroke="#164E73" />
-            <text x={0} y={0} fill="#00D9FF" fontSize={6.5} fontWeight={800}>Green Valley Residency</text>
+            <text x={0} y={0} fill="#00D9FF" fontSize={6.5} fontWeight={800}>
+              {building.name.length > 18 ? `${building.name.slice(0, 17)}…` : building.name}
+            </text>
           </g>
         </svg>
 
         {/* Overlay chips */}
         <div className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-md border border-[#164E73] bg-[#020B18]/85 px-2 py-1">
           <Building2 className="h-2.5 w-2.5 text-[#00D9FF]" />
-          <span className="text-[8px] font-bold text-[#94A3B8]">Survey 48/A</span>
+          <span className="text-[8px] font-bold text-[#94A3B8]">
+            {building.surveyNumber ? `Survey ${building.surveyNumber}` : "Survey —"}
+          </span>
         </div>
         <div className="absolute bottom-2 right-2 flex items-center gap-1.5 rounded-md border border-[#164E73] bg-[#020B18]/85 px-2 py-1">
           <Route className="h-2.5 w-2.5 text-[#008CFF]" />

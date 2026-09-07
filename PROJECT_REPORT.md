@@ -824,4 +824,42 @@ Full report: `phase18_township_digital_twin_verification_report.md`.
    - `npx tsc --noEmit` exited with 0 errors.
    - `npm run build` compiled all 57 Next.js production routes successfully.
 
+---
+
+## Phase 21 — Final End-to-End Validation & UX Hardening (September 2026)
+
+**Objective**: Close the remaining Phase 20 gaps — bidirectional 2D↔3D navigation, global search coverage, persona-level RBAC, building-management validation, and production-runtime verification — using real browser-level (CDP) testing against the production build. No result is claimed without an executed test.
+
+### 21.1 Fixes Applied
+
+1. **2D GIS → 3D deep links corrected** (`src/components/gis/GisEntityPanel.tsx`): the property-unit card and building card previously linked to `/properties/{parcelId}/digital-twin`, an identifier the twin route could not resolve to a unit. Both now emit the canonical unit deep link (`/properties/PROP-LR-B-0402/digital-twin?building=B-LR-B&floor=4&flat=402`), which auto-selects Tower B → Floor 4 → Flat 402 with property details and the DEMO/ILLUSTRATIVE disclaimer. Browser-verified in both directions.
+2. **Global search ranking hardened** (`src/lib/gisSearch.ts`): multi-word queries ("Flat 402", "Kolte Patil Life Republic") and short ambiguous tokens ("Tower B") now tokenize with word-boundary scoring so Tower B outranks Towers A/C/D/E. All eight Phase 21 queries navigate to the correct entity (browser-verified).
+3. **Register Building modal validation & fields** (`src/components/buildings/RegisterBuildingModal.tsx`, `src/types/gis.ts`): mandatory name, duplicate-code rejection against the registry, floor-count range validation, latitude/longitude range validation, dimension validation, new Latitude/Longitude/Status inputs (`UNDER_CONSTRUCTION` added to `BuildingStatus`), parcel→coordinate pre-fill, and a visible error summary. All five rejection cases browser-verified.
+4. **Archive flow hardening confirmed** (`src/app/society/[societyId]/buildings/page.tsx`): the confirmation dialog displays building name/code/floor count/unit count, requires a non-empty Archive Reason (confirm disabled until provided), and performs a soft delete via `archiveBuilding` (status → ARCHIVED, `archivedAt`/`archivedBy`/`archiveReason` audit fields, floors and units preserved).
+5. **RBAC enforcement verified per persona** (CDP, production server): CADASTRE ADMIN (dashboard, user management, audit log), SOCIETY ADMIN (portal + Register Building), GOVERNMENT OFFICER (workbench; `/society` → `/unauthorized`), CITIZEN (no Add Building button; `/society`, `/government`, `/dashboard/admin` all → `/unauthorized`). Zero console errors across all persona passes.
+
+### 21.2 Verification Results (production server, headless-Chrome CDP)
+
+| Suite | Result |
+| --- | --- |
+| E2E journey (auth → GIS → 3D → Tower B → Flat 402 → DEMO disclaimer → 2D return) | 19/19 PASS |
+| Global search matrix (8 canonical queries) | 8/8 PASS |
+| RBAC personas (4 roles, 16 checks) | 16/16 PASS |
+| Add Building validation (5 rejections + successful creation) | 10/10 PASS |
+| Console error audit | 0 errors |
+| Stale-cache audit (renthub / mini project in served chunks) | CLEAN (`hasRentHub:false`) |
+| Test-data hygiene: `B-P21-Z` absent from a fresh building list | PASS (GIS registry is in-memory; nothing persisted) |
+
+### 21.3 Constraints & Honest Limitations
+
+- **Archive Building E2E**: the society portal is Firestore-backed and demo sessions carry a synthetic UID (no Firebase Auth session); exercising writes would mutate the live Firebase project. Archive is therefore source-verified with a hardened dialog flow, and is explicitly marked NOT VERIFIED end-to-end in the browser.
+- **Live Firebase/Supabase production verification**: not performed in this environment.
+- The legacy chunk directory `.firebase/ulpin-3d/hosting/` contains historical build output only; active `src/` contains zero RentHub references.
+
+### 21.4 Final Validation
+
+- `npx tsc --noEmit` → exit code 0 (0 errors).
+- `npm run build` → exit code 0 (all routes compiled).
+- Production runtime (`next start`) → all journeys executed against `http://localhost:3000`.
+
 

@@ -430,8 +430,10 @@ export default function BuildingDetailPage() {
               <CardHeader><CardTitle>Actions</CardTitle></CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <Button variant="outline" disabled>
-                    <BarChart3 className="h-4 w-4 mr-2" />View 3D Building Preview — Coming Soon
+                  <Button variant="default" size="sm" asChild className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold">
+                    <Link href={`/properties/default-township/digital-twin?societyId=${societyId}&buildingId=${buildingId}`}>
+                      <BarChart3 className="h-4 w-4 mr-2" />View in 3D Digital Twin
+                    </Link>
                   </Button>
                   <Button variant="outline" onClick={handleOpenEdit}>
                     <Edit3 className="h-4 w-4 mr-2" />Edit Building

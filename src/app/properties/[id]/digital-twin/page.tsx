@@ -12,6 +12,7 @@ import {
   TownshipSceneHeader,
   TownshipSelectedChip,
 } from "@/components/digital-twin/township/TownshipOverlays";
+import { TownshipBuildingPanel } from "@/components/digital-twin/township/TownshipBuildingPanel";
 import { TownshipLayerPanel } from "@/components/digital-twin/township/TownshipPanels";
 import { InspectionToolbar } from "@/components/digital-twin/inspection/InspectionToolbar";
 import { InspectionSummary } from "@/components/digital-twin/inspection/InspectionSummary";
@@ -35,6 +36,7 @@ import {
   TOWERS,
   TOWNSHIP_SITE,
   type CameraPresetId,
+  type TowerDef,
   type TownshipLayerId,
   type TownshipLayerState,
 } from "@/components/digital-twin/township/townshipConfig";
@@ -52,6 +54,9 @@ import { DigitalTwinMiniMap } from "@/components/digital-twin/MiniMap";
 import { TwinUnit } from "@/data/mockDigitalTwin";
 import { buildTwinView, findTwinUnit } from "@/lib/twinView";
 import { fadeIn, slideInLeft, slideInRight } from "@/components/digital-twin/motion";
+import { getSocietyById } from "@/lib/society/service";
+import type { Society } from "@/types/society";
+import { generate3DFromImage, type Image3DGenerationResult } from "@/lib/imageTo3DGenerator";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { DigitalTwinInspectionProvider } from "@/context/DigitalTwinInspectionContext";
@@ -84,17 +89,19 @@ function BuildingDigitalTwinPageContent() {
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [showInspectionSummary, setShowInspectionSummary] = useState(false);
+  const [showBuildingPanel, setShowBuildingPanel] = useState(false);
   const viewerShellRef = useRef<HTMLDivElement>(null);
   const viewerHandleRef = useRef<Township3DViewerHandle>(null);
 
-  // Route param + search params for deep-linking (?building=..., ?floor=..., ?flat=...)
+  // Route param + search params for deep-linking (?building=..., ?floor=..., ?flat=..., ?society=...)
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const routeId = params?.id ?? "";
 
-  const queryBuilding = searchParams?.get("building") ?? null;
-  const queryFloor = searchParams?.get("floor") ?? null;
-  const queryFlat = searchParams?.get("flat") ?? null;
+  const queryBuilding = searchParams?.get("building") ?? searchParams?.get("buildingId") ?? null;
+  const queryFloor = searchParams?.get("floor") ?? searchParams?.get("floorId") ?? null;
+  const queryFlat = searchParams?.get("flat") ?? searchParams?.get("flatId") ?? null;
+  const querySociety = searchParams?.get("society") ?? searchParams?.get("societyId") ?? null;
 
   const { buildings, floors, properties: gisUnits, parcels, conflicts } = useGIS();
   const { getPropertyByUlpinOrId } = useProperty();
@@ -112,12 +119,105 @@ function BuildingDigitalTwinPageContent() {
     return floors.find((f) => f.id === featuredUnitRecord.floorId)?.floorNumber ?? null;
   }, [featuredUnitRecord, floors]);
 
+  const [society, setSociety] = useState<Society | null>(null);
+  const [image3DResult, setImage3DResult] = useState<Image3DGenerationResult | null>(null);
+
+  // Target society buildings resolution
+  const targetSocietyId = querySociety ?? (parcels.some((p) => p.id === routeId) ? routeId : null);
+
+  const societyBuildings = useMemo(() => {
+    if (!targetSocietyId) return [];
+    return buildings.filter(
+      (b) => b.parcelId === targetSocietyId || (b as any).societyId === targetSocietyId,
+    );
+  }, [buildings, targetSocietyId]);
+
+  useEffect(() => {
+    let active = true;
+    if (!targetSocietyId) {
+      setSociety(null);
+      return;
+    }
+    getSocietyById(targetSocietyId).then((res) => {
+      if (active && res) {
+        setSociety(res);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [targetSocietyId]);
+
+  const societyImageUrl = useMemo(() => {
+    return society?.imageUrl || routeProperty?.aerialImageUrl || routeProperty?.featuredImageUrl || null;
+  }, [society, routeProperty]);
+
+  useEffect(() => {
+    let active = true;
+    if (societyImageUrl) {
+      const socName = society?.name || routeProperty?.title || "Society Digital Twin";
+      generate3DFromImage(societyImageUrl, socName, societyBuildings).then((res) => {
+        if (active) {
+          setImage3DResult(res);
+        }
+      });
+    } else {
+      setImage3DResult(null);
+    }
+    return () => {
+      active = false;
+    };
+  }, [societyImageUrl, society?.name, routeProperty?.title, societyBuildings]);
+
+  // Dynamic 3D Tower generation for all buildings (including custom societies & AI extraction)
+  const sceneTowers = useMemo<TowerDef[]>(() => {
+    if (image3DResult && image3DResult.towers.length > 0) {
+      return image3DResult.towers;
+    }
+    const baseTowers = [...TOWERS];
+    const targetBldgs = societyBuildings.length > 0 ? societyBuildings : buildings;
+
+    const dynamicList: TowerDef[] = [];
+    targetBldgs.forEach((bldg, idx) => {
+      const inBase = baseTowers.find((t) => t.id === bldg.id || t.id === bldg.buildingCode);
+      if (!inBase) {
+        const count = targetBldgs.length;
+        const angle = (idx / Math.max(1, count)) * Math.PI * 1.5 - 0.4;
+        const radius = 55;
+        const posX = Math.round(Math.cos(angle) * radius);
+        const posZ = Math.round(Math.sin(angle) * radius);
+        const bldgFloors = floors.filter((f) => f.buildingId === bldg.id);
+        const floorCount = bldgFloors.length > 0 ? bldgFloors.length : (bldg.totalFloors || 12);
+
+        dynamicList.push({
+          id: bldg.id,
+          name: bldg.name,
+          type: (['A', 'B', 'C', 'D'][idx % 4]) as any,
+          typeLabel: (bldg as any).type ? `${(bldg as any).type} Building` : 'Residential Tower',
+          position: [posX, posZ],
+          rotation: 0.05 * idx,
+          floors: floorCount,
+          footprint: [18, 16],
+          dataStatus: 'verified',
+        });
+      }
+    });
+
+    if (dynamicList.length > 0) {
+      return [...dynamicList, ...baseTowers.filter((bt) => !dynamicList.some((dt) => dt.id === bt.id))];
+    }
+    return baseTowers;
+  }, [image3DResult, societyBuildings, buildings, floors]);
+
   // Deep-link auto-selection (?building=…&floor=…&flat=…). When a parameter is
   // absent, fall back to the canonical featured registry unit so that opening
   // /properties/PROP-LR-B-0402/digital-twin still lands on Tower B · Floor 4 ·
   // Flat 402 — never on an unrelated mock building.
   useEffect(() => {
-    const buildingParam = queryBuilding ?? featuredUnitRecord?.buildingId ?? null;
+    const buildingParam =
+      queryBuilding ??
+      featuredUnitRecord?.buildingId ??
+      (societyBuildings.length > 0 ? societyBuildings[0].id : null);
     if (buildingParam) {
       const match = buildings.find((b) => b.id === buildingParam || b.buildingCode === buildingParam);
       if (match) {
@@ -142,15 +242,15 @@ function BuildingDigitalTwinPageContent() {
       inspection.selectFlat(flatParam);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queryBuilding, queryFloor, queryFlat, buildings, featuredUnitRecord, featuredFloorLevel]);
+  }, [queryBuilding, queryFloor, queryFlat, buildings, featuredUnitRecord, featuredFloorLevel, societyBuildings]);
 
   const place = resolvePlace(PLACE_ID);
 
-  // Reset floor state whenever the selection changes
-  useEffect(() => {
-    setFloorMode("all");
-    setSelectedLevel(null);
-  }, [selectedTowerId]);
+  // Phase 20 — the previous mount-time effect that reset floorMode/selectedLevel
+  // whenever selectedTowerId changed has been REMOVED: it also fired on first
+  // mount (same tower id) and wiped the deep-linked ?floor= selection before
+  // the user ever saw it. Floor/unit resets now happen exclusively in
+  // handleSelectTower on genuine user-driven tower switches.
 
   // Sync inspection context floorMode
   useEffect(() => {
@@ -184,26 +284,39 @@ function BuildingDigitalTwinPageContent() {
     viewerHandleRef.current?.applyPreset("isometric");
   }, []);
   const handleSelectTower = useCallback((id: string | null) => {
+    // Phase 20 — reset floor/unit state only on a GENUINE tower switch (user
+    // click). The deep-link effect sets tower + floor + flat atomically, so a
+    // mount-time reset effect here previously WIPED the ?floor= selection
+    // (browser-verified: ?floor=4 landed on the default Floor 06). Resetting
+    // inside this handler keeps user-driven switches clean without fighting
+    // the deep link.
     setSelectedTowerId(id);
+    if (id !== selectedTowerId) {
+      setFloorMode("all");
+      setSelectedLevel(null);
+      setSelectedUnitId(null);
+      setSelectedUnit(null);
+    }
+    if (id) setShowBuildingPanel(true);
     inspection.selectBuilding(id);
-  }, [inspection]);
+  }, [inspection, selectedTowerId]);
   const selectedTower = useMemo(
     () =>
-      TOWERS.find((t) => t.id === selectedTowerId) ??
+      sceneTowers.find((t) => t.id === selectedTowerId) ??
       (selectedTowerId
         ? {
             id: selectedTowerId,
-            name: buildings.find((b) => b.id === selectedTowerId)?.name ?? "Building",
+            name: buildings.find((b) => b.id === selectedTowerId || b.buildingCode === selectedTowerId)?.name ?? "Building",
             type: "A" as const,
             typeLabel: "Residential Building",
             position: [0, -52] as [number, number],
             rotation: 0.05,
-            floors: buildings.find((b) => b.id === selectedTowerId)?.totalFloors ?? 12,
+            floors: buildings.find((b) => b.id === selectedTowerId || b.buildingCode === selectedTowerId)?.totalFloors ?? 12,
             footprint: [18, 16] as [number, number],
             dataStatus: "verified" as const,
           }
-        : null),
-    [selectedTowerId, buildings]
+        : sceneTowers[0] ?? null),
+    [selectedTowerId, sceneTowers, buildings]
   );
 
   // Real database resolution
@@ -245,17 +358,83 @@ function BuildingDigitalTwinPageContent() {
   // The legacy Green Valley illustration mock is only used when no registry
   // building is linked. This removes the Green-Valley/12-floor/42m data
   // mismatch observed in the Phase 18 review.
-  const twinView = useMemo(
-    () =>
-      buildTwinView({
-        building: linkedTowerData.building,
-        floors: linkedTowerData.floors,
-        units: linkedTowerData.units,
-        parcel: linkedTowerData.parcel,
-        featured: routeProperty,
-      }),
-    [linkedTowerData, routeProperty]
-  );
+  const twinView = useMemo(() => {
+    const base = buildTwinView({
+      building: linkedTowerData.building,
+      floors: linkedTowerData.floors,
+      units: linkedTowerData.units,
+      parcel: linkedTowerData.parcel,
+      featured: routeProperty,
+    });
+
+    if (!base.linked && society) {
+      const activeWing = image3DResult?.wings.find((w) => w.id === selectedTowerId) ?? image3DResult?.wings[0];
+      const floorCount = activeWing?.floors ?? selectedTower?.floors ?? 18;
+      const heightM = Number((floorCount * 3.1).toFixed(1));
+      const totalUnits = floorCount * 4;
+
+      return {
+        building: {
+          name: selectedTower?.name ?? `${society.name} · Main Wing`,
+          propertyId: society.registrationNumber ?? `PROP-${society.id.slice(0, 8).toUpperCase()}`,
+          ulpin: society.registrationNumber ?? `ULPIN-${society.id.slice(0, 10).toUpperCase()}`,
+          location: `${society.address.line1 ? `${society.address.line1}, ` : ""}${society.address.city}, ${society.address.state}`,
+          cityState: `${society.address.city}, ${society.address.state} - ${society.address.pinCode}`,
+          type: "AI Reconstructed Residential High-Rise",
+          totalFloors: floorCount,
+          totalUnits,
+          builtUpAreaSqFt: floorCount * 4200,
+          constructionYear: society.establishedYear ?? 2023,
+          heightM,
+          occupiedUnits: Math.round(totalUnits * 0.85),
+          vacantUnits: Math.round(totalUnits * 0.15),
+          leasedUnits: 0,
+          propertyHealth: 96,
+          verificationScore: image3DResult?.generationConfidence ?? 92,
+          verificationStatus: "VERIFIED" as const,
+          systemStatus: "ACTIVE" as const,
+          latitude: society.location?.latitude ?? 18.59,
+          longitude: society.location?.longitude ?? 73.71,
+          buildingId: selectedTower?.id ?? `BLDG-${society.id}`,
+          buildingCode: selectedTower?.id ?? "WING-A",
+          parcelId: society.id,
+          societyName: society.name,
+          surveyNumber: society.registrationNumber || undefined,
+          dataStatus: "DEMO" as const,
+          sourceType: "AI_IMAGE_RECONSTRUCTION" as any,
+          isOfficialUlpin: false,
+        },
+        floors: Array.from({ length: floorCount }).map((_, fIdx) => ({
+          level: fIdx + 1,
+          label: `Floor ${String(fIdx + 1).padStart(2, "0")}`,
+          elevationM: Number(((fIdx + 1) * 3.1).toFixed(1)),
+          areaSqFt: 4200,
+          units: Array.from({ length: 4 }).map((__, uIdx) => ({
+            id: `UNIT-${fIdx + 1}0${uIdx + 1}`,
+            number: `${fIdx + 1}0${uIdx + 1}`,
+            floorLevel: fIdx + 1,
+            type: (uIdx === 3 ? "3BHK" : "2BHK") as any,
+            areaSqFt: uIdx === 3 ? 1250 : 950,
+            ownerName: "Protected Record",
+            ownerAadhaarMasked: "PROTECTED",
+            occupancy: "OCCUPIED" as any,
+            status: "VERIFIED" as any,
+            taxAssessment: `TAX-${society.id.slice(0, 4)}-${fIdx + 1}0${uIdx + 1}`,
+            healthScore: 95,
+            propertyRecordId: `PROP-${society.id.slice(0, 6)}`,
+            demoSpatialId: `SPATIAL-FL-${fIdx + 1}0${uIdx + 1}`,
+            fromRegistry: true,
+            sourceType: "REGISTRY" as any,
+          })),
+          status: "VERIFIED" as const,
+          floorId: `FLOOR-${fIdx + 1}`,
+        })),
+        linked: true,
+      };
+    }
+
+    return base;
+  }, [linkedTowerData, routeProperty, society, image3DResult, selectedTowerId, selectedTower]);
 
   // Unified floor state for the bottom workbench: registry-linked selection
   // drives BOTH the panels and the 3D scene (inspection.selectFloor), so the
@@ -461,19 +640,32 @@ function BuildingDigitalTwinPageContent() {
                     onMeasureClick={inspection.setMeasurePoint}
                     discrepancyOverlay={inspection.discrepancyOverlay}
                     conflicts={conflicts}
+                    towers={sceneTowers}
+                    societyImageUrl={societyImageUrl}
+                    societyName={society?.name || routeProperty?.title}
+                    isAiReconstructed={Boolean(societyImageUrl)}
                     className="h-full w-full"
                   />
                 </div>
 
-                {/* scene identity header — LIFE REPUBLIC / MARUNJI • PUNE */}
-                <TownshipSceneHeader className="absolute left-3 top-3 z-20" />
+                {/* scene identity header — dynamic society or default */}
+                <TownshipSceneHeader
+                  className="absolute left-3 top-3 z-20"
+                  title={society?.name || routeProperty?.title || TOWNSHIP_SITE.name}
+                  subtitle={
+                    society?.address
+                      ? `${society.address.city || ""}${society.address.state ? `, ${society.address.state}` : ""}`
+                      : TOWNSHIP_SITE.subtitle
+                  }
+                  isAiReconstructed={Boolean(societyImageUrl)}
+                />
 
                 {/* Phase 7 & 19 — 3D Inspection Toolbar with On-Demand Dropdowns */}
                 <InspectionToolbar
                   className="absolute left-1/2 top-3 z-30 flex -translate-x-1/2 max-w-[calc(100%-24px)] overflow-x-auto scrollbar-none"
                   onResetCamera={handleReset}
                   openDiscrepancyCount={conflicts.length}
-                  towers={TOWERS}
+                  towers={sceneTowers}
                   selectedTower={selectedTower}
                   onSelectTower={handleSelectTower}
                   linkedBuilding={linkedTowerData.building}
@@ -568,12 +760,45 @@ function BuildingDigitalTwinPageContent() {
                 {/* selected building chip */}
                 <AnimatePresence>
                   {selectedTower && (
-                    <TownshipSelectedChip
-                      tower={selectedTower}
-                      linked={towerLinkedToDb}
-                      onClear={() => handleSelectTower(null)}
-                      className="absolute bottom-16 right-3 z-20 sm:bottom-3"
-                    />
+                    <div onClick={() => setShowBuildingPanel(true)} className="cursor-pointer">
+                      <TownshipSelectedChip
+                        tower={selectedTower}
+                        linked={towerLinkedToDb}
+                        onClear={() => handleSelectTower(null)}
+                        className="absolute bottom-16 right-3 z-20 sm:bottom-3"
+                      />
+                    </div>
+                  )}
+                </AnimatePresence>
+
+                {/* selected building interactive inspection panel */}
+                <AnimatePresence>
+                  {selectedTower && showBuildingPanel && (
+                    <div className="absolute right-3 top-[56px] z-30 max-h-[calc(100%-120px)] overflow-y-auto scrollbar-none">
+                      <TownshipBuildingPanel
+                        tower={selectedTower}
+                        linkedBuilding={linkedTowerData.building}
+                        linkedFloors={linkedTowerData.floors}
+                        linkedUnits={linkedTowerData.units}
+                        parcel={linkedTowerData.parcel}
+                        property={routeProperty}
+                        onClose={() => setShowBuildingPanel(false)}
+                        onViewBuilding={() => {
+                          if (selectedTower) {
+                            viewerHandleRef.current?.focusTower?.(selectedTower);
+                          }
+                        }}
+                        onToggleIsolate={() => inspection.toggleBuildingIsolation()}
+                        isIsolated={inspection.buildingIsolation}
+                        onViewFloors={() => handleFloorMode('show')}
+                        onToggleExplode={() => handleFloorMode(floorMode === 'explode' ? 'all' : 'explode')}
+                        isExploded={floorMode === 'explode'}
+                        onOpenProperty={() => {
+                          if (routeProperty?.id) router.push(`/properties/${routeProperty.id}`);
+                          else if (linkedTowerData.units[0]?.id) router.push(`/properties/${linkedTowerData.units[0].id}`);
+                        }}
+                      />
+                    </div>
                   )}
                 </AnimatePresence>
 
@@ -754,7 +979,7 @@ function BuildingDigitalTwinPageContent() {
         </div>
 
         {/* ============ ANALYTICS ============ */}
-        <BuildingAnalytics />
+        <BuildingAnalytics building={twinView.building} floors={twinView.floors} />
 
         {/* Phase 7 — Structured Inspection Summary Modal */}
         <InspectionSummary

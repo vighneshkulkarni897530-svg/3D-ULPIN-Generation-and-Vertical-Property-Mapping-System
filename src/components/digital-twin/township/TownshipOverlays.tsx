@@ -18,19 +18,42 @@ import { cn } from "@/lib/utils";
  * (config constants only — no random values, timestamps or browser APIs), so
  * server and client output stay identical.
  */
-export function TownshipSceneHeader({ className }: { className?: string }) {
+export function TownshipSceneHeader({
+  className,
+  title,
+  subtitle,
+  badge,
+  isAiReconstructed = false,
+}: {
+  className?: string;
+  title?: string;
+  subtitle?: string;
+  badge?: string;
+  isAiReconstructed?: boolean;
+}) {
+  const displayTitle = title || TOWNSHIP_SITE.name;
+  const displaySubtitle = subtitle || TOWNSHIP_SITE.subtitle;
+  const displayBadge = badge || PLACE_VISUALIZATION_STATUS;
+
   return (
-    <div className={cn("dt-hud dt-card-accent rounded-2xl px-3.5 py-2.5 shadow-[0_18px_50px_-20px_rgba(0,0,0,0.9)]", className)}>
+    <div className={cn("dt-hud dt-card-accent rounded-2xl px-3.5 py-2.5 shadow-[0_18px_50px_-20px_rgba(0,0,0,0.9)] backdrop-blur-md", className)}>
       <div className="flex items-center gap-2">
         <span className="flex items-center gap-1.5 rounded-lg border border-[#164E73] bg-[#0A1B31] px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] text-[#00D9FF]">
           <Building2 className="h-3 w-3" /> 3D Digital Twin
         </span>
-        <span className="hidden rounded-lg border border-[#FACC15]/40 bg-[#FACC15]/10 px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.16em] text-[#FACC15] sm:inline">
-          {PLACE_VISUALIZATION_STATUS}
-        </span>
+        {isAiReconstructed ? (
+          <span className="flex items-center gap-1 rounded-lg border border-cyan-400/50 bg-cyan-500/15 px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.16em] text-cyan-300 animate-pulse">
+            <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
+            AI Image-Reconstructed
+          </span>
+        ) : (
+          <span className="hidden rounded-lg border border-[#FACC15]/40 bg-[#FACC15]/10 px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.16em] text-[#FACC15] sm:inline">
+            {displayBadge}
+          </span>
+        )}
       </div>
-      <h2 className="mt-1.5 text-base font-black tracking-tight text-[#F8FAFC] sm:text-lg">{TOWNSHIP_SITE.name}</h2>
-      <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-[#94A3B8]">{TOWNSHIP_SITE.subtitle}</p>
+      <h2 className="mt-1.5 text-base font-black tracking-tight text-[#F8FAFC] sm:text-lg">{displayTitle}</h2>
+      <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-[#94A3B8]">{displaySubtitle}</p>
     </div>
   );
 }

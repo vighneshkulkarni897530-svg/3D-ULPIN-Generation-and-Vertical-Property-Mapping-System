@@ -306,11 +306,10 @@ function SocietyDashboardContent() {
                 <Users className="h-3.5 w-3.5" aria-hidden="true" /> Manage Residents
               </Link>
             </Button>
-            <Button variant="secondary" size="sm" disabled title="Coming in a future phase">
-              <Building2 className="h-3.5 w-3.5" aria-hidden="true" /> View 3D Society
-              <span className="ml-1 font-mono text-[9px] font-bold uppercase text-cyan-300">
-                Coming Soon
-              </span>
+            <Button variant="secondary" size="sm" asChild>
+              <Link href={`/properties/default-township/digital-twin?societyId=${societyId}`}>
+                <Building2 className="h-3.5 w-3.5" aria-hidden="true" /> View 3D Society
+              </Link>
             </Button>
           </>
         }
