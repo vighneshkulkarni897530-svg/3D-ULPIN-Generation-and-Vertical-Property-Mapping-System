@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { DEMO_PASSWORD } from "@/lib/auth/authConstants";
 import { MOCK_USERS } from "@/data/mockUsers";
+import { Earth3DBackground } from "@/components/common/Earth3DBackground";
 
 interface RoleAuthModalProps {
   isOpen: boolean;
@@ -188,8 +189,11 @@ export const RoleAuthModal: React.FC<RoleAuthModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-      <div className="relative w-full max-w-lg rounded-3xl border border-slate-800 bg-slate-900/95 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in overflow-hidden">
+      {/* 3D Earth Globe Spinning in the background */}
+      <Earth3DBackground className="z-0 opacity-75 pointer-events-none" />
+
+      <div className="relative z-10 w-full max-w-lg rounded-3xl border border-slate-800 bg-slate-900/95 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
         {/* Close Button */}
         <button
           onClick={onClose}

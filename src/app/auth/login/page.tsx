@@ -20,7 +20,6 @@ import {
 } from 'lucide-react';
 
 import { DEMO_PASSWORD } from '@/lib/auth/authConstants';
-import { RotatingEarthGlobe } from '@/components/common/RotatingEarthGlobe';
 
 const DEMO_ACCOUNTS: Record<'citizen' | 'officer' | 'admin', { email: string; dashboard: string }> = {
   citizen: { email: 'rajesh.sharma@example.com', dashboard: '/dashboard/citizen' },
