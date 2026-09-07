@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Building, Mail, ArrowRight, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { requestEmailOtp } from '@/lib/firebase/auth';
+import { RotatingEarthGlobe } from '@/components/common/RotatingEarthGlobe';
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -53,16 +54,19 @@ export default function ForgotPasswordPage() {
   return (
     <div className="min-h-[calc(100vh-10rem)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-950 relative overflow-hidden">
       <div className="max-w-md w-full space-y-6 relative z-10">
-        <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 p-0.5 mx-auto shadow-tech-cyan flex items-center justify-center">
-            <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-              <Building className="w-6 h-6 text-cyan-400" />
+        <div className="text-center space-y-3">
+          <div className="flex items-center justify-center gap-3">
+            <div className="w-12 h-12 rounded-2xl overflow-hidden border border-cyan-500/40 bg-slate-950 p-0.5 shadow-tech-cyan flex items-center justify-center">
+              <img src="/logo.jpeg" alt="CyberSpark Logo" className="w-full h-full object-cover rounded-[14px]" />
             </div>
+            <RotatingEarthGlobe size="sm" showAtmosphere showOrbitalRing rotationDurationSeconds={35} />
           </div>
-          <h2 className="text-2xl font-extrabold tracking-tight text-white">Reset Cadastre Password</h2>
-          <p className="text-xs text-slate-400">
-            Enter your registered email to receive your 6-digit OTP verification code.
-          </p>
+          <div>
+            <h2 className="text-2xl font-extrabold tracking-tight text-white">Reset Cadastre Password</h2>
+            <p className="text-xs text-slate-400 mt-1">
+              Enter your registered email to receive your 6-digit OTP verification code.
+            </p>
+          </div>
         </div>
 
         <div className="bg-slate-900/90 border border-slate-800 p-7 rounded-3xl shadow-2xl backdrop-blur-xl space-y-5">
