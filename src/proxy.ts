@@ -37,9 +37,12 @@ function isStaticAsset(pathname: string): boolean {
   return (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon') ||
+    pathname.startsWith('/videos/') ||
+    pathname.startsWith('/models/') ||
+    pathname.startsWith('/textures/') ||
     pathname === '/robots.txt' ||
     pathname === '/manifest.json' ||
-    /\.(svg|png|jpg|jpeg|gif|webp|ico|txt|xml|webmanifest|woff2?)$/.test(pathname)
+    /\.(svg|png|jpg|jpeg|gif|webp|ico|txt|xml|webmanifest|woff2?|mp4|webm|ogv|m4v|mp3|wav)$/.test(pathname)
   );
 }
 
