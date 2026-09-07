@@ -185,6 +185,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               email: fallbackEmail,
               name: emailUser.displayName,
             },
+            ...(otpClaim ? { claim: otpClaim } : {}),
           }),
           credentials: 'same-origin',
         });

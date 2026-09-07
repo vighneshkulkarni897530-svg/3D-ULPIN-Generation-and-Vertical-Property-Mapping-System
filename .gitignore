@@ -36,4 +36,5 @@ tsc_*.txt
 # OS & Temp files
 .DS_Store
 Thumbs.db
+*.pptx
 

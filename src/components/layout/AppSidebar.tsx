@@ -9,7 +9,6 @@ import { NAV_SECTIONS, getNavSectionsForRole, isNavItemActive } from "@/lib/navi
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { useGIS } from "@/context/GISContext";
-import { RoleSwitcher } from "@/components/common/RoleSwitcher";
 
 const PENDING_PROPERTY_STATUSES = [
   "Pending",
@@ -193,11 +192,6 @@ function SidebarBody({
       {/* User / officer section */}
       {isAuthenticated && currentUser && currentUser.name !== 'Guest' && (
         <div className="border-t border-slate-800 p-3">
-          {drawer && (
-            <div className="mb-3 flex justify-center">
-              <RoleSwitcher />
-            </div>
-          )}
           <div className={cn("flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/70 p-2.5", collapsed && "justify-center")}>
             <SafeImage
               src={currentUser.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"}

@@ -5,10 +5,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useProperty } from '@/context/PropertyContext';
-import { RoleSwitcher } from './RoleSwitcher';
 import { UserMenu } from '@/components/auth/UserMenu';
 import { GlobalSearch } from '@/components/layout/GlobalSearch';
-import { SystemStatus } from '@/components/layout/SystemStatus';
 import {
   Building, Search, Layers, AlertCircle, FileCheck2, LayoutDashboard, Bell, Menu, X, CheckCheck,
 } from 'lucide-react';
@@ -112,12 +110,6 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
           {/* Right Controls */}
           <div className="flex items-center gap-1.5 sm:gap-2.5">
-            {isShell && <SystemStatus />}
-
-            <div className="hidden md:flex items-center gap-2.5">
-              {isActuallyLoggedIn && <RoleSwitcher />}
-            </div>
-
             {/* Notifications */}
             {isActuallyLoggedIn && (
               <div className="relative">

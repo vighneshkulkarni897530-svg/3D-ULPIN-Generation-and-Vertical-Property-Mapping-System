@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { UserRole } from "@/types";
@@ -17,6 +17,8 @@ import {
   X,
   Sparkles,
   ArrowRight,
+  KeyRound,
+  CheckCircle2,
 } from "lucide-react";
 import { DEMO_PASSWORD } from "@/lib/auth/authConstants";
 import { MOCK_USERS } from "@/data/mockUsers";
@@ -34,8 +36,9 @@ export const RoleAuthModal: React.FC<RoleAuthModalProps> = ({
   targetRole,
   onSuccess,
 }) => {
-  const { login, role: currentRole } = useAuth();
+  const { login, requestOtp, verifyOtp, role: currentRole } = useAuth();
 
+  const [authMode, setAuthMode] = useState<"password" | "otp">("password");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [badgeNumber, setBadgeNumber] = useState("");
@@ -43,14 +46,41 @@ export const RoleAuthModal: React.FC<RoleAuthModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // OTP states
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [devOtp, setDevOtp] = useState<string | null>(null);
+  const [challengeId, setChallengeId] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [resendCountdown, setResendCountdown] = useState(0);
+
+  // Countdown timer
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (resendCountdown > 0) {
+      timer = setInterval(() => {
+        setResendCountdown((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [resendCountdown]);
+
   // Reset state on target change
-  React.useEffect(() => {
+  useEffect(() => {
     if (isOpen && targetRole) {
       setError(null);
+      setAuthMode("password");
       setEmail("");
       setPassword("");
       setBadgeNumber("");
       setSocietyRegNo("");
+      setOtpSent(false);
+      setOtpCode("");
+      setDevOtp(null);
     }
   }, [isOpen, targetRole]);
 
@@ -60,7 +90,7 @@ export const RoleAuthModal: React.FC<RoleAuthModalProps> = ({
   const isSecretary = targetRole === "ADMIN";
   const isCitizen = targetRole === "CITIZEN";
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -88,6 +118,72 @@ export const RoleAuthModal: React.FC<RoleAuthModalProps> = ({
       window.location.href = "/dashboard/admin";
     } else {
       window.location.href = "/dashboard/citizen";
+    }
+  };
+
+  const handleSendOtp = async () => {
+    if (!email || !email.includes("@")) {
+      setError("Please enter a valid registered email address.");
+      return;
+    }
+
+    setOtpSending(true);
+    setError(null);
+
+    const roleName = isOfficer ? "Revenue Officer" : isSecretary ? "Society Secretary" : "Citizen";
+
+    try {
+      const res = await requestOtp(email.trim(), roleName);
+      if (!res.ok) {
+        throw new Error(res.error || "Failed to dispatch verification OTP.");
+      }
+      setChallengeId(res.challengeId || null);
+      setToken(res.token || null);
+      setDevOtp(res.devOtp || null);
+      setOtpSent(true);
+      setResendCountdown(60);
+    } catch (err: any) {
+      setError(err?.message || "Could not send OTP. Please try again.");
+    } finally {
+      setOtpSending(false);
+    }
+  };
+
+  const handleOtpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otpCode || otpCode.trim().length !== 6) {
+      setError("Please enter the 6-digit verification code.");
+      return;
+    }
+
+    setOtpVerifying(true);
+    setError(null);
+
+    try {
+      const res = await verifyOtp(
+        email.trim(),
+        otpCode.trim(),
+        token || undefined,
+        challengeId || undefined
+      );
+
+      if (!res.ok) {
+        throw new Error(res.error || "Invalid or expired OTP code.");
+      }
+
+      onSuccess?.();
+      onClose();
+
+      if (isOfficer) {
+        window.location.href = "/dashboard/officer";
+      } else if (isSecretary) {
+        window.location.href = "/dashboard/admin";
+      } else {
+        window.location.href = "/dashboard/citizen";
+      }
+    } catch (err: any) {
+      setError(err?.message || "Failed to verify OTP code.");
+      setOtpVerifying(false);
     }
   };
 
@@ -159,11 +255,11 @@ export const RoleAuthModal: React.FC<RoleAuthModalProps> = ({
         </div>
 
         {/* Security Warning Notice */}
-        <div className="mb-5 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-200/90 flex items-start gap-2.5">
+        <div className="mb-4 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-200/90 flex items-start gap-2.5">
           <AlertCircle className="h-4 w-4 shrink-0 text-amber-400 mt-0.5" />
           <p className="text-[11px] leading-relaxed">
             Direct persona switching without credentials has been disabled for data security. Please authenticate
-            with your official credentials to proceed.
+            with your credentials to proceed.
           </p>
         </div>
 
@@ -178,8 +274,7 @@ export const RoleAuthModal: React.FC<RoleAuthModalProps> = ({
           </div>
         )}
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handlePasswordSubmit} className="space-y-4">
           {/* Officer-specific field: Badge Number */}
           {isOfficer && (
             <div>
@@ -197,7 +292,7 @@ export const RoleAuthModal: React.FC<RoleAuthModalProps> = ({
                   className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2.5 pl-10 pr-4 text-xs font-mono font-medium text-white outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
                 />
               </div>
-              <p className="mt-1 text-[10px] text-slate-500">Issued by Department of Land Records & Cadastre.</p>
+              <p className="mt-1 text-[10px] text-slate-500">Issued by Department of Land Records &amp; Cadastre.</p>
             </div>
           )}
 
@@ -273,7 +368,7 @@ export const RoleAuthModal: React.FC<RoleAuthModalProps> = ({
             <button
               type="submit"
               disabled={loading}
-              className={`w-full flex items-center justify-center gap-2 rounded-xl py-3 text-xs font-black transition-all ${
+              className={`w-full flex items-center justify-center gap-2 rounded-xl py-3 text-xs font-black transition-all cursor-pointer ${
                 isOfficer
                   ? "bg-gradient-to-r from-emerald-500 to-teal-700 text-slate-950 hover:from-emerald-400 hover:to-teal-600 shadow-lg"
                   : isSecretary
@@ -328,3 +423,4 @@ export const RoleAuthModal: React.FC<RoleAuthModalProps> = ({
     </div>
   );
 };
+

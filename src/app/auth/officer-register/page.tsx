@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -22,7 +22,9 @@ import {
   CheckCircle2,
   MapPin,
   FileBadge,
+  KeyRound,
 } from "lucide-react";
+import { requestEmailOtp, verifyEmailOtp } from "@/lib/firebase/auth";
 
 export default function OfficerRegisterPage() {
   const router = useRouter();
@@ -39,13 +41,96 @@ export default function OfficerRegisterPage() {
   const [badgeNumber, setBadgeNumber] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
 
+  // Email OTP verification states
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [devOtp, setDevOtp] = useState<string | null>(null);
+  const [challengeId, setChallengeId] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [resendCountdown, setResendCountdown] = useState(0);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Resend countdown timer
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (resendCountdown > 0) {
+      timer = setInterval(() => {
+        setResendCountdown((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [resendCountdown]);
 
   // Generate official KA Revenue ID
   const handleGenerateKaRevId = () => {
     const randomNum = Math.floor(1000 + Math.random() * 9000);
     setBadgeNumber(`KA-REV-${randomNum}`);
+  };
+
+  // Send Email OTP
+  const handleSendEmailOtp = async () => {
+    if (!email || !email.includes("@")) {
+      setError("Please enter a valid official government email address before requesting OTP verification.");
+      return;
+    }
+
+    setOtpSending(true);
+    setOtpError(null);
+    setError(null);
+
+    try {
+      const res = await requestEmailOtp(email.trim(), name.trim() || "Revenue Officer");
+      setChallengeId(res.challengeId || null);
+      setToken(res.token || null);
+      setDevOtp(res.devOtp || null);
+      setOtpSent(true);
+      setResendCountdown(60);
+      if (typeof window !== "undefined") {
+        if (res.challengeId) sessionStorage.setItem("bhu_off_challengeId", res.challengeId);
+        if (res.token) sessionStorage.setItem("bhu_off_token", res.token);
+        sessionStorage.setItem("bhu_off_reg_email", email.trim());
+      }
+    } catch (err: any) {
+      setOtpError(err?.message || "Failed to dispatch verification OTP. Please try again.");
+    } finally {
+      setOtpSending(false);
+    }
+  };
+
+  // Verify Email OTP
+  const handleVerifyOtp = async () => {
+    if (!otpCode || otpCode.trim().length !== 6) {
+      setOtpError("Please enter the 6-digit verification code sent to your official email.");
+      return;
+    }
+
+    setOtpVerifying(true);
+    setOtpError(null);
+
+    try {
+      await verifyEmailOtp(
+        email.trim(),
+        otpCode.trim(),
+        undefined,
+        token || undefined,
+        challengeId || undefined
+      );
+      setEmailVerified(true);
+      setOtpSent(false);
+      setError(null);
+    } catch (err: any) {
+      setOtpError(err?.message || "Invalid or expired OTP code. Please try again.");
+    } finally {
+      setOtpVerifying(false);
+    }
   };
 
   // Handle profile photo upload and convert to base64 data URL
@@ -75,6 +160,11 @@ export default function OfficerRegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!emailVerified) {
+      setError("Please verify the Official Government Email address using the 6-digit OTP code before proceeding.");
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError("Passwords do not match. Please verify both password fields.");
@@ -251,41 +341,146 @@ export default function OfficerRegisterPage() {
               </p>
             </div>
 
-            {/* Name and Official Email */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                  Officer Full Name
+            {/* Officer Full Name */}
+            <div>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                Officer Full Name
+              </label>
+              <div className="relative">
+                <User className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Ramesh K. Patil"
+                  className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2.5 pl-10 pr-3 text-xs font-medium text-white outline-none focus:border-emerald-500"
+                />
+              </div>
+            </div>
+
+            {/* Official Government Email with Inline OTP Verification */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                  Official Government Email
                 </label>
-                <div className="relative">
-                  <User className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Ramesh K. Patil"
-                    className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2.5 pl-10 pr-3 text-xs font-medium text-white outline-none focus:border-emerald-500"
-                  />
-                </div>
+                {emailVerified && (
+                  <span className="inline-flex items-center gap-1 font-mono text-[11px] font-extrabold text-emerald-400">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Email Verified
+                  </span>
+                )}
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                  Official Email
-                </label>
-                <div className="relative">
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
                   <Mail className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                   <input
                     type="email"
                     required
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (emailVerified) setEmailVerified(false);
+                      setOtpSent(false);
+                      setError(null);
+                    }}
                     placeholder="ramesh.patil@rev.gov.in"
-                    className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2.5 pl-10 pr-3 text-xs font-medium text-white outline-none focus:border-emerald-500"
+                    className={`w-full rounded-xl border bg-slate-950 py-2.5 pl-10 pr-3 text-xs font-medium text-white outline-none transition-all ${
+                      emailVerified
+                        ? "border-emerald-500/60 bg-emerald-950/20 text-emerald-200"
+                        : "border-slate-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                    }`}
                   />
                 </div>
+
+                {!emailVerified && (
+                  <button
+                    type="button"
+                    onClick={handleSendEmailOtp}
+                    disabled={otpSending || !email || !email.includes("@")}
+                    className="shrink-0 flex items-center gap-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-3.5 py-2.5 text-xs font-extrabold text-slate-950 shadow-tech-cyan disabled:opacity-40 transition-all cursor-pointer"
+                  >
+                    {otpSending ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Sending...
+                      </>
+                    ) : (
+                      <>
+                        <KeyRound className="h-3.5 w-3.5" /> {otpSent ? "Resend OTP" : "Verify Email"}
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
+
+              {/* Inline OTP verification expandable panel */}
+              {otpSent && !emailVerified && (
+                <div className="mt-2.5 p-3.5 rounded-xl bg-slate-950 border border-emerald-500/40 space-y-2.5 animate-in fade-in zoom-in-95">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-emerald-300 font-bold text-[11px] flex items-center gap-1.5">
+                      <KeyRound className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Enter 6-digit code sent to your official email:</span>
+                    </span>
+                    {resendCountdown > 0 ? (
+                      <span className="text-slate-500 text-[10px]">Resend in {resendCountdown}s</span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleSendEmailOtp}
+                        className="text-emerald-400 hover:underline text-[10px] font-bold cursor-pointer"
+                      >
+                        Resend Code
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      maxLength={6}
+                      value={otpCode}
+                      onChange={(e) => {
+                        setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6));
+                        setOtpError(null);
+                      }}
+                      placeholder="••••••"
+                      className="flex-1 bg-slate-900 border border-slate-800 focus:border-emerald-400 text-emerald-300 font-mono text-center tracking-widest text-sm font-bold rounded-lg px-3 py-2 outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleVerifyOtp}
+                      disabled={otpVerifying || otpCode.length !== 6}
+                      className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs disabled:opacity-50 transition-all flex items-center gap-1 cursor-pointer"
+                    >
+                      {otpVerifying ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <>
+                          <span>Confirm OTP</span>
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {otpError && (
+                    <p className="text-[11px] text-rose-400 font-medium">{otpError}</p>
+                  )}
+
+                  {/* Demo OTP Helper */}
+                  <div className="rounded-lg border border-emerald-500/20 bg-emerald-950/30 px-2.5 py-1.5 text-[10px] text-emerald-300 flex items-center justify-between">
+                    <span>⚡ Demo Code: <strong className="text-white font-mono">{devOtp || "123456"}</strong></span>
+                    <button
+                      type="button"
+                      onClick={() => setOtpCode(devOtp || "123456")}
+                      className="text-emerald-400 hover:underline font-bold"
+                    >
+                      Auto-Fill
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Phone and Jurisdiction */}
@@ -396,7 +591,7 @@ export default function OfficerRegisterPage() {
             <div className="pt-3">
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !emailVerified}
                 className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 py-3 text-xs font-black text-white shadow-lg hover:from-emerald-400 hover:to-teal-500 transition-all disabled:opacity-50"
               >
                 {loading ? (
@@ -409,6 +604,11 @@ export default function OfficerRegisterPage() {
                   </>
                 )}
               </button>
+              {!emailVerified && (
+                <p className="mt-1.5 text-center text-[10px] text-amber-400 font-semibold">
+                  * Email OTP verification required to activate Officer registration.
+                </p>
+              )}
             </div>
           </form>
         </div>

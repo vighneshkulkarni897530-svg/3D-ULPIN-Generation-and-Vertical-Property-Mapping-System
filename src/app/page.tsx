@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
 import { motion } from 'framer-motion';
@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useProperty } from '@/context/PropertyContext';
 import { PropertyCard } from '@/components/property/PropertyCard';
+import EarthBackground from '@/components/common/EarthBackground';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -41,11 +42,12 @@ export default function LandingPage() {
 
   return (
     <div className="flex-1 flex flex-col">
-      {/* 1. HERO SECTION (Midnight Dark Navy with Cyan Tech Highlights) */}
-      <section className="relative bg-slate-950 text-white overflow-hidden pt-12 pb-24 border-b border-slate-800">
-        {/* Subtle Background Glows & Grid Pattern */}
-        <div className="absolute inset-0 tech-grid-dark opacity-40 pointer-events-none" />
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-cyan-500/15 blur-[120px] rounded-full pointer-events-none" />
+      {/* 1. HERO SECTION (With Animated 3D Earth Background & Highlights) */}
+      <section className="relative overflow-hidden border-b border-slate-800">
+        <EarthBackground earthSize={3.3} className="!min-h-0 pt-12 pb-24">
+          {/* Subtle Background Glows & Grid Pattern */}
+          <div className="absolute inset-0 tech-grid-dark opacity-30 pointer-events-none" />
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-cyan-500/10 blur-[120px] rounded-full pointer-events-none" />
         <div className="absolute top-1/3 right-10 w-[400px] h-[300px] bg-blue-600/10 blur-[100px] rounded-full pointer-events-none" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -105,6 +107,7 @@ export default function LandingPage() {
             </motion.div>
           </motion.div>
         </div>
+        </EarthBackground>
       </section>
 
       {/* 2. CORE PLATFORM CAPABILITIES */}

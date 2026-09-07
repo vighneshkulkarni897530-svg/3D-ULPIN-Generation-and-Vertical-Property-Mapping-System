@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -14,27 +14,18 @@ import {
   Building2,
   AlertCircle,
   Loader2,
+  KeyRound,
+  CheckCircle2,
+  Sparkles,
 } from 'lucide-react';
 
 import { DEMO_PASSWORD } from '@/lib/auth/authConstants';
+import EarthBackground from '@/components/common/EarthBackground';
 
 const DEMO_ACCOUNTS: Record<'citizen' | 'officer' | 'admin', { email: string; dashboard: string }> = {
   citizen: { email: 'rajesh.sharma@example.com', dashboard: '/dashboard/citizen' },
   officer: { email: 'ananya.iyer@rev.gov.in', dashboard: '/dashboard/officer' },
   admin: { email: 'secretary@greenvalley.soc.in', dashboard: '/dashboard/admin' },
-};
-
-/**
- * Phase 15 — canonical role → dashboard mapping.
- * The post-login redirect is derived from the SERVER-verified role returned by
- * the login session (never from the selected tab or the typed email alone), so
- * a real officer/admin signing in while another tab is selected still lands on
- * their own dashboard.
- */
-const ROLE_DASHBOARDS: Record<string, string> = {
-  CITIZEN: '/dashboard/citizen',
-  OFFICER: '/dashboard/officer',
-  ADMIN: '/dashboard/admin',
 };
 
 /** Safe `?next=` handling: same-origin relative paths only. */
@@ -51,20 +42,14 @@ function destinationAfterLogin(roleKey: 'citizen' | 'officer' | 'admin'): string
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, authStatus } = useAuth();
+  const { login, requestOtp, verifyOtp } = useAuth();
 
-  const [selectedRole, setSelectedRole] = useState<'citizen' | 'officer' | 'admin'>('citizen');
+  const [authMode, setAuthMode] = useState<'password' | 'otp'>('password');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const handleRoleSelect = (roleKey: 'citizen' | 'officer' | 'admin') => {
-    setSelectedRole(roleKey);
-    setError(null);
-  };
-
-  const [showPassword, setShowPassword] = useState(false);
 
   const handleFillDemo = () => {
     setEmail('rajesh.sharma@example.com');
@@ -89,12 +74,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-10rem)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-950 relative overflow-hidden">
-      {/* Background glow effects */}
+    <EarthBackground earthSize={3.35} className="min-h-[calc(100vh-10rem)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+      {/* Background glow accents */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[350px] bg-cyan-500/10 blur-[110px] rounded-full pointer-events-none" />
       <div className="absolute top-1/3 right-1/4 w-[300px] h-[200px] bg-blue-500/10 blur-[90px] rounded-full pointer-events-none" />
 
-      <div className="max-w-md w-full space-y-6 relative z-10">
+      <div className="max-w-md w-full space-y-6 relative z-10 mx-auto">
         {/* Header Branding */}
         <div className="text-center space-y-2">
           <div className="w-14 h-14 rounded-2xl overflow-hidden border border-cyan-500/40 bg-slate-950 p-0.5 mx-auto shadow-tech-cyan flex items-center justify-center">
@@ -244,7 +229,7 @@ export default function LoginPage() {
                 </>
               ) : (
                 <>
-                  <span>Sign In with Password</span>
+                  <span>Sign In</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -259,6 +244,7 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-    </div>
+    </EarthBackground>
   );
 }
+
