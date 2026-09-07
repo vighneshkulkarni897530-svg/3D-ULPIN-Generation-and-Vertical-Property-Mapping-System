@@ -22,7 +22,6 @@ import {
 } from "lucide-react";
 import { DEMO_PASSWORD } from "@/lib/auth/authConstants";
 import { MOCK_USERS } from "@/data/mockUsers";
-import EarthBackground from "@/components/common/EarthBackground";
 
 export default function SocietyLoginPage() {
   const router = useRouter();
@@ -63,7 +62,7 @@ export default function SocietyLoginPage() {
   };
 
   return (
-    <EarthBackground earthSize={3.35} className="min-h-[calc(100vh-10rem)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+    <div className="min-h-[calc(100vh-10rem)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden bg-slate-950">
       {/* Background glow effects */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[350px] bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none" />
       <div className="absolute top-1/3 right-1/4 w-[300px] h-[200px] bg-purple-500/10 blur-[90px] rounded-full pointer-events-none" />
@@ -223,7 +222,7 @@ export default function SocietyLoginPage() {
           </Link>
         </div>
       </div>
-    </EarthBackground>
+    </div>
   );
 }
 

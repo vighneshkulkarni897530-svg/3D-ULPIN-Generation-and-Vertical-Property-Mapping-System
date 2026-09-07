@@ -20,7 +20,6 @@ import {
 } from 'lucide-react';
 
 import { DEMO_PASSWORD } from '@/lib/auth/authConstants';
-import EarthBackground from '@/components/common/EarthBackground';
 
 const DEMO_ACCOUNTS: Record<'citizen' | 'officer' | 'admin', { email: string; dashboard: string }> = {
   citizen: { email: 'rajesh.sharma@example.com', dashboard: '/dashboard/citizen' },
@@ -42,9 +41,8 @@ function destinationAfterLogin(roleKey: 'citizen' | 'officer' | 'admin'): string
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, requestOtp, verifyOtp } = useAuth();
+  const { login } = useAuth();
 
-  const [authMode, setAuthMode] = useState<'password' | 'otp'>('password');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -74,7 +72,7 @@ export default function LoginPage() {
   };
 
   return (
-    <EarthBackground earthSize={3.35} className="min-h-[calc(100vh-10rem)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+    <div className="min-h-[calc(100vh-10rem)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden bg-slate-950">
       {/* Background glow accents */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[350px] bg-cyan-500/10 blur-[110px] rounded-full pointer-events-none" />
       <div className="absolute top-1/3 right-1/4 w-[300px] h-[200px] bg-blue-500/10 blur-[90px] rounded-full pointer-events-none" />
@@ -244,7 +242,7 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-    </EarthBackground>
+    </div>
   );
 }
 
