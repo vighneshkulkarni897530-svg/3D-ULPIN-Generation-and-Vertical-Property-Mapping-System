@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
 import { motion } from 'framer-motion';
@@ -41,11 +41,11 @@ export default function LandingPage() {
 
   return (
     <div className="flex-1 flex flex-col">
-      {/* 1. HERO SECTION (Midnight Dark Navy with Cyan Tech Highlights) */}
-      <section className="relative bg-slate-950 text-white overflow-hidden pt-12 pb-24 border-b border-slate-800">
+      {/* 1. HERO SECTION */}
+      <section className="relative overflow-hidden border-b border-slate-800 bg-slate-950 pt-12 pb-24">
         {/* Subtle Background Glows & Grid Pattern */}
-        <div className="absolute inset-0 tech-grid-dark opacity-40 pointer-events-none" />
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-cyan-500/15 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute inset-0 tech-grid-dark opacity-30 pointer-events-none" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-cyan-500/10 blur-[120px] rounded-full pointer-events-none" />
         <div className="absolute top-1/3 right-10 w-[400px] h-[300px] bg-blue-600/10 blur-[100px] rounded-full pointer-events-none" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -56,40 +56,39 @@ export default function LandingPage() {
             variants={{ show: { transition: { staggerChildren: 0.1 } } }}
           >
             {/* Top Pill */}
-            <motion.div variants={fadeUp} custom={0} className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 border border-cyan-500/30 text-cyan-300 text-xs font-semibold shadow-tech-cyan">
-              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-              <span>National Unified Geospatial Cadastre Platform</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+            <motion.div variants={fadeUp} custom={0} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-cyan-500/30 bg-cyan-950/40 text-cyan-300 text-xs font-semibold backdrop-blur-md">
+              <span className="flex h-2 w-2 rounded-full bg-cyan-400 animate-ping" />
+              <span>SIH-2026 Reference Implementation · Problem Statement 26011</span>
             </motion.div>
 
             {/* Headline */}
-            <motion.h1 variants={fadeUp} custom={1} className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-[1.15] text-slate-50">
-              Transparent, Smart & Verified{' '}
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-sky-300 to-blue-500">
-                Land & Property Cadastre
-              </span>
-            </motion.h1>
+            <motion.div variants={fadeUp} custom={1} className="space-y-2">
+              <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-white leading-tight">
+                3D-ULPIN &amp; Vertical Property{' '}
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-sky-300 to-blue-500">
+                  Mapping System
+                </span>
+              </h1>
+              <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed font-normal">
+                National infrastructure for Vertical Unit demarcation, multi-tier spatial cadastre registries, and automated periodic verification under Land Records Modernization.
+              </p>
+            </motion.div>
 
-            {/* Sub-headline */}
-            <motion.p variants={fadeUp} custom={2} className="text-sm sm:text-base lg:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed">
-              Verify land ownership using 14-digit <strong className="text-cyan-300 font-semibold">ULPIN (Bhu-Aadhaar)</strong>, inspect high-precision 2D boundary polygons, explore interactive 3D building digital twins, and resolve property disputes with official revenue officers.
-            </motion.p>
-
-            {/* Search Box Console */}
-            <motion.div variants={fadeUp} custom={3} className="pt-4 max-w-3xl mx-auto">
+            {/* Search Bar / Fast Action Console */}
+            <motion.div variants={fadeUp} custom={2} className="pt-4 max-w-3xl mx-auto">
               <SearchBar size="large" />
             </motion.div>
 
-            {/* Micro Stats Bar */}
-            <motion.div variants={fadeUp} custom={4} className="pt-8 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto text-left">
+            {/* Metrics Quick Strip */}
+            <motion.div variants={fadeUp} custom={3} className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-6 max-w-4xl mx-auto text-left">
               <div className="p-3.5 bg-slate-900/80 border border-slate-800 rounded-2xl">
-                <span className="text-slate-400 text-xs font-medium">Verified Parcels</span>
-                <p className="text-xl sm:text-2xl font-bold text-white font-mono mt-0.5">9.42M+</p>
-                <span className="text-[10px] text-emerald-400 font-semibold">↑ 100% Geo-Referenced</span>
+                <span className="text-slate-400 text-xs font-medium">Parcels Mapped</span>
+                <p className="text-xl sm:text-2xl font-bold text-white font-mono mt-0.5">85,420+</p>
+                <span className="text-[10px] text-slate-400">Maharashtra &amp; Karnataka</span>
               </div>
               <div className="p-3.5 bg-slate-900/80 border border-slate-800 rounded-2xl">
-                <span className="text-slate-400 text-xs font-medium">3D Digital Twins</span>
-                <p className="text-xl sm:text-2xl font-bold text-cyan-400 font-mono mt-0.5">385K+</p>
+                <span className="text-slate-400 text-xs font-medium">Vertical Units</span>
+                <p className="text-xl sm:text-2xl font-bold text-cyan-400 font-mono mt-0.5">1.2M+</p>
                 <span className="text-[10px] text-slate-400">Highrise & Commercial</span>
               </div>
               <div className="p-3.5 bg-slate-900/80 border border-slate-800 rounded-2xl">

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -16,6 +16,7 @@ import {
   Building,
   CheckCircle2,
   ArrowLeft,
+  KeyRound,
 } from "lucide-react";
 import { DEMO_PASSWORD } from "@/lib/auth/authConstants";
 import { MOCK_USERS } from "@/data/mockUsers";
@@ -27,10 +28,9 @@ export default function OfficerLoginPage() {
   const [email, setEmail] = useState("");
   const [badgeNumber, setBadgeNumber] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const [showPassword, setShowPassword] = useState(false);
 
   const handleFillDemo = () => {
     setEmail('ananya.iyer@rev.gov.in');
@@ -60,12 +60,12 @@ export default function OfficerLoginPage() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-10rem)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-950 relative overflow-hidden">
+    <div className="min-h-[calc(100vh-10rem)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden bg-slate-950">
       {/* Background glow effects */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[350px] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none" />
       <div className="absolute top-1/3 right-1/4 w-[300px] h-[200px] bg-teal-500/10 blur-[90px] rounded-full pointer-events-none" />
 
-      <div className="max-w-md w-full space-y-6 relative z-10">
+      <div className="max-w-md w-full space-y-6 relative z-10 mx-auto">
         {/* Navigation back */}
         <div className="flex items-center justify-between">
           <Link
@@ -185,7 +185,7 @@ export default function OfficerLoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-700 py-3 text-xs font-black text-slate-950 shadow-lg hover:from-emerald-400 hover:to-teal-600 transition-all disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-700 py-3 text-xs font-black text-slate-950 shadow-lg hover:from-emerald-400 hover:to-teal-600 transition-all disabled:opacity-50 cursor-pointer"
               >
                 {loading ? (
                   <>
@@ -219,3 +219,4 @@ export default function OfficerLoginPage() {
     </div>
   );
 }
+

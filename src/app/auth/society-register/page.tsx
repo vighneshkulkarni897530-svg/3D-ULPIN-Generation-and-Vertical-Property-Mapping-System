@@ -369,180 +369,144 @@ export default function SocietyRegisterPage() {
               </div>
             </div>
 
-            {/* Secretary Name & Official Email */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div>
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                  Authorized Secretary Name
-                </label>
-                <div className="relative">
-                  <User className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. K. S. Narayana Swamy"
-                    className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2.5 pl-10 pr-3 text-xs font-medium text-white outline-none focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                    Secretary Email Address
-                  </label>
-                  {emailVerified && (
-                    <span className="inline-flex items-center gap-1 font-mono text-[10px] font-extrabold text-emerald-400">
-                      <CheckCircle2 className="h-3 w-3" /> Verified
-                    </span>
-                  )}
-                </div>
-                <div className="relative">
-                  <Mail className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                  <input
-                    type="email"
-                    required
-                    disabled={emailVerified}
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      setEmailVerified(false);
-                      setOtpSent(false);
-                    }}
-                    placeholder="secretary@greenvalley.soc.in"
-                    className={`w-full rounded-xl border bg-slate-950 py-2.5 pl-10 pr-3 text-xs font-medium text-white outline-none ${
-                      emailVerified
-                        ? "border-emerald-500/50 bg-emerald-950/20 text-emerald-200"
-                        : "border-slate-800 focus:border-indigo-500"
-                    }`}
-                  />
-                </div>
+            {/* Secretary Full Name */}
+            <div>
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                Secretary Full Name
+              </label>
+              <div className="relative">
+                <User className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. K. S. Narayana Swamy"
+                  className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2.5 pl-10 pr-3 text-xs font-medium text-white outline-none focus:border-indigo-500"
+                />
               </div>
             </div>
 
-            {/* ── Official Secretary Email OTP Verification Module ── */}
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-indigo-400" />
-                  <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
-                    Secretary Official Email Verification
-                  </span>
-                </div>
-                {emailVerified ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2.5 py-0.5 font-mono text-[10px] font-black text-emerald-400 border border-emerald-500/40">
-                    <CheckCircle2 className="h-3 w-3" /> OTP VERIFIED
-                  </span>
-                ) : (
-                  <span className="rounded-full bg-amber-500/10 px-2 py-0.5 font-mono text-[9.5px] font-bold text-amber-400 border border-amber-500/30">
-                    OTP REQUIRED
+            {/* Secretary Email Address with Inline OTP Verification */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                  Secretary Email Address
+                </label>
+                {emailVerified && (
+                  <span className="inline-flex items-center gap-1 font-mono text-[11px] font-extrabold text-emerald-400">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Email Verified
                   </span>
                 )}
               </div>
 
-              {otpError && (
-                <div className="flex items-center gap-2 rounded-xl border border-rose-500/40 bg-rose-500/10 p-2.5 text-[11px] text-rose-300">
-                  <AlertCircle className="h-3.5 w-3.5 shrink-0 text-rose-400" />
-                  <span>{otpError}</span>
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Mail className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (emailVerified) setEmailVerified(false);
+                      setOtpSent(false);
+                      setError(null);
+                    }}
+                    placeholder="secretary@greenvalley.soc.in"
+                    className={`w-full rounded-xl border bg-slate-950 py-2.5 pl-10 pr-3 text-xs font-medium text-white outline-none transition-all ${
+                      emailVerified
+                        ? "border-emerald-500/60 bg-emerald-950/20 text-emerald-200"
+                        : "border-slate-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                    }`}
+                  />
                 </div>
-              )}
 
-              {!emailVerified ? (
-                <div className="space-y-3">
-                  {!otpSent ? (
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-[11px] text-slate-400">
-                        A 6-digit verification code will be dispatched to confirm official society administrative ownership.
-                      </p>
+                {!emailVerified && (
+                  <button
+                    type="button"
+                    onClick={handleSendEmailOtp}
+                    disabled={otpSending || !email || !email.includes("@")}
+                    className="shrink-0 flex items-center gap-1.5 rounded-xl bg-indigo-500 hover:bg-indigo-400 px-3.5 py-2.5 text-xs font-extrabold text-white shadow-tech-cyan disabled:opacity-40 transition-all cursor-pointer"
+                  >
+                    {otpSending ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Sending...
+                      </>
+                    ) : (
+                      <>
+                        <KeyRound className="h-3.5 w-3.5" /> {otpSent ? "Resend OTP" : "Verify Email"}
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+
+              {/* Inline OTP verification expandable panel */}
+              {otpSent && !emailVerified && (
+                <div className="mt-2.5 p-3.5 rounded-xl bg-slate-950 border border-indigo-500/40 space-y-2.5 animate-in fade-in zoom-in-95">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-indigo-300 font-bold text-[11px] flex items-center gap-1.5">
+                      <KeyRound className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>Enter 6-digit code sent to your email:</span>
+                    </span>
+                    {resendCountdown > 0 ? (
+                      <span className="text-slate-500 text-[10px]">Resend in {resendCountdown}s</span>
+                    ) : (
                       <button
                         type="button"
                         onClick={handleSendEmailOtp}
-                        disabled={otpSending || !email || !email.includes("@")}
-                        className="shrink-0 flex items-center gap-1.5 rounded-xl border border-indigo-400/50 bg-indigo-500/20 px-3.5 py-2 text-xs font-bold text-indigo-200 hover:bg-indigo-500/30 hover:border-indigo-400 transition-all disabled:opacity-40 cursor-pointer"
+                        className="text-indigo-400 hover:underline text-[10px] font-bold cursor-pointer"
                       >
-                        {otpSending ? (
-                          <>
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Sending...
-                          </>
-                        ) : (
-                          <>
-                            <KeyRound className="h-3.5 w-3.5 text-indigo-400" /> Send Verification OTP
-                          </>
-                        )}
+                        Resend Code
                       </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-2.5">
-                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                        <div className="relative flex-1">
-                          <KeyRound className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-indigo-400" />
-                          <input
-                            type="text"
-                            maxLength={6}
-                            value={otpCode}
-                            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
-                            placeholder="Enter 6-digit OTP code"
-                            className="w-full rounded-xl border border-indigo-500/50 bg-slate-900 py-2.5 pl-10 pr-3 font-mono text-sm tracking-widest font-black text-white placeholder:text-slate-600 focus:border-indigo-400 outline-none"
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={handleVerifyOtp}
-                          disabled={otpVerifying || otpCode.length !== 6}
-                          className="flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-4 py-2.5 text-xs font-extrabold text-slate-950 hover:from-emerald-400 hover:to-teal-500 transition-all disabled:opacity-40 cursor-pointer"
-                        >
-                          {otpVerifying ? (
-                            <>
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Verifying...
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle2 className="h-3.5 w-3.5" /> Confirm OTP
-                            </>
-                          )}
-                        </button>
-                      </div>
+                    )}
+                  </div>
 
-                      <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
-                        <span>Didn't receive code?</span>
-                        {resendCountdown > 0 ? (
-                          <span className="font-mono text-indigo-300">Resend in {resendCountdown}s</span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={handleSendEmailOtp}
-                            disabled={otpSending}
-                            className="font-bold text-indigo-400 hover:underline cursor-pointer"
-                          >
-                            Resend Code
-                          </button>
-                        )}
-                      </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      maxLength={6}
+                      value={otpCode}
+                      onChange={(e) => {
+                        setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6));
+                        setOtpError(null);
+                      }}
+                      placeholder="••••••"
+                      className="flex-1 bg-slate-900 border border-slate-800 focus:border-indigo-400 text-indigo-300 font-mono text-center tracking-widest text-sm font-bold rounded-lg px-3 py-2 outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleVerifyOtp}
+                      disabled={otpVerifying || otpCode.length !== 6}
+                      className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs disabled:opacity-50 transition-all flex items-center gap-1 cursor-pointer"
+                    >
+                      {otpVerifying ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <>
+                          <span>Confirm OTP</span>
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        </>
+                      )}
+                    </button>
+                  </div>
 
-                      {/* Demo OTP Banner for Instant Local Testing */}
-                      <div className="rounded-xl border border-indigo-500/30 bg-indigo-950/40 p-2.5 text-[11px] text-indigo-200 flex items-center justify-between">
-                        <span className="font-mono">
-                          ⚡ Instant Demo OTP: <strong className="text-white">{devOtp || "999999"}</strong>
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setOtpCode(devOtp || "999999")}
-                          className="rounded-lg bg-indigo-500/20 border border-indigo-400/40 px-2 py-0.5 text-[10px] font-bold text-indigo-300 hover:bg-indigo-500/30"
-                        >
-                          Auto-Fill OTP
-                        </button>
-                      </div>
-                    </div>
+                  {otpError && (
+                    <p className="text-[11px] text-rose-400 font-medium">{otpError}</p>
                   )}
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-2.5 text-[11px] text-emerald-300">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-                  <span>
-                    Official Secretary email <strong>{email}</strong> has been successfully verified for society onboarding.
-                  </span>
+
+                  {/* Demo OTP Helper */}
+                  <div className="rounded-lg border border-indigo-500/20 bg-indigo-950/30 px-2.5 py-1.5 text-[10px] text-indigo-300 flex items-center justify-between">
+                    <span>⚡ Demo Code: <strong className="text-white font-mono">{devOtp || "123456"}</strong></span>
+                    <button
+                      type="button"
+                      onClick={() => setOtpCode(devOtp || "123456")}
+                      className="text-indigo-400 hover:underline font-bold"
+                    >
+                      Auto-Fill
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
