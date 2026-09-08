@@ -35,7 +35,7 @@ interface TestResult {
 }
 
 console.log('======================================================================');
-console.log('BHU-VERIFY PHASE 23 — 3D DIGITAL TWIN VERIFICATION FOR ALL 7 PARCELS');
+console.log('3D SMART ULPIN PHASE 23 — 3D DIGITAL TWIN VERIFICATION FOR ALL 7 PARCELS');
 console.log('======================================================================\n');
 
 let totalTests = 0;

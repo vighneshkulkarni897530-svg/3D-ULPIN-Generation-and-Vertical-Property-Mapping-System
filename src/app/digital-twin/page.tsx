@@ -147,7 +147,7 @@ function GatewayContent() {
             <div className="space-y-1.5">
               <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/40 bg-cyan-500/10 px-3 py-1 text-[11px] font-bold text-cyan-300">
                 <Sparkles className="h-3.5 w-3.5" />
-                BHU-VERIFY 3D DIGITAL TWIN GATEWAY
+                3D SMART ULPIN DIGITAL TWIN GATEWAY
               </div>
               <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
                 Open Society 3D Digital Twin

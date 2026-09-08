@@ -62,13 +62,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           <Link href="/" className="flex items-center gap-3 group shrink-0">
             <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl overflow-hidden bg-gradient-to-br from-cyan-500 via-blue-600 to-indigo-900 p-0.5 shadow-tech-cyan group-hover:scale-105 transition-transform duration-200 flex items-center justify-center">
               <div className="w-full h-full bg-slate-950 rounded-[10px] overflow-hidden flex items-center justify-center">
-                <img src="/logo.jpeg" alt="CyberSpark BHU-VERIFY" className="w-full h-full object-cover" />
+                <img src="/logo.jpeg" alt="CyberSpark 3D SMART ULPIN" className="w-full h-full object-cover" />
               </div>
             </div>
             <div className="hidden sm:block">
               <div className="flex items-center gap-2">
                 <span className="font-extrabold text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-cyan-400">
-                  BHU-VERIFY
+                  3D SMART ULPIN
                 </span>
                 <span className="text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
                   ULPIN 3.0

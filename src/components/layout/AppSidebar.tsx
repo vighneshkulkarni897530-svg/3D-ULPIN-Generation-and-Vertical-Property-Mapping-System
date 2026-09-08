@@ -117,7 +117,7 @@ function SidebarBody({
         </div>
         {!collapsed && (
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-bold tracking-tight text-white">BHU-VERIFY</p>
+            <p className="truncate text-sm font-bold tracking-tight text-white">3D SMART ULPIN</p>
             <p className="truncate font-mono text-[9px] uppercase tracking-widest text-cyan-400">
               3D ULPIN · Vertical Cadastre
             </p>

@@ -114,7 +114,7 @@ export const MOCK_PROPERTIES: PropertyItem[] = [
       {
         id: 'vh-lr-01',
         stage: 'VERIFIED',
-        title: 'Bhu-Verify 3D Cadastre Verification Completed',
+        title: '3D Smart ULPIN Cadastre Verification Completed',
         description: '3D Spatial identity and vertical boundaries verified matching PMRDA masterplan.',
         timestamp: '2024-02-10T11:30:00Z',
         actorName: 'Prakash M. Deshmukh',

@@ -73,7 +73,7 @@ const SAMPLE_PNG_B =
 
 async function runAllTests() {
   console.log("===============================================================================");
-  console.log("BHU-VERIFY PHASE 23: AI 3D DIGITAL TWIN GENERATION VERIFICATION SUITE");
+  console.log("3D SMART ULPIN PHASE 23: AI 3D DIGITAL TWIN GENERATION VERIFICATION SUITE");
   console.log("===============================================================================\n");
 
   // TEST 1: Society A Generation & Isolation
