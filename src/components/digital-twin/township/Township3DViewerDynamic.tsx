@@ -1,16 +1,12 @@
 "use client";
 
+import React, { forwardRef } from "react";
 import dynamic from "next/dynamic";
 import type { Township3DViewerHandle, Township3DViewerProps } from "./Township3DViewer";
 
 export type { Township3DViewerHandle, Township3DViewerProps };
 
-/**
- * The township 3D viewer is heavy (Three.js). Load it client-side only so
- * the rest of the page SSR-prints instantly (same pattern as the original
- * Building3DViewerDynamic wrapper).
- */
-export const Township3DViewerDynamic = dynamic(
+const InnerViewer = dynamic(
   () => import("./Township3DViewer").then((m) => m.Township3DViewer),
   {
     ssr: false,
@@ -29,3 +25,16 @@ export const Township3DViewerDynamic = dynamic(
     ),
   }
 );
+
+/**
+ * The township 3D viewer is heavy (Three.js). Load it client-side only so
+ * the rest of the page SSR-prints instantly (same pattern as the original
+ * Building3DViewerDynamic wrapper).
+ */
+export const Township3DViewerDynamic = forwardRef<Township3DViewerHandle, Township3DViewerProps>(
+  (props, ref) => {
+    return <InnerViewer {...props} ref={ref} />;
+  }
+);
+Township3DViewerDynamic.displayName = "Township3DViewerDynamic";
+

@@ -38,9 +38,14 @@ const fadeUp = {
 export default function LandingPage() {
   const { properties } = useProperty();
   const featuredProperties = properties.slice(0, 3);
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col" suppressHydrationWarning>
       {/* 1. HERO SECTION */}
       <section className="relative overflow-hidden border-b border-slate-800 bg-slate-950 pt-12 pb-24">
         {/* Subtle Background Glows & Grid Pattern */}
@@ -51,7 +56,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <motion.div
             className="text-center max-w-4xl mx-auto space-y-6"
-            initial="hidden"
+            initial={mounted ? "hidden" : false}
             animate="show"
             variants={{ show: { transition: { staggerChildren: 0.1 } } }}
           >

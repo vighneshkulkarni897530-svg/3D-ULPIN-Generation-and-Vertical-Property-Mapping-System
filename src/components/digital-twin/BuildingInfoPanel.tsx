@@ -50,7 +50,7 @@ function InfoCard({
       </span>
       <div className="min-w-0">
         <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#94A3B8]">{label}</p>
-        <p className="truncate text-sm font-black tracking-tight text-[#F8FAFC]">{value}</p>
+        <p className="truncate text-sm font-black tracking-tight text-[#F8FAFC]" title={value}>{value}</p>
       </div>
     </motion.div>
   );

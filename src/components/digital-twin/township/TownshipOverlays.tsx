@@ -2,7 +2,22 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Building2, CheckCircle2, Layers, Maximize2, RotateCcw, Scan, TriangleAlert, X, ZoomIn, ZoomOut, type LucideIcon } from "lucide-react";
+import {
+  Building2,
+  CheckCircle2,
+  Layers,
+  Maximize2,
+  Moon,
+  RotateCcw,
+  RotateCw,
+  Scan,
+  Sun,
+  TriangleAlert,
+  X,
+  ZoomIn,
+  ZoomOut,
+  type LucideIcon,
+} from "lucide-react";
 import { CAMERA_PRESET_DEFS, PLACE_VISUALIZATION_STATUS, TOWNSHIP_SITE, type CameraPresetId, type TowerDef } from "./townshipConfig";
 import { cn } from "@/lib/utils";
 
@@ -36,7 +51,7 @@ export function TownshipSceneHeader({
   const displayBadge = badge || PLACE_VISUALIZATION_STATUS;
 
   return (
-    <div className={cn("dt-hud dt-card-accent rounded-2xl px-3.5 py-2.5 shadow-[0_18px_50px_-20px_rgba(0,0,0,0.9)] backdrop-blur-md", className)}>
+    <div className={cn("dt-hud dt-card-accent rounded-2xl px-3.5 py-2.5 shadow-[0_18px_50px_-20px_rgba(0,0,0,0.9)] backdrop-blur-md max-w-[280px] sm:max-w-[320px]", className)}>
       <div className="flex items-center gap-2">
         <span className="flex items-center gap-1.5 rounded-lg border border-[#164E73] bg-[#0A1B31] px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] text-[#00D9FF]">
           <Building2 className="h-3 w-3" /> 3D Digital Twin
@@ -44,7 +59,7 @@ export function TownshipSceneHeader({
         {isAiReconstructed ? (
           <span className="flex items-center gap-1 rounded-lg border border-cyan-400/50 bg-cyan-500/15 px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.16em] text-cyan-300 animate-pulse">
             <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
-            AI Image-Reconstructed
+            AI Reconstructed
           </span>
         ) : (
           <span className="hidden rounded-lg border border-[#FACC15]/40 bg-[#FACC15]/10 px-2 py-0.5 text-[8px] font-black uppercase tracking-[0.16em] text-[#FACC15] sm:inline">
@@ -52,8 +67,8 @@ export function TownshipSceneHeader({
           </span>
         )}
       </div>
-      <h2 className="mt-1.5 text-base font-black tracking-tight text-[#F8FAFC] sm:text-lg">{displayTitle}</h2>
-      <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-[#94A3B8]">{displaySubtitle}</p>
+      <h2 className="mt-1.5 truncate text-sm font-black tracking-tight text-[#F8FAFC] sm:text-base" title={displayTitle}>{displayTitle}</h2>
+      <p className="truncate text-[9px] font-bold uppercase tracking-[0.22em] text-[#94A3B8]" title={displaySubtitle}>{displaySubtitle}</p>
     </div>
   );
 }
@@ -63,16 +78,26 @@ export function TownshipControlCluster({
   onIsoView,
   onLayers,
   onFullscreen,
+  onToggleRotate,
+  isAutoRotating = false,
+  onToggleNight,
+  isNightMode = true,
   className,
 }: {
   onIsoView: () => void;
   onLayers: () => void;
   onFullscreen: () => void;
+  onToggleRotate?: () => void;
+  isAutoRotating?: boolean;
+  onToggleNight?: () => void;
+  isNightMode?: boolean;
   className?: string;
 }) {
-  const items: { icon: LucideIcon; label: string; onClick: () => void }[] = [
-    { icon: Scan, label: "Isometric view", onClick: onIsoView },
+  const items: { icon: LucideIcon; label: string; active?: boolean; onClick: () => void }[] = [
+    { icon: Scan, label: "Isometric View", onClick: onIsoView },
     { icon: Layers, label: "Layers", onClick: onLayers },
+    ...(onToggleRotate ? [{ icon: RotateCw, label: isAutoRotating ? "Auto-Rotate (Active)" : "Auto-Rotate Orbit", active: isAutoRotating, onClick: onToggleRotate }] : []),
+    ...(onToggleNight ? [{ icon: isNightMode ? Moon : Sun, label: isNightMode ? "Night Mode (Active)" : "Day Mode (Active)", active: isNightMode, onClick: onToggleNight }] : []),
     { icon: Maximize2, label: "Fullscreen", onClick: onFullscreen },
   ];
   return (
@@ -89,10 +114,15 @@ export function TownshipControlCluster({
             whileTap={{ scale: 0.94 }}
             onClick={item.onClick}
             title={item.label}
-            className="group relative flex h-10 w-10 items-center justify-center rounded-xl border border-[#164E73] bg-[#061426]/90 text-[#00D9FF] backdrop-blur transition-colors hover:border-[#00D9FF]/60 hover:shadow-[0_0_18px_-4px_rgba(0,217,255,0.5)]"
+            className={cn(
+              "group relative flex h-10 w-10 items-center justify-center rounded-xl border backdrop-blur transition-all",
+              item.active
+                ? "border-cyan-400 bg-cyan-500/25 text-cyan-200 shadow-[0_0_16px_rgba(0,217,255,0.4)]"
+                : "border-[#164E73] bg-[#061426]/90 text-[#00D9FF] hover:border-[#00D9FF]/60 hover:shadow-[0_0_18px_-4px_rgba(0,217,255,0.5)]"
+            )}
           >
             <Icon className="h-4 w-4" />
-            <span className="pointer-events-none absolute left-full ml-2 whitespace-nowrap rounded-md border border-[#164E73] bg-[#020B18]/95 px-2 py-0.5 text-[9px] font-semibold text-[#94A3B8] opacity-0 transition-opacity group-hover:opacity-100">
+            <span className="pointer-events-none absolute right-full mr-2 whitespace-nowrap rounded-md border border-[#164E73] bg-[#020B18]/95 px-2 py-0.5 text-[9px] font-semibold text-[#94A3B8] opacity-0 transition-opacity group-hover:opacity-100 z-50">
               {item.label}
             </span>
           </motion.button>

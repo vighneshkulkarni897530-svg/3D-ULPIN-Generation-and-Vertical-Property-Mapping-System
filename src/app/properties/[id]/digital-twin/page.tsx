@@ -96,6 +96,8 @@ function BuildingDigitalTwinPageContent() {
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [showInspectionSummary, setShowInspectionSummary] = useState(false);
   const [showBuildingPanel, setShowBuildingPanel] = useState(false);
+  const [isAutoRotate, setIsAutoRotate] = useState(false);
+  const [isNightMode, setIsNightMode] = useState(true);
   const viewerShellRef = useRef<HTMLDivElement>(null);
   const viewerHandleRef = useRef<Township3DViewerHandle>(null);
 
@@ -551,35 +553,24 @@ function BuildingDigitalTwinPageContent() {
 
       <div className="relative z-10 mx-auto w-full max-w-[1600px] space-y-4 px-3 pb-10 pt-4 sm:px-5 lg:px-6">
         {/* Top Navigation Strip */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Link
-            href={`/properties/${routeProperty?.id ?? routeId ?? "prop-hyd-002"}`}
-            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#64748B] transition-colors hover:text-[#00D9FF]"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" /> Back to property record
-          </Link>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          {/* Left: Back Link & Society Quick Switcher Pod */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Link
+              href={`/properties/${routeProperty?.id ?? routeId ?? "prop-hyd-002"}`}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[#164E73]/70 bg-[#061426]/90 px-3 py-2 text-[11px] font-bold text-[#94A3B8] transition-all hover:border-[#00D9FF]/50 hover:text-[#00D9FF] hover:bg-[#061426]"
+            >
+              <ArrowLeft className="h-3.5 w-3.5 text-[#00D9FF]" />
+              <span className="hidden sm:inline">Back to Property Record</span>
+              <span className="sm:hidden">Back</span>
+            </Link>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Phase 23 — Society 3D ULPIN HUD Pill & Copy Action */}
-            {societyUlpinRecord && (
-              <div className="flex items-center gap-1.5 rounded-lg border border-cyan-500/40 bg-cyan-950/60 px-2.5 py-1 text-[11px] shadow-[0_0_10px_rgba(6,182,212,0.15)]">
-                <Fingerprint className="h-3.5 w-3.5 text-cyan-400" />
-                <span className="font-mono text-cyan-200 font-extrabold">{societyUlpinRecord.society3DUlpin}</span>
-                <button
-                  type="button"
-                  onClick={() => handleCopyUlpin(societyUlpinRecord.society3DUlpin)}
-                  className="ml-1 text-slate-400 hover:text-cyan-300 transition-colors"
-                  title="Copy Society 3D ULPIN"
-                >
-                  {copiedUlpin ? <CheckCheck className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
-                </button>
-              </div>
-            )}
-
-            {/* Phase 22 & 23 — Complete 7-Parcel Society Digital Twin Quick Switcher */}
-            <div className="flex items-center gap-1.5 rounded-lg border border-[#164E73] bg-[#061426] px-2.5 py-1 text-[11px]">
-              <Building2 className="h-3.5 w-3.5 text-[#00D9FF]" />
-              <span className="text-[10px] font-bold text-slate-400 uppercase hidden sm:inline">Society:</span>
+            {/* Society Selector Dropdown with Icon */}
+            <div className="flex items-center gap-2 rounded-xl border border-cyan-500/40 bg-cyan-950/50 px-3 py-1.5 shadow-[0_0_12px_rgba(6,182,212,0.12)]">
+              <Building2 className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
+              <span className="text-[10px] font-black text-cyan-400 uppercase tracking-wider hidden sm:inline">
+                Society:
+              </span>
               <select
                 value={resolvedSocietyId}
                 onChange={(e) => {
@@ -587,7 +578,7 @@ function BuildingDigitalTwinPageContent() {
                   router.push(`/properties/${routeId}/digital-twin?society=${newSoc}&parcel=${newSoc}`);
                 }}
                 aria-label="Select Society 3D Digital Twin"
-                className="bg-transparent text-xs font-bold text-cyan-300 focus:outline-none cursor-pointer"
+                className="bg-transparent text-xs font-extrabold text-cyan-200 focus:outline-none cursor-pointer max-w-[200px] sm:max-w-[240px] truncate"
               >
                 <option value="PARCEL-MH-PUN-001" className="bg-slate-900 text-white">S3D-MH-PUN-GVR-001 · Green View (3 Bldgs)</option>
                 <option value="PARCEL-MH-PUN-002" className="bg-slate-900 text-white">S3D-MH-PUN-SKA-001 · Shree Krishna (5 Bldgs)</option>
@@ -600,41 +591,68 @@ function BuildingDigitalTwinPageContent() {
               </select>
             </div>
 
+            {/* Society 3D ULPIN HUD Pill & Copy Action */}
+            {societyUlpinRecord && (
+              <div className="flex items-center gap-1.5 rounded-xl border border-cyan-500/30 bg-cyan-950/40 px-2.5 py-1.5 text-[11px]">
+                <Fingerprint className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
+                <span className="font-mono text-cyan-200 font-bold tracking-tight text-[11px]">
+                  {societyUlpinRecord.society3DUlpin}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleCopyUlpin(societyUlpinRecord.society3DUlpin)}
+                  className="ml-1 rounded p-0.5 text-slate-400 hover:text-cyan-300 hover:bg-cyan-900/40 transition-colors"
+                  title="Copy Society 3D ULPIN"
+                >
+                  {copiedUlpin ? <CheckCheck className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Right: Action Buttons Group */}
+          <div className="flex flex-wrap items-center gap-2">
             <Link
               href={`/digital-twin?society=${resolvedSocietyId}&ulpin=${societyUlpinRecord?.society3DUlpin || ""}`}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-[11px] font-bold text-cyan-300 transition-colors hover:bg-cyan-500/20 shadow-[0_0_8px_rgba(6,182,212,0.15)]"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-[11px] font-bold text-cyan-300 transition-all hover:bg-cyan-500/20 hover:border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.15)]"
               title="Open Society 3D ULPIN Gateway"
             >
-              <Fingerprint className="h-3.5 w-3.5 text-cyan-400" /> Gateway
+              <Fingerprint className="h-3.5 w-3.5 text-cyan-400" />
+              <span>Gateway</span>
             </Link>
 
             <button
               type="button"
               onClick={() => setShowUploadModal(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-500/50 bg-cyan-500/10 px-3 py-1.5 text-[11px] font-bold text-cyan-300 transition-colors hover:bg-cyan-500/20 shadow-[0_0_10px_rgba(0,217,255,0.2)]"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-500/50 bg-cyan-500/15 px-3 py-2 text-[11px] font-bold text-cyan-200 transition-all hover:bg-cyan-500/25 hover:border-cyan-400 shadow-[0_0_12px_rgba(0,217,255,0.2)]"
             >
-              <UploadCloud className="h-3.5 w-3.5 text-cyan-400" /> Upload Site Plan
+              <UploadCloud className="h-3.5 w-3.5 text-cyan-400" />
+              <span>Upload Site Plan</span>
             </button>
 
             <button
               type="button"
               onClick={() => setShowInspectionSummary(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[#164E73] bg-[#061426] px-3 py-1.5 text-[11px] font-bold text-[#F8FAFC] transition-colors hover:border-[#00D9FF]/50 hover:text-[#00D9FF]"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[#164E73] bg-[#061426] px-3 py-2 text-[11px] font-bold text-[#F8FAFC] transition-all hover:border-[#00D9FF]/50 hover:text-[#00D9FF]"
             >
-              <FileText className="h-3.5 w-3.5 text-[#00D9FF]" /> Inspection
+              <FileText className="h-3.5 w-3.5 text-[#00D9FF]" />
+              <span>Inspection</span>
             </button>
+
             <Link
               href={selectedTowerId ? `/map?society=${resolvedSocietyId}&building=${selectedTowerId}` : `/map?society=${resolvedSocietyId}&parcel=${resolvedSocietyId}`}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[#00D9FF]/40 bg-[#00D9FF]/10 px-3 py-1.5 text-[11px] font-bold text-[#00D9FF] transition-colors hover:bg-[#00D9FF]/20"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[#00D9FF]/40 bg-[#00D9FF]/10 px-3 py-2 text-[11px] font-bold text-[#00D9FF] transition-all hover:bg-[#00D9FF]/20 hover:border-[#00D9FF]"
             >
-              <MapPinned className="h-3.5 w-3.5" /> 2D GIS Map
+              <MapPinned className="h-3.5 w-3.5" />
+              <span>2D GIS Map</span>
             </Link>
+
             {linkedTowerData.parcel?.id && (
               <Link
                 href={`/society/${linkedTowerData.parcel.id}`}
-                className="hidden rounded-lg border border-[#164E73] bg-[#061426] px-3 py-1.5 text-[11px] font-bold text-[#F8FAFC] transition-colors hover:border-[#00D9FF]/50 hover:text-[#00D9FF] sm:inline-flex"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[#164E73] bg-[#061426] px-3 py-2 text-[11px] font-bold text-[#F8FAFC] transition-all hover:border-[#00D9FF]/50 hover:text-[#00D9FF]"
               >
-                Society Portal
+                <span>Society Portal</span>
               </Link>
             )}
           </div>
@@ -674,26 +692,26 @@ function BuildingDigitalTwinPageContent() {
                 isFullscreen ? "rounded-none border-[#00D9FF]/50" : ""
               }`}
             >
-              {/* viewer header strip */}
-              <div className="flex h-10 items-center justify-between border-b border-[#164E73]/60 bg-[#061426]/70 px-4 backdrop-blur">
-                <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-[#94A3B8]">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#00D9FF] shadow-[0_0_8px_rgba(0,217,255,0.8)]" />
-                  3D Property Inspection Workbench
-                  <span className="hidden font-mono normal-case tracking-normal text-[#64748B] sm:inline">
-                    · {linkedTowerData.parcel?.parcelNumber ? `Parcel ${linkedTowerData.parcel.parcelNumber}` : place.name} · Cadastral Parcel: {linkedTowerData.parcel?.parcelNumber ?? linkedTowerData.parcel?.id ?? "—"}
+              {/* viewer header strip — Clean 2-column flexbox with zero overlap */}
+              <div className="flex min-h-10 flex-wrap items-center justify-between gap-3 border-b border-[#164E73]/60 bg-[#061426]/80 px-4 py-2 backdrop-blur">
+                <div className="flex min-w-0 flex-1 items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-[#94A3B8]">
+                  <span className="h-2 w-2 shrink-0 rounded-full bg-[#00D9FF] shadow-[0_0_8px_rgba(0,217,255,0.8)] animate-pulse" />
+                  <span className="truncate text-[#F8FAFC] font-extrabold">3D Property Inspection Workbench</span>
+                  <span className="hidden font-mono text-[9px] text-[#64748B] normal-case tracking-normal md:inline truncate">
+                    · {linkedTowerData.parcel?.parcelNumber ? `Parcel ${linkedTowerData.parcel.parcelNumber}` : place.name}
                   </span>
                   <span
-                    className="rounded border border-[#FACC15]/50 bg-[#FACC15]/10 px-1.5 py-0.5 font-bold uppercase text-[#FACC15]"
+                    className="shrink-0 rounded border border-[#FACC15]/50 bg-[#FACC15]/10 px-1.5 py-0.5 font-bold uppercase text-[#FACC15]"
                     title="Illustrative demo dataset — not an official government cadastral record"
                   >
                     Demo Data
                   </span>
                 </div>
-                <div className="flex items-center gap-2 font-mono text-[9px] text-[#64748B]">
-                  <span className="hidden uppercase sm:inline">
+                <div className="flex shrink-0 items-center gap-2 font-mono text-[9px] text-[#64748B]">
+                  <span className="hidden uppercase sm:inline rounded border border-[#164E73] bg-[#0A1B31] px-2 py-0.5 text-slate-300 font-semibold">
                     {towerLinkedToDb ? "Real Database Linked" : place.visualizationStatus}
                   </span>
-                  <span className="rounded border border-[#00D9FF]/40 bg-[#00D9FF]/10 px-1.5 py-0.5 text-[#00D9FF]">
+                  <span className="rounded border border-[#00D9FF]/40 bg-[#00D9FF]/10 px-2 py-0.5 font-bold text-[#00D9FF]">
                     {cameraPreset.toUpperCase()} VIEW
                   </span>
                 </div>
@@ -703,6 +721,10 @@ function BuildingDigitalTwinPageContent() {
               <div className="relative">
                 <div className="relative h-[52vh] min-h-[380px] w-full sm:h-[60vh] lg:h-[66vh]">
                   <Township3DViewerDynamic
+                    ref={viewerHandleRef}
+                    isAutoRotate={isAutoRotate}
+                    isNightMode={isNightMode}
+                    cameraPreset={cameraPreset}
                     layers={layers}
                     selectedTowerId={selectedTowerId}
                     onSelectTower={handleSelectTower}
@@ -731,9 +753,9 @@ function BuildingDigitalTwinPageContent() {
                   />
                 </div>
 
-                {/* scene identity header — dynamic society or default */}
+                {/* scene identity header — anchored at bottom-left so it NEVER collides with top inspection toolbar */}
                 <TownshipSceneHeader
-                  className="absolute left-3 top-3 z-20"
+                  className="absolute left-3 bottom-3 z-20"
                   title={society?.name || routeProperty?.title || TOWNSHIP_SITE.name}
                   subtitle={
                     society?.address
@@ -743,7 +765,7 @@ function BuildingDigitalTwinPageContent() {
                   isAiReconstructed={Boolean(societyImageUrl)}
                 />
 
-                {/* Phase 7 & 19 — 3D Inspection Toolbar with On-Demand Dropdowns */}
+                {/* Phase 7 & 19 — 3D Inspection Toolbar with On-Demand Dropdowns (Centered at top) */}
                 <InspectionToolbar
                   className="absolute left-1/2 top-3 z-30 flex -translate-x-1/2 max-w-[calc(100%-24px)]"
                   onResetCamera={handleReset}
@@ -827,7 +849,7 @@ function BuildingDigitalTwinPageContent() {
                       layers={layers}
                       onToggle={handleToggleLayer}
                       onClose={handleLayers}
-                      className="absolute left-3 top-[122px] z-30"
+                      className="absolute left-3 top-[56px] z-30"
                     />
                   )}
                 </AnimatePresence>
@@ -838,9 +860,13 @@ function BuildingDigitalTwinPageContent() {
                   onIsoView={handleIsoView}
                   onLayers={handleLayers}
                   onFullscreen={handleFullscreen}
+                  onToggleRotate={() => setIsAutoRotate((r) => !r)}
+                  isAutoRotating={isAutoRotate}
+                  onToggleNight={() => setIsNightMode((n) => !n)}
+                  isNightMode={isNightMode}
                 />
 
-                {/* selected building chip */}
+                {/* selected building chip — bottom-right */}
                 <AnimatePresence>
                   {selectedTower && (
                     <div onClick={() => setShowBuildingPanel(true)} className="cursor-pointer">
@@ -930,8 +956,17 @@ function BuildingDigitalTwinPageContent() {
                   </span>
                 </div>
                 <dl className="space-y-2 text-[11px]">
+                  {/* Society Name — rendered with dedicated block layout to prevent text collision */}
+                  <div className="flex flex-col gap-1 border-b border-[#164E73]/40 pb-2">
+                    <dt className="text-[9px] font-bold uppercase tracking-wider text-[#94A3B8]">
+                      Society / Township
+                    </dt>
+                    <dd className="font-mono text-xs font-bold text-cyan-300 break-words leading-snug">
+                      {twinView.building.societyName ?? "—"}
+                    </dd>
+                  </div>
+
                   {[
-                    { k: "Society", v: twinView.building.societyName ?? "—" },
                     { k: "Survey No.", v: twinView.building.surveyNumber ?? "—" },
                     { k: "Building Code", v: twinView.building.buildingCode ?? twinView.building.buildingId ?? "—" },
                     { k: "Construction Year", v: twinView.building.constructionYear },
@@ -943,11 +978,11 @@ function BuildingDigitalTwinPageContent() {
                     { k: "Data Status", v: "DEMO — ILLUSTRATIVE" },
                     { k: "Official ULPIN", v: "NO" },
                   ].map((r) => (
-                    <div key={r.k} className="flex items-center justify-between border-b border-[#164E73]/40 pb-1.5 last:border-0 last:pb-0">
-                      <dt className="font-semibold text-[#94A3B8]">{r.k}</dt>
-                      <dd className={`font-mono font-black tabular-nums ${
+                    <div key={r.k} className="flex items-center justify-between gap-2 border-b border-[#164E73]/40 py-1 last:border-0 last:pb-0">
+                      <dt className="shrink-0 font-semibold text-[#94A3B8]">{r.k}</dt>
+                      <dd className={`text-right font-mono font-bold tabular-nums truncate max-w-[60%] ${
                         r.k === "Data Status" ? "text-[#FACC15]" : r.k === "Official ULPIN" ? "text-[#FACC15]" : "text-[#F8FAFC]"
-                      }`}>{r.v}</dd>
+                      }`} title={String(r.v)}>{r.v}</dd>
                     </div>
                   ))}
                 </dl>

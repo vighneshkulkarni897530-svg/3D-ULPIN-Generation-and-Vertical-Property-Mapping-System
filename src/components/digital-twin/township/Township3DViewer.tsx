@@ -99,6 +99,9 @@ export interface Township3DViewerHandle {
   applyPreset: (preset: CameraPresetId) => void;
   zoomBy: (factor: number) => void;
   focusTower?: (tower: TowerDef) => void;
+  toggleAutoRotate?: () => void;
+  toggleNightMode?: () => void;
+  toggleImageOverlay?: () => void;
   getContainer: () => HTMLDivElement | null;
 }
 
@@ -150,6 +153,14 @@ export interface Township3DViewerProps {
   generatedModelUrl?: string | null;
   /** Callback to trigger AI 3D Twin generation */
   onGenerateTwinClick?: () => void;
+  /** Controlled auto-rotate state */
+  isAutoRotate?: boolean;
+  /** Controlled night mode / day mode state */
+  isNightMode?: boolean;
+  /** Controlled camera preset */
+  cameraPreset?: CameraPresetId;
+  /** Controlled image overlay visibility */
+  showImageOverlay?: boolean;
   className?: string;
 }
 
@@ -2001,18 +2012,34 @@ export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Townshi
       isAiReconstructed = false,
       generatedModelUrl = null,
       onGenerateTwinClick,
+      isAutoRotate: propIsAutoRotate,
+      isNightMode: propIsNightMode,
+      cameraPreset: propCameraPreset,
+      showImageOverlay: propShowImageOverlay,
       className,
     },
     ref
   ) => {
     const mountRef = React.useRef<HTMLDivElement>(null);
     const apiRef = React.useRef<ViewerApi | null>(null);
-    const [preset, setPreset] = React.useState<CameraPresetId>("isometric");
+    const [preset, setPreset] = React.useState<CameraPresetId>(propCameraPreset || "isometric");
     const [flightNonce, setFlightNonce] = React.useState(0);
-    const [isNightMode, setIsNightMode] = React.useState(true);
-    const [isAutoRotate, setIsAutoRotate] = React.useState(false);
-    const [showImageOverlay, setShowImageOverlay] = React.useState(true);
+    const [localNightMode, setLocalNightMode] = React.useState(true);
+    const [localAutoRotate, setLocalAutoRotate] = React.useState(false);
+    const [localImageOverlay, setLocalImageOverlay] = React.useState(true);
     const tier = useMobileTier();
+
+    const effectiveNightMode = propIsNightMode !== undefined ? propIsNightMode : localNightMode;
+    const effectiveAutoRotate = propIsAutoRotate !== undefined ? propIsAutoRotate : localAutoRotate;
+    const effectiveImageOverlay = propShowImageOverlay !== undefined ? propShowImageOverlay : localImageOverlay;
+
+    // Synchronize camera preset if changed from outside
+    React.useEffect(() => {
+      if (propCameraPreset && propCameraPreset !== preset) {
+        setPreset(propCameraPreset);
+        setFlightNonce((n) => n + 1);
+      }
+    }, [propCameraPreset, preset]);
 
     const isLifeRepublic = React.useMemo(() => {
       if (digitalTwin) return digitalTwin.societyId === "PARCEL-MH-PUN-074" || digitalTwin.societyId === "life-republic";
@@ -2059,32 +2086,13 @@ export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Townshi
         },
         zoomBy: (factor: number) => apiRef.current?.zoomBy(factor),
         focusTower: (tower: TowerDef) => apiRef.current?.focusTower(tower),
+        toggleAutoRotate: () => setLocalAutoRotate((v) => !v),
+        toggleNightMode: () => setLocalNightMode((v) => !v),
+        toggleImageOverlay: () => setLocalImageOverlay((v) => !v),
         getContainer: () => mountRef.current,
       }),
       []
     );
-
-    const handleFocusBuilding = () => {
-      const target = activeTowers.find((t) => t.id === selectedTowerId) ?? activeTowers[0];
-      apiRef.current?.focusTower(target);
-      if (!selectedTowerId) onSelectTower(target.id);
-    };
-
-    const handleResetAll = () => {
-      setPreset("isometric");
-      setFlightNonce((n) => n + 1);
-      onSelectTower(null);
-    };
-
-    const handleToggleFullscreen = () => {
-      const el = mountRef.current;
-      if (!el) return;
-      if (document.fullscreenElement) {
-        document.exitFullscreen().catch(() => undefined);
-      } else {
-        el.requestFullscreen?.().catch(() => undefined);
-      }
-    };
 
     return (
       <div
@@ -2092,100 +2100,6 @@ export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Townshi
         className={cn("relative h-full w-full overflow-hidden select-none", className)}
         aria-label="Interactive 3D township digital twin (illustrative)"
       >
-        {/* ── 3D Interactive Floating Toolbar (Top Center of Viewport) ── */}
-        <div className="pointer-events-auto absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 rounded-2xl border border-cyan-500/40 bg-slate-950/90 p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.85)] backdrop-blur-xl">
-          {/* Zoom In */}
-          <button
-            type="button"
-            onClick={() => apiRef.current?.zoomBy(1.3)}
-            title="Zoom In (+)"
-            className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-700 bg-slate-900/80 text-cyan-300 transition-all hover:border-cyan-400 hover:bg-cyan-500/20 text-xs font-black"
-          >
-            +
-          </button>
-          {/* Zoom Out */}
-          <button
-            type="button"
-            onClick={() => apiRef.current?.zoomBy(0.75)}
-            title="Zoom Out (−)"
-            className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-700 bg-slate-900/80 text-cyan-300 transition-all hover:border-cyan-400 hover:bg-cyan-500/20 text-xs font-black"
-          >
-            −
-          </button>
-          {/* Rotate / Orbit */}
-          <button
-            type="button"
-            onClick={() => setIsAutoRotate((v) => !v)}
-            title="Rotate / Orbit View"
-            className={cn(
-              "flex h-7 items-center gap-1 rounded-lg border px-2 text-[9.5px] font-bold uppercase transition-all",
-              isAutoRotate
-                ? "border-cyan-400 bg-cyan-500/30 text-cyan-200 shadow-[0_0_12px_rgba(0,217,255,0.4)]"
-                : "border-slate-700 bg-slate-900/80 text-slate-300 hover:border-cyan-400 hover:text-cyan-300"
-            )}
-          >
-            <RotateCw className="h-3 w-3 text-cyan-400" /> Rotate
-          </button>
-          {/* Focus Building */}
-          <button
-            type="button"
-            onClick={handleFocusBuilding}
-            title="Focus Selected Building"
-            className="flex h-7 items-center gap-1 rounded-lg border border-slate-700 bg-slate-900/80 px-2 text-[9.5px] font-bold uppercase text-slate-300 transition-all hover:border-cyan-400 hover:text-cyan-300"
-          >
-            <Crosshair className="h-3 w-3 text-cyan-400" /> Focus
-          </button>
-          {/* Fullscreen */}
-          <button
-            type="button"
-            onClick={handleToggleFullscreen}
-            title="Toggle Fullscreen View"
-            className="flex h-7 items-center gap-1 rounded-lg border border-slate-700 bg-slate-900/80 px-2 text-[9.5px] font-bold uppercase text-slate-300 transition-all hover:border-cyan-400 hover:text-cyan-300"
-          >
-            <Maximize className="h-3 w-3 text-cyan-400" /> Fullscreen
-          </button>
-          {/* Uploaded 2D Image Ground Plan Toggle */}
-          {societyImageUrl && (
-            <button
-              type="button"
-              onClick={() => setShowImageOverlay((v) => !v)}
-              title="Toggle Uploaded 2D Image Orthophoto Plan"
-              className={cn(
-                "flex h-7 items-center gap-1 rounded-lg border px-2 text-[9.5px] font-bold uppercase transition-all",
-                showImageOverlay
-                  ? "border-cyan-400 bg-cyan-500/30 text-cyan-200 shadow-[0_0_12px_rgba(0,217,255,0.4)]"
-                  : "border-slate-700 bg-slate-900/80 text-slate-400 hover:border-cyan-400 hover:text-cyan-300"
-              )}
-            >
-              <Layers className="h-3 w-3 text-cyan-400" /> Image Plan
-            </button>
-          )}
-          {/* Day / Night Mode */}
-          <button
-            type="button"
-            onClick={() => setIsNightMode((v) => !v)}
-            title="Toggle Day / Night Mode"
-            className={cn(
-              "flex h-7 items-center gap-1 rounded-lg border px-2 text-[9.5px] font-bold uppercase transition-all",
-              isNightMode
-                ? "border-blue-500/50 bg-blue-950/60 text-cyan-200"
-                : "border-amber-500/50 bg-amber-500/20 text-amber-300"
-            )}
-          >
-            {isNightMode ? <Moon className="h-3 w-3 text-cyan-300" /> : <Sun className="h-3 w-3 text-amber-400" />}
-            {isNightMode ? "Night" : "Day"}
-          </button>
-          {/* Reset Camera */}
-          <button
-            type="button"
-            onClick={handleResetAll}
-            title="Reset Camera to Overview"
-            className="flex h-7 items-center gap-1 rounded-lg border border-slate-700 bg-slate-900/80 px-2 text-[9.5px] font-bold uppercase text-slate-300 transition-all hover:border-cyan-400 hover:text-cyan-300"
-          >
-            <RotateCcw className="h-3 w-3 text-cyan-400" /> Reset
-          </button>
-        </div>
-
         <Canvas
           shadows="soft"
           dpr={[1, tier === "low" ? 1.2 : 1.75]}
@@ -2208,8 +2122,8 @@ export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Townshi
             </mesh>
           )}
 
-          {/* Dynamic Sky Atmosphere & Lighting based on isNightMode */}
-          {isNightMode ? (
+          {/* Dynamic Sky Atmosphere & Lighting based on effectiveNightMode */}
+          {effectiveNightMode ? (
             <>
               <color attach="background" args={["#040914"]} />
               <fog attach="fog" args={["#040914", 340, 980]} />
@@ -2263,13 +2177,13 @@ export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Townshi
                 width={160}
                 depth={130}
                 opacity={0.92}
-                visible={showImageOverlay}
+                visible={effectiveImageOverlay}
                 societyName={societyName}
               />
             </SceneErrorBoundary>
           )}
 
-          {layers.terrain && (!societyImageUrl || !showImageOverlay) && (
+          {layers.terrain && (!societyImageUrl || !effectiveImageOverlay) && (
             <SceneErrorBoundary>
               <Terrain siteDimensions={digitalTwin?.siteDimensions} />
               {isLifeRepublic && <Berms />}
@@ -2388,9 +2302,8 @@ export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Townshi
             minDistance={18}
             maxDistance={450}
             maxPolarAngle={Math.PI / 2.1}
-            autoRotate={isAutoRotate}
+            autoRotate={effectiveAutoRotate}
             autoRotateSpeed={0.85}
-            target={[0, 6, 0]}
           />
         </Canvas>
 
