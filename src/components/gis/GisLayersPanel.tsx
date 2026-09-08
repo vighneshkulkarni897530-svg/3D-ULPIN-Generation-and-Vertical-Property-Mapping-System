@@ -1,11 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, ChevronUp, MapPin, Building2, Layers as LayersIcon, TriangleAlert } from "lucide-react";
+import Link from "next/link";
+import { ChevronDown, ChevronUp, MapPin, Building2, Layers as LayersIcon, TriangleAlert, Box } from "lucide-react";
 import { LAYER_META, type LayerState } from "@/lib/gisLayers";
 import { GisStatusBadge } from "@/components/common/GisStatusBadge";
 import { useGIS } from "@/context/GISContext";
 import { selectBuildingsByParcel, selectFloorsByBuilding, selectPropertiesByBuilding } from "@/lib/gisSelectors";
+import { resolveSocietyByAnyId } from "@/lib/society/society3DUlpinRegistry";
 import { cn } from "@/lib/utils";
 
 interface GisLayersPanelProps {
@@ -97,29 +99,59 @@ export function GisLayersPanel({ layers, onToggleLayer }: GisLayersPanelProps) {
             ))}
           </ul>
         </section>
-        {/* Parcel list */}
-        <section aria-label="Parcel list">
-          <p className="mb-1.5 px-1 text-[9px] font-extrabold uppercase tracking-widest text-slate-500">
-            Land Parcels · {parcels.length}
-          </p>
-          <ul className="space-y-1">
+        {/* Societies & 3D ULPIN Registry */}
+        <section aria-label="Societies & 3D ULPIN Registry">
+          <div className="mb-1.5 flex items-center justify-between px-1">
+            <p className="text-[9px] font-extrabold uppercase tracking-widest text-cyan-400">
+              Societies & 3D ULPIN · {parcels.length}
+            </p>
+            <Link
+              href="/digital-twin"
+              className="text-[9px] font-bold text-slate-400 hover:text-cyan-300"
+              title="Open Society 3D ULPIN Gateway"
+            >
+              Gateway &rarr;
+            </Link>
+          </div>
+          <ul className="space-y-1.5">
             {parcels.map((parcel) => {
               const active = selectedParcelId === parcel.id;
+              const socRecord = resolveSocietyByAnyId(parcel.id);
+              const socName = socRecord?.societyName || parcel.parcelNumber;
+              const ulpin3D = socRecord?.society3DUlpin || "3D-PENDING";
+
               return (
-                <li key={parcel.id}>
+                <li key={parcel.id} className="group relative">
                   <button
                     type="button"
                     onClick={() => selectParcel(active ? null : parcel.id)}
                     className={cn(
-                      "flex w-full items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition-colors",
-                      active ? "border-cyan-400/70 bg-cyan-500/15" : "border-slate-800 bg-slate-900/60 hover:border-slate-700",
+                      "flex w-full flex-col gap-1 rounded-lg border p-2 text-left transition-all",
+                      active
+                        ? "border-cyan-400/80 bg-cyan-500/15 shadow-[0_0_12px_rgba(6,182,212,0.15)]"
+                        : "border-slate-800 bg-slate-900/60 hover:border-slate-700 hover:bg-slate-900/90",
                     )}
                   >
-                    <MapPin className={cn("h-3.5 w-3.5 shrink-0", active ? "text-cyan-300" : "text-slate-500")} />
-                    <span className="min-w-0 flex-1 truncate font-mono text-[10px] font-bold text-slate-200">
-                      {parcel.parcelNumber}
-                    </span>
-                    <GisStatusBadge status={parcel.status} className="shrink-0" />
+                    <div className="flex items-center justify-between gap-1.5">
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <MapPin className={cn("h-3 w-3 shrink-0", active ? "text-cyan-300" : "text-slate-500")} />
+                        <span className="truncate text-[10.5px] font-extrabold text-slate-100">
+                          {socName}
+                        </span>
+                      </div>
+                      <span className="rounded bg-cyan-950/80 px-1 py-0.2 font-mono text-[8px] font-black text-cyan-300 border border-cyan-800/40">
+                        {socRecord?.totalBuildings ?? 1} BLD
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-1 text-[9px]">
+                      <span className="font-mono text-cyan-400/90 font-semibold truncate">
+                        {ulpin3D}
+                      </span>
+                      <span className="shrink-0 text-slate-500 font-mono text-[8.5px]">
+                        {parcel.parcelNumber}
+                      </span>
+                    </div>
                   </button>
                 </li>
               );

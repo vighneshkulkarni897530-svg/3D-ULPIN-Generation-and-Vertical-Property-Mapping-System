@@ -29,8 +29,8 @@ const GisViewer3D = dynamic(
 );
 
 /** Demo-wide reset view (Pune survey cluster). */
-const PUNE_CENTRE: [number, number] = [18.56, 73.78];
-const RESET_ZOOM = 15;
+const PUNE_CENTRE: [number, number] = [18.5940, 73.7415];
+const RESET_ZOOM = 16;
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
@@ -414,10 +414,10 @@ function MapWorkspace() {
             </ViewerErrorBoundary>
           )}
 
-          {/* 3D focus hint — the MVP scene renders everything; a building sharpens it */}
+          {/* 3D focus hint — master district with all 7 parcels and 27 vertical structures */}
           {mode === "3d" && !selectedBuildingId && (
-            <div className="pointer-events-none absolute left-1/2 top-3 z-20 -translate-x-1/2 rounded-full border border-slate-700 bg-slate-950/85 px-3.5 py-1.5 text-[10px] font-bold text-slate-300 shadow-xl">
-              Select a building to focus the vertical structure — parcels render flat without a selection
+            <div className="pointer-events-none absolute left-1/2 top-3 z-20 -translate-x-1/2 rounded-full border border-cyan-500/40 bg-slate-950/90 px-4 py-1.5 text-[11px] font-bold text-cyan-300 shadow-2xl backdrop-blur">
+              7 Cadastral Parcels · 27 3D Buildings Rendered — Click any building or parcel to focus vertical details
             </div>
           )}
 

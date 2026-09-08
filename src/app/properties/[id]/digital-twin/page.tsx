@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, MapPinned, FileText } from "lucide-react";
+import { ArrowLeft, MapPinned, FileText, Building2 } from "lucide-react";
 import { Township3DViewerDynamic, Township3DViewerHandle } from "@/components/digital-twin/township/Township3DViewerDynamic";
 import {
   TownshipCameraBar,
@@ -57,13 +57,19 @@ import { fadeIn, slideInLeft, slideInRight } from "@/components/digital-twin/mot
 import { getSocietyById } from "@/lib/society/service";
 import type { Society } from "@/types/society";
 import { generate3DFromImage, type Image3DGenerationResult } from "@/lib/imageTo3DGenerator";
+import { getSocietyDigitalTwin, saveSocietyDigitalTwin } from "@/lib/digital-twin/digitalTwinRegistry";
+import { analyzeSocietySiteImage } from "@/lib/digital-twin/imageAnalyzer";
+import type { SocietyDigitalTwin } from "@/types/digitalTwin";
+import { resolveSocietyByAnyId, validateSocietyBuildingOwnership } from "@/lib/society/society3DUlpinRegistry";
+import { UploadCloud, Sparkles, X, ChevronDown, Check, Fingerprint, Copy, CheckCheck, ShieldCheck } from "lucide-react";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { DigitalTwinInspectionProvider } from "@/context/DigitalTwinInspectionContext";
 
 /**
- * Digital Twin route (Phase 7, 10 & 16): Enforces authentication and provides
- * real Firestore-driven 3D Property Inspection & Spatial Analysis Workbench.
+ * Digital Twin route (Phase 7, 10, 16 & 22): Enforces authentication and provides
+ * real Firestore-driven 3D Property Inspection & Spatial Analysis Workbench
+ * with dynamic society-specific 3D digital twins generated from site images.
  */
 export default function BuildingDigitalTwinPage() {
   return (
@@ -93,6 +99,12 @@ function BuildingDigitalTwinPageContent() {
   const viewerShellRef = useRef<HTMLDivElement>(null);
   const viewerHandleRef = useRef<Township3DViewerHandle>(null);
 
+  // Phase 22 — Society Digital Twin State & Synthesis
+  const [digitalTwinVersion, setDigitalTwinVersion] = useState(0);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [isSynthesizing, setIsSynthesizing] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+
   // Route param + search params for deep-linking (?building=..., ?floor=..., ?flat=..., ?society=...)
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
@@ -108,8 +120,6 @@ function BuildingDigitalTwinPageContent() {
   const routeProperty = useMemo(() => getPropertyByUlpinOrId(routeId) ?? null, [getPropertyByUlpinOrId, routeId]);
 
   // Phase 19 — resolve the canonical registry unit for this route
-  // (e.g. PROP-LR-B-0402 → building B-LR-B, floor FLOOR-LR-B-04). Used to
-  // auto-select the correct tower/floor/flat even when query params are absent.
   const featuredUnitRecord = useMemo(
     () => gisUnits.find((u) => u.id === routeId || u.propertyId === routeId) ?? null,
     [gisUnits, routeId],
@@ -122,8 +132,26 @@ function BuildingDigitalTwinPageContent() {
   const [society, setSociety] = useState<Society | null>(null);
   const [image3DResult, setImage3DResult] = useState<Image3DGenerationResult | null>(null);
 
-  // Target society buildings resolution
-  const targetSocietyId = querySociety ?? (parcels.some((p) => p.id === routeId) ? routeId : null);
+  // Target society resolution (Phase 22 & Phase 23)
+  const resolvedSocietyId = useMemo(() => {
+    if (querySociety) return querySociety;
+    if (searchParams?.get("parcel")) return searchParams.get("parcel")!;
+    if ((routeProperty as any)?.parcelId) return (routeProperty as any).parcelId;
+    if ((routeProperty as any)?.societyId) return (routeProperty as any).societyId;
+    if (featuredUnitRecord?.parcelId) return featuredUnitRecord.parcelId;
+    if (parcels.some((p) => p.id === routeId)) return routeId;
+    if (routeId.startsWith("PARCEL-") || routeId.startsWith("SOCIETY-") || routeId.startsWith("SOC-")) return routeId;
+    if (routeId.includes("LR-") || routeId === "PROP-LR-B-0402") {
+      return "PARCEL-MH-PUN-074";
+    }
+    return routeId;
+  }, [querySociety, searchParams, routeProperty, featuredUnitRecord, parcels, routeId]);
+
+  const targetSocietyId = resolvedSocietyId;
+
+  const societyDigitalTwin = useMemo<SocietyDigitalTwin | null>(() => {
+    return getSocietyDigitalTwin(resolvedSocietyId);
+  }, [resolvedSocietyId, digitalTwinVersion]);
 
   const societyBuildings = useMemo(() => {
     if (!targetSocietyId) return [];
@@ -131,6 +159,26 @@ function BuildingDigitalTwinPageContent() {
       (b) => b.parcelId === targetSocietyId || (b as any).societyId === targetSocietyId,
     );
   }, [buildings, targetSocietyId]);
+
+  // Phase 23 — Automatic State Reset on Society Switch
+  const prevSocietyIdRef = useRef<string>(resolvedSocietyId);
+  useEffect(() => {
+    if (prevSocietyIdRef.current !== resolvedSocietyId) {
+      prevSocietyIdRef.current = resolvedSocietyId;
+      // Reset tower selection to first building of new society
+      const firstBldg = societyDigitalTwin?.buildings[0]?.id || societyBuildings[0]?.id || null;
+      setSelectedTowerId(firstBldg);
+      setSelectedLevel(null);
+      setSelectedUnitId(null);
+      setSelectedUnit(null);
+      setFloorMode("all");
+      inspection.selectBuilding(firstBldg);
+      inspection.selectFloor(null);
+      inspection.selectFlat(null);
+      inspection.resetInspection();
+      viewerHandleRef.current?.applyPreset("isometric");
+    }
+  }, [resolvedSocietyId, societyDigitalTwin, societyBuildings, inspection]);
 
   useEffect(() => {
     let active = true;
@@ -149,8 +197,14 @@ function BuildingDigitalTwinPageContent() {
   }, [targetSocietyId]);
 
   const societyImageUrl = useMemo(() => {
-    return society?.imageUrl || routeProperty?.aerialImageUrl || routeProperty?.featuredImageUrl || null;
-  }, [society, routeProperty]);
+    return (
+      societyDigitalTwin?.sourceImage ||
+      society?.imageUrl ||
+      routeProperty?.aerialImageUrl ||
+      routeProperty?.featuredImageUrl ||
+      null
+    );
+  }, [societyDigitalTwin, society, routeProperty]);
 
   useEffect(() => {
     let active = true;
@@ -171,53 +225,47 @@ function BuildingDigitalTwinPageContent() {
 
   // Dynamic 3D Tower generation for all buildings (including custom societies & AI extraction)
   const sceneTowers = useMemo<TowerDef[]>(() => {
-    if (image3DResult && image3DResult.towers.length > 0) {
-      return image3DResult.towers;
+    if (societyDigitalTwin && societyDigitalTwin.buildings) {
+      return societyDigitalTwin.buildings.map((b) => ({
+        id: b.id,
+        name: b.name,
+        type: (["A", "B", "C", "D"].includes(b.type) ? b.type : "A") as any,
+        typeLabel: b.typeLabel || "Building Block",
+        position: b.position,
+        rotation: b.rotation,
+        floors: b.floors,
+        footprint: b.footprint,
+        dataStatus: (b.dataStatus as any) || "verified",
+      }));
     }
-    const baseTowers = [...TOWERS];
-    const targetBldgs = societyBuildings.length > 0 ? societyBuildings : buildings;
-
-    const dynamicList: TowerDef[] = [];
-    targetBldgs.forEach((bldg, idx) => {
-      const inBase = baseTowers.find((t) => t.id === bldg.id || t.id === bldg.buildingCode);
-      if (!inBase) {
-        const count = targetBldgs.length;
-        const angle = (idx / Math.max(1, count)) * Math.PI * 1.5 - 0.4;
-        const radius = 55;
-        const posX = Math.round(Math.cos(angle) * radius);
-        const posZ = Math.round(Math.sin(angle) * radius);
-        const bldgFloors = floors.filter((f) => f.buildingId === bldg.id);
-        const floorCount = bldgFloors.length > 0 ? bldgFloors.length : (bldg.totalFloors || 12);
-
-        dynamicList.push({
-          id: bldg.id,
-          name: bldg.name,
-          type: (['A', 'B', 'C', 'D'][idx % 4]) as any,
-          typeLabel: (bldg as any).type ? `${(bldg as any).type} Building` : 'Residential Tower',
-          position: [posX, posZ],
-          rotation: 0.05 * idx,
-          floors: floorCount,
-          footprint: [18, 16],
-          dataStatus: 'verified',
-        });
-      }
-    });
-
-    if (dynamicList.length > 0) {
-      return [...dynamicList, ...baseTowers.filter((bt) => !dynamicList.some((dt) => dt.id === bt.id))];
+    if (societyDigitalTwin === null) {
+      return [];
     }
-    return baseTowers;
-  }, [image3DResult, societyBuildings, buildings, floors]);
+    return TOWERS;
+  }, [societyDigitalTwin]);
 
-  // Deep-link auto-selection (?building=…&floor=…&flat=…). When a parameter is
-  // absent, fall back to the canonical featured registry unit so that opening
-  // /properties/PROP-LR-B-0402/digital-twin still lands on Tower B · Floor 4 ·
-  // Flat 402 — never on an unrelated mock building.
+  // Society 3D ULPIN Record (Phase 23)
+  const societyUlpinRecord = useMemo(() => resolveSocietyByAnyId(resolvedSocietyId), [resolvedSocietyId]);
+  const [copiedUlpin, setCopiedUlpin] = useState(false);
+  const handleCopyUlpin = (ulpin: string) => {
+    navigator.clipboard.writeText(ulpin);
+    setCopiedUlpin(true);
+    setTimeout(() => setCopiedUlpin(false), 2000);
+  };
+
+  // Deep-link auto-selection (?building=…&floor=…&flat=…). Validates ownership
+  // to prevent cross-society mismatched building injections.
   useEffect(() => {
-    const buildingParam =
-      queryBuilding ??
+    let buildingParam = queryBuilding;
+    if (buildingParam && !validateSocietyBuildingOwnership(resolvedSocietyId, buildingParam)) {
+      // Building does not belong to this society - sanitize to avoid foreign render
+      buildingParam = null;
+    }
+    buildingParam =
+      buildingParam ??
       featuredUnitRecord?.buildingId ??
       (societyBuildings.length > 0 ? societyBuildings[0].id : null);
+
     if (buildingParam) {
       const match = buildings.find((b) => b.id === buildingParam || b.buildingCode === buildingParam);
       if (match) {
@@ -242,15 +290,9 @@ function BuildingDigitalTwinPageContent() {
       inspection.selectFlat(flatParam);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queryBuilding, queryFloor, queryFlat, buildings, featuredUnitRecord, featuredFloorLevel, societyBuildings]);
+  }, [queryBuilding, queryFloor, queryFlat, buildings, featuredUnitRecord, featuredFloorLevel, societyBuildings, resolvedSocietyId]);
 
   const place = resolvePlace(PLACE_ID);
-
-  // Phase 20 — the previous mount-time effect that reset floorMode/selectedLevel
-  // whenever selectedTowerId changed has been REMOVED: it also fired on first
-  // mount (same tower id) and wiped the deep-linked ?floor= selection before
-  // the user ever saw it. Floor/unit resets now happen exclusively in
-  // handleSelectTower on genuine user-driven tower switches.
 
   // Sync inspection context floorMode
   useEffect(() => {
@@ -284,12 +326,6 @@ function BuildingDigitalTwinPageContent() {
     viewerHandleRef.current?.applyPreset("isometric");
   }, []);
   const handleSelectTower = useCallback((id: string | null) => {
-    // Phase 20 — reset floor/unit state only on a GENUINE tower switch (user
-    // click). The deep-link effect sets tower + floor + flat atomically, so a
-    // mount-time reset effect here previously WIPED the ?floor= selection
-    // (browser-verified: ?floor=4 landed on the default Floor 06). Resetting
-    // inside this handler keeps user-driven switches clean without fighting
-    // the deep link.
     setSelectedTowerId(id);
     if (id !== selectedTowerId) {
       setFloorMode("all");
@@ -352,12 +388,6 @@ function BuildingDigitalTwinPageContent() {
     inspection.selectFloor(level);
   }, [inspection]);
 
-  // ── Phase 19 — canonical twin view (single source of truth) ────────────────
-  // Derives ALL presentation data (header / info panel / floor explorer /
-  // units / minimap) from the REAL registry records of the selected building.
-  // The legacy Green Valley illustration mock is only used when no registry
-  // building is linked. This removes the Green-Valley/12-floor/42m data
-  // mismatch observed in the Phase 18 review.
   const twinView = useMemo(() => {
     const base = buildTwinView({
       building: linkedTowerData.building,
@@ -436,9 +466,6 @@ function BuildingDigitalTwinPageContent() {
     return base;
   }, [linkedTowerData, routeProperty, society, image3DResult, selectedTowerId, selectedTower]);
 
-  // Unified floor state for the bottom workbench: registry-linked selection
-  // drives BOTH the panels and the 3D scene (inspection.selectFloor), so the
-  // geometry visibly responds to floor changes.
   const activeLevel = twinView.linked ? selectedLevel ?? selectedFloorLevel : selectedFloorLevel;
   const bottomFloors = twinView.floors;
   const activeFloor = useMemo(
@@ -456,8 +483,6 @@ function BuildingDigitalTwinPageContent() {
     [twinView.linked, handleSelectLevel, handleSelectFloor]
   );
 
-  // Sync the selected TwinUnit from the canonical registry when a flat id is
-  // chosen via deep link (?flat=402), the in-scene explorer, or a conflict.
   useEffect(() => {
     if (!selectedUnitId) return;
     const unit = findTwinUnit(bottomFloors, selectedUnitId);
@@ -488,14 +513,12 @@ function BuildingDigitalTwinPageContent() {
     inspection.resetInspection();
   };
 
-  // keep isFullscreen in sync with browser fullscreen state
   React.useEffect(() => {
     const onFsChange = () => setIsFullscreen(document.fullscreenElement !== null);
     document.addEventListener("fullscreenchange", onFsChange);
     return () => document.removeEventListener("fullscreenchange", onFsChange);
   }, []);
 
-  // Safe fallback when the place cannot be resolved.
   if (!place) {
     return (
       <div className="digital-twin flex min-h-screen w-full items-center justify-center px-4 text-[#F8FAFC]">
@@ -536,19 +559,75 @@ function BuildingDigitalTwinPageContent() {
             <ArrowLeft className="h-3.5 w-3.5" /> Back to property record
           </Link>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Phase 23 — Society 3D ULPIN HUD Pill & Copy Action */}
+            {societyUlpinRecord && (
+              <div className="flex items-center gap-1.5 rounded-lg border border-cyan-500/40 bg-cyan-950/60 px-2.5 py-1 text-[11px] shadow-[0_0_10px_rgba(6,182,212,0.15)]">
+                <Fingerprint className="h-3.5 w-3.5 text-cyan-400" />
+                <span className="font-mono text-cyan-200 font-extrabold">{societyUlpinRecord.society3DUlpin}</span>
+                <button
+                  type="button"
+                  onClick={() => handleCopyUlpin(societyUlpinRecord.society3DUlpin)}
+                  className="ml-1 text-slate-400 hover:text-cyan-300 transition-colors"
+                  title="Copy Society 3D ULPIN"
+                >
+                  {copiedUlpin ? <CheckCheck className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                </button>
+              </div>
+            )}
+
+            {/* Phase 22 & 23 — Complete 7-Parcel Society Digital Twin Quick Switcher */}
+            <div className="flex items-center gap-1.5 rounded-lg border border-[#164E73] bg-[#061426] px-2.5 py-1 text-[11px]">
+              <Building2 className="h-3.5 w-3.5 text-[#00D9FF]" />
+              <span className="text-[10px] font-bold text-slate-400 uppercase hidden sm:inline">Society:</span>
+              <select
+                value={resolvedSocietyId}
+                onChange={(e) => {
+                  const newSoc = e.target.value;
+                  router.push(`/properties/${routeId}/digital-twin?society=${newSoc}&parcel=${newSoc}`);
+                }}
+                aria-label="Select Society 3D Digital Twin"
+                className="bg-transparent text-xs font-bold text-cyan-300 focus:outline-none cursor-pointer"
+              >
+                <option value="PARCEL-MH-PUN-001" className="bg-slate-900 text-white">S3D-MH-PUN-GVR-001 · Green View (3 Bldgs)</option>
+                <option value="PARCEL-MH-PUN-002" className="bg-slate-900 text-white">S3D-MH-PUN-SKA-001 · Shree Krishna (5 Bldgs)</option>
+                <option value="PARCEL-MH-PUN-003" className="bg-slate-900 text-white">S3D-MH-PUN-TT-001 · Tech Tower (2 Blocks)</option>
+                <option value="PARCEL-MH-PUN-004" className="bg-slate-900 text-white">S3D-MH-PUN-WAK-001 · Wakad Heights (4 Bldgs)</option>
+                <option value="PARCEL-MH-PUN-005" className="bg-slate-900 text-white">S3D-MH-PUN-HIN-001 · Hinjewadi Enclave (6 Blocks)</option>
+                <option value="PARCEL-MH-PUN-006" className="bg-slate-900 text-white">S3D-MH-PUN-AMA-001 · Amanora Elegance (2 Towers)</option>
+                <option value="PARCEL-MH-PUN-074" className="bg-slate-900 text-white">S3D-MH-PUN-LR-001 · Life Republic (5 Towers)</option>
+                <option value="society-unconfigured-test" className="bg-slate-900 text-white">S3D-MH-PUN-UNC-999 · Pristine Meadows (Unconfigured)</option>
+              </select>
+            </div>
+
+            <Link
+              href={`/digital-twin?society=${resolvedSocietyId}&ulpin=${societyUlpinRecord?.society3DUlpin || ""}`}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-[11px] font-bold text-cyan-300 transition-colors hover:bg-cyan-500/20 shadow-[0_0_8px_rgba(6,182,212,0.15)]"
+              title="Open Society 3D ULPIN Gateway"
+            >
+              <Fingerprint className="h-3.5 w-3.5 text-cyan-400" /> Gateway
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => setShowUploadModal(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-500/50 bg-cyan-500/10 px-3 py-1.5 text-[11px] font-bold text-cyan-300 transition-colors hover:bg-cyan-500/20 shadow-[0_0_10px_rgba(0,217,255,0.2)]"
+            >
+              <UploadCloud className="h-3.5 w-3.5 text-cyan-400" /> Upload Site Plan
+            </button>
+
             <button
               type="button"
               onClick={() => setShowInspectionSummary(true)}
               className="inline-flex items-center gap-1.5 rounded-lg border border-[#164E73] bg-[#061426] px-3 py-1.5 text-[11px] font-bold text-[#F8FAFC] transition-colors hover:border-[#00D9FF]/50 hover:text-[#00D9FF]"
             >
-              <FileText className="h-3.5 w-3.5 text-[#00D9FF]" /> Inspection Summary
+              <FileText className="h-3.5 w-3.5 text-[#00D9FF]" /> Inspection
             </button>
             <Link
-              href={`/map?society=${linkedTowerData.parcel?.id ?? ""}${linkedTowerData.building?.id ? `&building=${linkedTowerData.building.id}` : ""}`}
+              href={selectedTowerId ? `/map?society=${resolvedSocietyId}&building=${selectedTowerId}` : `/map?society=${resolvedSocietyId}&parcel=${resolvedSocietyId}`}
               className="inline-flex items-center gap-1.5 rounded-lg border border-[#00D9FF]/40 bg-[#00D9FF]/10 px-3 py-1.5 text-[11px] font-bold text-[#00D9FF] transition-colors hover:bg-[#00D9FF]/20"
             >
-              <MapPinned className="h-3.5 w-3.5" /> View on 2D GIS Map
+              <MapPinned className="h-3.5 w-3.5" /> 2D GIS Map
             </Link>
             {linkedTowerData.parcel?.id && (
               <Link
@@ -627,6 +706,10 @@ function BuildingDigitalTwinPageContent() {
                     layers={layers}
                     selectedTowerId={selectedTowerId}
                     onSelectTower={handleSelectTower}
+                    digitalTwin={societyDigitalTwin}
+                    generatedModelUrl={societyDigitalTwin?.generatedModelUrl}
+                    onUploadImageClick={() => setShowUploadModal(true)}
+                    onGenerateTwinClick={() => setShowUploadModal(true)}
                     floorMode={floorMode}
                     selectedLevel={selectedLevel}
                     linkedFloors={explicitFloors}
@@ -642,8 +725,8 @@ function BuildingDigitalTwinPageContent() {
                     conflicts={conflicts}
                     towers={sceneTowers}
                     societyImageUrl={societyImageUrl}
-                    societyName={society?.name || routeProperty?.title}
-                    isAiReconstructed={Boolean(societyImageUrl)}
+                    societyName={societyDigitalTwin?.societyName || society?.name || routeProperty?.title}
+                    isAiReconstructed={Boolean(societyImageUrl || (societyDigitalTwin && societyDigitalTwin.sourceImage))}
                     className="h-full w-full"
                   />
                 </div>
@@ -993,6 +1076,129 @@ function BuildingDigitalTwinPageContent() {
           selectedFloorNumber={selectedLevel}
           selectedFlatId={selectedUnitId}
         />
+
+        {/* Phase 22 — Site Plan Upload & 3D Twin Synthesis Modal */}
+        {showUploadModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md">
+            <div className="relative max-w-lg w-full rounded-2xl border border-cyan-500/40 bg-slate-950 p-6 shadow-2xl space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <UploadCloud className="h-5 w-5 text-cyan-400" />
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+                    Upload Site Plan &amp; Synthesize 3D Twin
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setShowUploadModal(false)}
+                  className="rounded-lg border border-slate-700 bg-slate-800 p-1 text-slate-400 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <p className="text-xs text-slate-300">
+                Upload a master plan, aerial photo, or architectural layout for <strong className="text-cyan-300">{societyDigitalTwin?.societyName || resolvedSocietyId}</strong>. Computer vision will extract building footprints, green zones, parking lots, and road networks.
+              </p>
+
+              {/* File input */}
+              <label className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-cyan-500/40 bg-slate-900/50 p-6 text-center cursor-pointer hover:border-cyan-400 hover:bg-slate-900/80 transition-all">
+                <UploadCloud className="h-8 w-8 text-cyan-400 animate-bounce" />
+                <span className="text-xs font-bold text-slate-200">Click to select site image from your device</span>
+                <span className="text-[10px] text-slate-400">Supports PNG, JPG, WEBP, drone aerial shots, and CAD master plans</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setIsSynthesizing(true);
+                    setUploadStatus("Analyzing site image & extracting building massing...");
+                    const reader = new FileReader();
+                    reader.onload = async (ev) => {
+                      const dataUrl = ev.target?.result as string;
+                      try {
+                        const newTwin = await analyzeSocietySiteImage(
+                          dataUrl,
+                          societyDigitalTwin?.societyName || society?.name || "Dynamic Society",
+                          resolvedSocietyId
+                        );
+                        saveSocietyDigitalTwin(newTwin);
+                        setDigitalTwinVersion((v) => v + 1);
+                        setUploadStatus("3D Digital Twin successfully generated!");
+                        setTimeout(() => {
+                          setShowUploadModal(false);
+                          setIsSynthesizing(false);
+                          setUploadStatus(null);
+                        }, 1200);
+                      } catch (err) {
+                        setUploadStatus("Failed to analyze image. Please try again.");
+                        setIsSynthesizing(false);
+                      }
+                    };
+                    reader.readAsDataURL(file);
+                  }}
+                  disabled={isSynthesizing}
+                />
+              </label>
+
+              {/* Sample Layout Presets for Instant Testing */}
+              <div className="space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Or Test with Sample Society Digital Twins:
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      router.push(`/properties/${routeId}/digital-twin?societyId=PARCEL-MH-PUN-074`);
+                      setShowUploadModal(false);
+                    }}
+                    className="rounded-lg border border-slate-700 bg-slate-900 p-2 text-left hover:border-cyan-400 text-slate-200 font-bold hover:bg-slate-800"
+                  >
+                    Life Republic (5 Towers)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      router.push(`/properties/${routeId}/digital-twin?societyId=PARCEL-MH-PUN-001`);
+                      setShowUploadModal(false);
+                    }}
+                    className="rounded-lg border border-slate-700 bg-slate-900 p-2 text-left hover:border-cyan-400 text-slate-200 font-bold hover:bg-slate-800"
+                  >
+                    Society A (3 Bldgs)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      router.push(`/properties/${routeId}/digital-twin?societyId=PARCEL-MH-PUN-002`);
+                      setShowUploadModal(false);
+                    }}
+                    className="rounded-lg border border-slate-700 bg-slate-900 p-2 text-left hover:border-cyan-400 text-slate-200 font-bold hover:bg-slate-800"
+                  >
+                    Society B (5 Bldgs)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      router.push(`/properties/${routeId}/digital-twin?societyId=PARCEL-MH-PUN-003`);
+                      setShowUploadModal(false);
+                    }}
+                    className="rounded-lg border border-slate-700 bg-slate-900 p-2 text-left hover:border-cyan-400 text-slate-200 font-bold hover:bg-slate-800"
+                  >
+                    Society C (2 Bldgs)
+                  </button>
+                </div>
+              </div>
+
+              {uploadStatus && (
+                <div className="rounded-lg border border-cyan-500/40 bg-cyan-950/70 p-2.5 text-center text-xs font-bold text-cyan-300 animate-pulse">
+                  {uploadStatus}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

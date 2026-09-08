@@ -36,10 +36,10 @@ export const MOCK_CONFLICTS: SpatialConflict[] = [
       'eastern edge. Units PROP-102-0202 and PROP-104-G01 are in the affected zone.',
     detectedAt: '2025-03-10T06:45:00Z',
     geometry: poly([
-      [73.8543, 18.5330],
-      [73.8548, 18.5330],
-      [73.8548, 18.5334],
-      [73.8543, 18.5334],
+      [73.7400, 18.5910],
+      [73.7405, 18.5910],
+      [73.7405, 18.5916],
+      [73.7400, 18.5916],
     ]),
   },
 
@@ -60,10 +60,10 @@ export const MOCK_CONFLICTS: SpatialConflict[] = [
       'unit-level verification cannot proceed for 4 affected units.',
     detectedAt: '2025-03-08T14:20:00Z',
     geometry: poly([
-      [73.7742, 18.5670],
-      [73.7755, 18.5670],
-      [73.7755, 18.5678],
-      [73.7742, 18.5678],
+      [73.7432, 18.5907],
+      [73.7440, 18.5907],
+      [73.7440, 18.5918],
+      [73.7432, 18.5918],
     ]),
   },
 
@@ -87,10 +87,10 @@ export const MOCK_CONFLICTS: SpatialConflict[] = [
       'as a potential duplicate spatial ID. No ownership conflict confirmed yet.',
     detectedAt: '2025-03-09T11:10:00Z',
     geometry: poly([
-      [73.7747, 18.5678],
-      [73.7750, 18.5678],
-      [73.7750, 18.5680],
-      [73.7747, 18.5680],
+      [73.7434, 18.5912],
+      [73.7438, 18.5912],
+      [73.7438, 18.5916],
+      [73.7434, 18.5916],
     ]),
   },
 ];

@@ -3,7 +3,7 @@
 import * as React from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Edges, Html, Instance, Instances, Line, OrbitControls } from "@react-three/drei";
+import { Edges, Html, Instance, Instances, Line, OrbitControls, useGLTF } from "@react-three/drei";
 import {
   AMENITY,
   CAMERA_PRESET_DEFS,
@@ -26,6 +26,18 @@ import {
   type TownshipLayerState,
   type TowerDef,
 } from "./townshipConfig";
+import type {
+  SocietyDigitalTwin,
+  SocietyBuilding3DDef,
+  SocietyRoadDef,
+  SocietyParkDef,
+  SocietyParkingDef,
+  SocietyAmenityDef,
+  SocietyWaterBodyDef,
+  SocietyEntranceDef,
+  SocietyTreeDef,
+  SocietySiteBoundaryDef,
+} from "@/types/digitalTwin";
 import {
   BENCHES,
   BERMS,
@@ -65,6 +77,7 @@ import {
 import type { ExplicitFloor, GisFootprint, TownshipFloorMode } from "./townshipData";
 import { cn } from "@/lib/utils";
 import {
+  Building2,
   Crosshair,
   Eye,
   Layers,
@@ -75,13 +88,11 @@ import {
   Scissors,
   Sparkles,
   Sun,
+  UploadCloud,
 } from "lucide-react";
 
 /* ======================================================================
- * Phase 15A+15B — Realistic Township Digital Twin (ILLUSTRATIVE).
- * Everything rendered here is conceptual geometry: no survey, GIS or DEM
- * data exists for this site. Buildings/roads/landscape are labeled
- * "Illustrative" on screen and in townshipConfig.ts / townshipLandscape.ts.
+ * Phase 22 — Dynamic Society-Specific 3D Digital Twin Viewer
  * ==================================================================== */
 
 export interface Township3DViewerHandle {
@@ -95,6 +106,10 @@ export interface Township3DViewerProps {
   layers: TownshipLayerState;
   selectedTowerId: string | null;
   onSelectTower: (id: string | null) => void;
+  /** Phase 22 — Society-specific digital twin configuration */
+  digitalTwin?: SocietyDigitalTwin | null;
+  /** Callback to trigger site image upload when unconfigured */
+  onUploadImageClick?: () => void;
   /** Phase 15C — floor-view mode for the selected tower (real DB floors only). */
   floorMode?: TownshipFloorMode;
   /** Phase 15C — selected real floor level (null ⇒ whole building). */
@@ -131,6 +146,10 @@ export interface Township3DViewerProps {
   societyName?: string;
   /** True when scene is synthesized from uploaded image. */
   isAiReconstructed?: boolean;
+  /** Phase 23 — AI-generated 3D GLB model URL from Hugging Face or 3D pipeline */
+  generatedModelUrl?: string | null;
+  /** Callback to trigger AI 3D Twin generation */
+  onGenerateTwinClick?: () => void;
   className?: string;
 }
 
@@ -271,19 +290,21 @@ function lawnShape(w: number, d: number, r = 10): THREE.Shape {
 
 /* ------------------------------- Terrain ------------------------------- */
 
-function Terrain() {
+function Terrain({ siteDimensions }: { siteDimensions?: { widthMeters: number; depthMeters: number } }) {
+  const w = siteDimensions?.widthMeters ?? 356;
+  const d = siteDimensions?.depthMeters ?? 296;
   return (
     <group>
       {/* surrounding context landscape */}
       <mesh receiveShadow material={M.context} position={[0, -0.46, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[1600, 1600]} />
+        <planeGeometry args={[Math.max(1600, w * 4), Math.max(1600, d * 4)]} />
       </mesh>
       {/* landscaped site platform (subtle elevation) */}
       <mesh receiveShadow material={M.groundEdge} position={[0, -0.25, 0]}>
-        <boxGeometry args={[362, 0.5, 302]} />
+        <boxGeometry args={[w + 6, 0.5, d + 6]} />
       </mesh>
       <mesh receiveShadow material={M.ground} position={[0, 0.001, 0]}>
-        <boxGeometry args={[356, 0.5, 296]} />
+        <boxGeometry args={[w, 0.5, d]} />
       </mesh>
     </group>
   );
@@ -291,17 +312,28 @@ function Terrain() {
 
 /* -------------------------------- Roads -------------------------------- */
 
-function Roads() {
-  const ringGeom = React.useMemo(() => new THREE.ShapeGeometry(ringShape(RING_ROAD.outerHalf, RING_ROAD.innerHalf, RING_ROAD.radius), 10), []);
-  React.useEffect(() => () => ringGeom.dispose(), [ringGeom]);
+function Roads({ roads }: { roads?: SocietyRoadDef }) {
+  const ringRoad = roads?.ringRoad ?? (roads ? undefined : RING_ROAD);
+  const ringGeom = React.useMemo(() => {
+    if (!ringRoad) return null;
+    return new THREE.ShapeGeometry(ringShape(ringRoad.outerHalf, ringRoad.innerHalf, ringRoad.radius), 10);
+  }, [ringRoad]);
+
+  React.useEffect(() => () => ringGeom?.dispose(), [ringGeom]);
+
+  const segments = roads ? roads.segments : ROAD_SEGMENTS;
+  const sidewalks = roads ? (roads.sidewalks ?? []) : SIDEWALKS;
+
   return (
     <group>
-      {/* curved perimeter ring road */}
-      <mesh geometry={ringGeom} material={M.road} receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]} />
+      {/* curved perimeter ring road if present */}
+      {ringGeom && (
+        <mesh geometry={ringGeom} material={M.road} receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]} />
+      )}
       {/* internal grid of access roads */}
-      {ROAD_SEGMENTS.map((s, i) => (
+      {segments.map((s: any, i) => (
         <mesh
-          key={i}
+          key={s.id || `seg-${i}`}
           geometry={UNIT_BOX}
           material={M.road}
           receiveShadow
@@ -310,9 +342,9 @@ function Roads() {
         />
       ))}
       {/* pedestrian sidewalks along the main spine */}
-      {SIDEWALKS.map((s, i) => (
+      {sidewalks.map((s: any, i) => (
         <mesh
-          key={`sw-${i}`}
+          key={`sw-${s.id || i}`}
           geometry={UNIT_BOX}
           material={M.sidewalk}
           receiveShadow
@@ -326,18 +358,38 @@ function Roads() {
 
 /* ------------------------------ Green base ------------------------------ */
 
-function GreenZones() {
-  const lawnGeoms = React.useMemo(() => LAWNS.map((l) => new THREE.ShapeGeometry(lawnShape(l.size[0], l.size[1], 14), 8)), []);
+function GreenZones({ parks, isLifeRepublic = false }: { parks?: SocietyParkDef[]; isLifeRepublic?: boolean }) {
+  const effectiveParks = parks !== undefined ? parks : LAWNS.map((l, i) => ({
+    id: `lawn-${i}`,
+    position: l.position,
+    size: l.size,
+    shape: 'rounded-rect' as const,
+  }));
+
+  const lawnGeoms = React.useMemo(() => {
+    return effectiveParks.map((p) => {
+      if (p.shape === 'circle' && p.radius) {
+        return new THREE.CircleGeometry(p.radius, 32);
+      }
+      return new THREE.ShapeGeometry(lawnShape(p.size[0], p.size[1], 12), 8);
+    });
+  }, [effectiveParks]);
+
   React.useEffect(() => () => lawnGeoms.forEach((g) => g.dispose()), [lawnGeoms]);
+
+  if (effectiveParks.length === 0) return null;
+
   return (
     <group>
-      {/* large central meadow around the amenity plaza */}
-      <mesh receiveShadow material={M.meadow} position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[CENTRAL_MEADOW_RADIUS, 48]} />
-      </mesh>
-      {LAWNS.map((l, i) => (
+      {/* central meadow around amenity plaza if Life Republic */}
+      {isLifeRepublic && (
+        <mesh receiveShadow material={M.meadow} position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <circleGeometry args={[CENTRAL_MEADOW_RADIUS, 48]} />
+        </mesh>
+      )}
+      {effectiveParks.map((l, i) => (
         <mesh
-          key={i}
+          key={l.id || `park-${i}`}
           geometry={lawnGeoms[i]}
           material={i % 2 === 0 ? M.lawn : M.lawnAlt}
           receiveShadow
@@ -345,19 +397,19 @@ function GreenZones() {
           position={[l.position[0], 0.03, l.position[1]]}
         />
       ))}
-      {/* a few circular shrub beds as landscape accents */}
-      {[
-        [-16, 30, 4.5],
-        [18, 34, 3.5],
-        [-40, -20, 4],
-        [46, -22, 3.6],
-        [24, 84, 4.2],
-        [-70, 78, 3.4],
-      ].map(([x, z, r], i) => (
-        <mesh key={`bed-${i}`} receiveShadow material={i % 2 === 0 ? M.shrub : M.canopyAlt} position={[x, 0.06, z]} rotation={[-Math.PI / 2, 0, 0]}>
-          <circleGeometry args={[r, 20]} />
-        </mesh>
-      ))}
+      {isLifeRepublic &&
+        [
+          [-16, 30, 4.5],
+          [18, 34, 3.5],
+          [-40, -20, 4],
+          [46, -22, 3.6],
+          [24, 84, 4.2],
+          [-70, 78, 3.4],
+        ].map(([x, z, r], i) => (
+          <mesh key={`bed-${i}`} receiveShadow material={i % 2 === 0 ? M.shrub : M.canopyAlt} position={[x, 0.06, z]} rotation={[-Math.PI / 2, 0, 0]}>
+            <circleGeometry args={[r, 20]} />
+          </mesh>
+        ))}
     </group>
   );
 }
@@ -369,45 +421,51 @@ interface BayStripe {
   z: number;
 }
 
-function Parking() {
+function Parking({ parkingAreas }: { parkingAreas?: SocietyParkingDef[] }) {
+  const effectiveLots = parkingAreas !== undefined ? parkingAreas : PARKING_LOTS;
+
   const stripes = React.useMemo<BayStripe[]>(() => {
     const out: BayStripe[] = [];
-    PARKING_LOTS.forEach((lot) => {
-      const totalW = lot.baysPerRow * 2.7;
+    effectiveLots.forEach((lot) => {
+      const bays = lot.baysPerRow || 12;
+      const totalW = bays * 2.7;
       const startX = lot.position[0] - totalW / 2 + 1.35;
-      for (let i = 0; i <= lot.baysPerRow; i += 1) {
+      for (let i = 0; i <= bays; i += 1) {
         const x = startX + i * 2.7;
         out.push({ x, z: lot.position[1] - lot.size[1] / 2 + 2.6 });
         out.push({ x, z: lot.position[1] + lot.size[1] / 2 - 2.6 });
       }
     });
     return out;
-  }, []);
+  }, [effectiveLots]);
+
+  if (effectiveLots.length === 0) return null;
 
   return (
     <group>
-      {PARKING_LOTS.map((lot) => (
-        <mesh
-          key={lot.id}
-          geometry={UNIT_BOX}
-          material={M.parking}
-          receiveShadow
-          position={[lot.position[0], 0.07, lot.position[1]]}
-          scale={[lot.size[0], 0.1, lot.size[1]]}
-        />
+      {effectiveLots.map((lot) => (
+        <React.Fragment key={lot.id}>
+          <mesh
+            geometry={UNIT_BOX}
+            material={M.parking}
+            receiveShadow
+            position={[lot.position[0], 0.07, lot.position[1]]}
+            scale={[lot.size[0], 0.1, lot.size[1]]}
+          />
+          {(lot as any).accessLanes?.map((lane: any, i: number) => (
+            <mesh
+              key={`lane-${lot.id}-${i}`}
+              geometry={UNIT_BOX}
+              material={M.road}
+              receiveShadow
+              position={[lane.position[0], 0.05, lane.position[1]]}
+              scale={[lane.size[0], 0.08, lane.size[1]]}
+            />
+          ))}
+        </React.Fragment>
       ))}
-      {PARKING_LANES.map((lane, i) => (
-        <mesh
-          key={`lane-${i}`}
-          geometry={UNIT_BOX}
-          material={M.road}
-          receiveShadow
-          position={[lane.position[0], 0.05, lane.position[1]]}
-          scale={[lane.size[0], 0.08, lane.size[1]]}
-        />
-      ))}
-      {/* instanced bay markings — one draw call for every stripe */}
-      <Instances limit={stripes.length} range={stripes.length} geometry={UNIT_BOX} material={M.bay}>
+      {/* instanced bay markings */}
+      <Instances limit={stripes.length || 1} range={stripes.length} geometry={UNIT_BOX} material={M.bay}>
         {stripes.map((s, i) => (
           <Instance key={i} position={[s.x, 0.13, s.z]} scale={[0.18, 0.02, 5]} />
         ))}
@@ -653,93 +711,119 @@ const INTERACTION_MAT = new THREE.MeshBasicMaterial({ colorWrite: false, depthWr
 
 /* --------------------------- Central amenity ---------------------------- */
 
-function Amenity() {
+function Amenity({ amenities, isLifeRepublic = false }: { amenities?: SocietyAmenityDef[]; isLifeRepublic?: boolean }) {
+  if (amenities !== undefined && amenities.length === 0) return null;
+
+  if (amenities && amenities.length > 0) {
+    return (
+      <group>
+        {amenities.map((a) => {
+          if (a.type === "PAVILION" || a.radius) {
+            const rad = a.radius || 20;
+            return (
+              <group key={a.id} position={[a.position[0], 0, a.position[1]]}>
+                <mesh receiveShadow material={M.plaza} position={[0, 0.1, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                  <circleGeometry args={[rad + 12, 48]} />
+                </mesh>
+                <mesh receiveShadow position={[0, 3.2, 0]} material={M.pavilionGlow}>
+                  <cylinderGeometry args={[rad, rad, 6.4, 48, 1, true]} />
+                </mesh>
+                <mesh receiveShadow castShadow position={[0, 6.5, 0]} material={M.amenityRoof}>
+                  <ringGeometry args={[rad * 0.45, rad + 1.5, 48]} />
+                </mesh>
+                <mesh position={[0, 6.6, 0]} material={M.emissiveCrown}>
+                  <ringGeometry args={[rad + 1.2, rad + 1.8, 48]} />
+                </mesh>
+              </group>
+            );
+          }
+          // Standard modern community center / clubhouse
+          const [w, h, d] = a.size;
+          return (
+            <group key={a.id} position={[a.position[0], 0, a.position[1]]}>
+              <mesh geometry={UNIT_BOX} material={M.amenityBody} castShadow receiveShadow position={[0, h / 2, 0]} scale={[w, h, d]} />
+              <mesh geometry={UNIT_BOX} material={M.pavilionGlow} position={[0, h / 2, d / 2 + 0.1]} scale={[w * 0.85, h * 0.75, 0.3]} />
+              <mesh geometry={UNIT_BOX} material={M.amenityRoof} castShadow position={[0, h + 0.4, 0]} scale={[w + 2, 0.8, d + 2]} />
+              <mesh geometry={UNIT_BOX} material={M.emissiveCrown} position={[0, h + 0.85, 0]} scale={[w + 1.6, 0.2, d + 1.6]}>
+                <Edges color="#00f0ff" threshold={15} />
+              </mesh>
+            </group>
+          );
+        })}
+      </group>
+    );
+  }
+
+  // Fallback to Life Republic Pavilion
   const [px, pz] = AMENITY.center;
   return (
     <group position={[px, 0, pz]}>
-      {/* Circular plaza paved ground with landscaping */}
       <mesh receiveShadow material={M.plaza} position={[0, 0.1, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[AMENITY.plazaRadius, 56]} />
       </mesh>
       <mesh receiveShadow material={M.plazaRing} position={[0, 0.12, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[AMENITY.plazaRadius - 4, AMENITY.plazaRadius - 2.5, 56]} />
       </mesh>
-
-      {/* Radial walkways connecting to towers and gardens */}
-      {[0, Math.PI / 4, Math.PI / 2, (3 * Math.PI) / 4, Math.PI, (5 * Math.PI) / 4, (3 * Math.PI) / 2, (7 * Math.PI) / 4].map((a, i) => (
-        <mesh
-          key={`walk-${i}`}
-          geometry={UNIT_BOX}
-          material={M.plazaRing}
-          receiveShadow
-          position={[Math.cos(a) * (AMENITY.plazaRadius + 12), 0.09, Math.sin(a) * (AMENITY.plazaRadius + 12)]}
-          scale={[28, 0.08, 3.2]}
-          rotation={[0, -a, 0]}
-        />
-      ))}
-
-      {/* Circular Glass Atrium Pavilion (Donut Profile matching reference image) */}
       <mesh receiveShadow position={[0, 3.2, 0]} material={M.pavilionGlow}>
         <cylinderGeometry args={[20, 20, 6.4, 48, 1, true]} />
       </mesh>
-      {/* Inner atrium glass wall */}
-      <mesh receiveShadow position={[0, 3.2, 0]} material={M.pavilionGlow}>
-        <cylinderGeometry args={[9, 9, 6.4, 32, 1, true]} />
-      </mesh>
-      {/* Ring Roof Canopy */}
       <mesh receiveShadow castShadow position={[0, 6.5, 0]} material={M.amenityRoof}>
         <ringGeometry args={[8.5, 21.5, 48]} />
       </mesh>
-      {/* Illuminated Roof Ring Edge */}
       <mesh position={[0, 6.6, 0]} material={M.emissiveCrown}>
         <ringGeometry args={[21.2, 21.8, 48]} />
       </mesh>
-      {/* Inner Courtyard Tree / Garden */}
-      <mesh receiveShadow material={M.lawn} position={[0, 0.14, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[8.8, 32]} />
-      </mesh>
-      <mesh geometry={UNIT_BOX} material={M.canopy} position={[0, 2.5, 0]} scale={[3.5, 5, 3.5]} />
     </group>
   );
 }
 
 /* ---------------------------- Water feature ----------------------------- */
 
-function WaterFeature() {
-  const geom = React.useMemo(() => new THREE.ShapeGeometry(blobShape(WATER_FEATURE.radii), 36), []);
-  const edgeGeom = React.useMemo(() => new THREE.ShapeGeometry(blobShape(WATER_FEATURE.radii.map((r) => r + 2.8)), 36), []);
-  const [cx, cz] = WATER_FEATURE.center;
+function OrganicWaterBody({ center, radii }: { center: [number, number]; radii: number[] }) {
+  const geom = React.useMemo(() => new THREE.ShapeGeometry(blobShape(radii), 36), [radii]);
+  const edgeGeom = React.useMemo(() => new THREE.ShapeGeometry(blobShape(radii.map((r) => r + 2.8)), 36), [radii]);
 
-  React.useEffect(
-    () => () => {
-      geom.dispose();
-      edgeGeom.dispose();
-    },
-    [geom, edgeGeom]
-  );
+  React.useEffect(() => () => {
+    geom.dispose();
+    edgeGeom.dispose();
+  }, [geom, edgeGeom]);
 
   return (
-    <group position={[cx, 0, cz]}>
-      {/* Landscaped shoreline stone curb */}
+    <group position={[center[0], 0, center[1]]}>
       <mesh geometry={edgeGeom} material={M.pondEdge} receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.08, 0]} />
-      {/* Organic central lake — deep cyan reflective night shader */}
       <mesh geometry={geom} material={M.waterNight} receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.14, 0]}>
         <Edges color="#00f0ff" threshold={25} />
       </mesh>
-      {/* Lake perimeter bollard lights */}
-      {WATER_FEATURE.radii.map((r, i) => {
-        const angle = (i / WATER_FEATURE.radii.length) * Math.PI * 2;
-        const lx = Math.cos(angle) * (r + 3.2);
-        const lz = Math.sin(angle) * (r + 3.2);
-        return (
-          <group key={`lake-light-${i}`} position={[lx, 0.6, lz]}>
-            <mesh geometry={UNIT_BOX} material={M.post} scale={[0.3, 1.2, 0.3]} />
-            <mesh geometry={UNIT_BOX} material={M.lightGlobe} position={[0, 0.65, 0]} scale={[0.4, 0.4, 0.4]} />
-          </group>
-        );
-      })}
     </group>
   );
+}
+
+function WaterFeature({ waterBodies }: { waterBodies?: SocietyWaterBodyDef[] }) {
+  if (waterBodies !== undefined && waterBodies.length === 0) return null;
+
+  if (waterBodies && waterBodies.length > 0) {
+    return (
+      <group>
+        {waterBodies.map((w) => {
+          if (w.type === "SWIMMING_POOL" || w.shape === "rectangle") {
+            const size = w.size || [24, 12];
+            return (
+              <group key={w.id} position={[w.position[0], 0, w.position[1]]}>
+                <mesh geometry={UNIT_BOX} material={M.pondEdge} receiveShadow position={[0, 0.05, 0]} scale={[size[0] + 3, 0.1, size[1] + 3]} />
+                <mesh geometry={UNIT_BOX} material={M.waterNight} receiveShadow position={[0, 0.1, 0]} scale={[size[0], 0.02, size[1]]}>
+                  <Edges color="#00f0ff" threshold={20} />
+                </mesh>
+              </group>
+            );
+          }
+          const radii = w.radii || [22, 28, 25, 32, 28, 22, 26, 23];
+          return <OrganicWaterBody key={w.id} center={w.position} radii={radii} />;
+        })}
+      </group>
+    );
+  }
+
+  return <OrganicWaterBody center={WATER_FEATURE.center} radii={WATER_FEATURE.radii} />;
 }
 
 /* ---------------------------- Community Center & Sports Complex ----------------------------- */
@@ -786,17 +870,41 @@ function SportsArena() {
 
 /* ---------------------------- Site boundary & Grand Entrance ----------------------------- */
 
-function SiteBoundary() {
-  const { half, radius, y } = SITE_BOUNDARY;
+function SiteBoundary({
+  boundary,
+  entrances,
+  isLifeRepublic = false,
+}: {
+  boundary?: SocietySiteBoundaryDef;
+  entrances?: SocietyEntranceDef[];
+  isLifeRepublic?: boolean;
+}) {
+  const effectiveBoundary = boundary || SITE_BOUNDARY;
+  const { half, radius, y = 0.3 } = effectiveBoundary;
   const points = React.useMemo(() => {
     const v2 = roundedRectPoints(half[0], half[1], radius, 18);
     return v2.map((p) => [p.x, y + 0.3, p.y] as [number, number, number]);
   }, [half, radius, y]);
   const posts = React.useMemo(() => points.filter((_, i) => i % 4 === 0), [points]);
 
+  const effectiveEntrances =
+    entrances !== undefined
+      ? entrances
+      : [
+          {
+            id: "ent-default",
+            name: "Main Entrance",
+            position: [ENTRANCE.gate.x, ENTRANCE.gate.z] as [number, number],
+            width: ENTRANCE.gate.width,
+            height: ENTRANCE.gate.height,
+            hasSecurityBooth: true,
+            hasSignage: isLifeRepublic,
+          },
+        ];
+
   return (
     <group>
-      {/* Glowing Neon Cyan Ribbon (Matching Reference Render Perimeter Track) */}
+      {/* Glowing Neon Cyan Ribbon */}
       <Line points={points} color="#00f0ff" lineWidth={3.5} transparent opacity={0.98} />
       <Line points={points.map(([x, py, z]) => [x, py + 0.6, z])} color="#38bdf8" lineWidth={2.0} transparent opacity={0.75} />
 
@@ -808,43 +916,35 @@ function SiteBoundary() {
         </group>
       ))}
 
-      {/* Grand Entrance Gateway Boulevard (Bottom-Left Location matching reference) */}
-      <group position={[ENTRANCE.gate.x, 0, ENTRANCE.gate.z]}>
-        {/* Cantilevered Gate Canopy Arch */}
-        <mesh geometry={UNIT_BOX} material={M.pillar} castShadow position={[-12, 3.8, 0]} scale={[2.2, 7.6, 3.2]} />
-        <mesh geometry={UNIT_BOX} material={M.pillar} castShadow position={[12, 3.8, 0]} scale={[2.2, 7.6, 3.2]} />
-        <mesh geometry={UNIT_BOX} material={M.roof} castShadow position={[0, 7.8, 0]} scale={[28, 1.4, 5.5]} />
-        <mesh geometry={UNIT_BOX} material={M.emissiveCrown} position={[0, 8.6, 0]} scale={[27.6, 0.3, 5.2]}>
-          <Edges color="#00f0ff" threshold={15} />
-        </mesh>
-        {/* Illuminated Gate Signboard */}
-        <mesh geometry={UNIT_BOX} material={M.signNavy} position={[0, 7.2, 2.8]} scale={[22, 1.6, 0.3]} />
-        <mesh geometry={UNIT_BOX} material={M.windowLitCool} position={[0, 7.2, 2.96]} scale={[18, 0.8, 0.05]} />
-
-        {/* Security Cabin */}
-        <mesh geometry={UNIT_BOX} material={M.amenityBody} castShadow position={[16, 1.8, 0]} scale={[4, 3.6, 4]} />
-        <mesh geometry={UNIT_BOX} material={M.lobbyWarm} position={[16, 1.8, 2.1]} scale={[3.4, 2.4, 0.2]} />
-      </group>
+      {/* Entrance Gateway Portals */}
+      {effectiveEntrances.map((ent) => (
+        <group key={ent.id} position={[ent.position[0], 0, ent.position[1]]}>
+          <mesh geometry={UNIT_BOX} material={M.pillar} castShadow position={[-ent.width / 2 + 1.5, ent.height / 2, 0]} scale={[2.2, ent.height, 3.2]} />
+          <mesh geometry={UNIT_BOX} material={M.pillar} castShadow position={[ent.width / 2 - 1.5, ent.height / 2, 0]} scale={[2.2, ent.height, 3.2]} />
+          <mesh geometry={UNIT_BOX} material={M.roof} castShadow position={[0, ent.height + 0.4, 0]} scale={[ent.width, 1.2, 5.5]} />
+          <mesh geometry={UNIT_BOX} material={M.emissiveCrown} position={[0, ent.height + 1.1, 0]} scale={[ent.width - 0.4, 0.3, 5.2]}>
+            <Edges color="#00f0ff" threshold={15} />
+          </mesh>
+          {ent.hasSecurityBooth && (
+            <>
+              <mesh geometry={UNIT_BOX} material={M.amenityBody} castShadow position={[ent.width / 2 + 3, 1.8, 0]} scale={[3.8, 3.6, 3.8]} />
+              <mesh geometry={UNIT_BOX} material={M.lobbyWarm} position={[ent.width / 2 + 3, 1.8, 2.0]} scale={[3.2, 2.2, 0.2]} />
+            </>
+          )}
+        </group>
+      ))}
     </group>
   );
 }
 
-/* ------------------------- Phase 15B vegetation ---------------------------
- * Five low-poly tree kinds, all InstancedMesh-based: shared geometry and
- * materials, per-instance colour tints, deterministic placement generated in
- * townshipLandscape.ts. Palms render a trunk plus six quaternion-oriented
- * frond cones (single draw call for every frond in the township).
- * ------------------------------------------------------------------------ */
+/* ------------------------- Phase 15B vegetation --------------------------- */
 
 interface KindCfg {
   trunk: [number, number, number];
-  /** Canopy centre height (unscaled). */
   canopyY: number;
   canopy: "ico" | "cone";
   canopyR: number;
-  /** Cone height (kind C only). */
   canopyH?: number;
-  /** Canopy vertical squash. */
   flat: number;
 }
 
@@ -857,29 +957,59 @@ const TREE_KINDS: Record<Exclude<TreeKind, "E">, KindCfg> = {
 
 const KIND_ORDER: Array<Exclude<TreeKind, "E">> = ["A", "B", "C", "D"];
 
-function Vegetation({ tier = "high" }: { tier?: QualityTier }) {
-  // On low-tier devices keep roughly half the trees — the InstancedMesh still
-  // renders a single draw call per kind, so this mostly halves GPU vertex load.
-  const denseTrees = (list: TreeInstance[]) =>
-    tier === "low" ? list.filter((_, i) => i % 2 === 0) : list;
+function Vegetation({
+  trees,
+  tier = "high",
+  isLifeRepublic = false,
+}: {
+  trees?: SocietyTreeDef[];
+  tier?: QualityTier;
+  isLifeRepublic?: boolean;
+}) {
+  if (trees !== undefined) {
+    if (trees.length === 0) return null;
+    const treeList = tier === "low" ? trees.filter((_, i) => i % 2 === 0) : trees;
+    return (
+      <group>
+        <Instances limit={treeList.length || 1} range={treeList.length} material={M.trunk} castShadow>
+          <cylinderGeometry args={[0.2, 0.3, 2.4, 6]} />
+          {treeList.map((t, i) => (
+            <Instance key={i} position={[t.x, 1.2 * (t.scale || 1), t.z]} scale={[t.scale || 1, t.scale || 1, t.scale || 1]} />
+          ))}
+        </Instances>
+        <Instances limit={treeList.length || 1} range={treeList.length} material={M.canopyWhite} castShadow>
+          <icosahedronGeometry args={[2.2, 1]} />
+          {treeList.map((t, i) => (
+            <Instance
+              key={i}
+              position={[t.x, 3.6 * (t.scale || 1), t.z]}
+              scale={[t.scale || 1, (t.scale || 1) * 0.85, t.scale || 1]}
+              color={t.kind === "palm" ? "#10b981" : t.kind === "ornamental" ? "#06b6d4" : "#22c55e"}
+            />
+          ))}
+        </Instances>
+      </group>
+    );
+  }
+
+  const denseTrees = (list: TreeInstance[]) => (tier === "low" ? list.filter((_, i) => i % 2 === 0) : list);
   return (
     <group>
-      {/* tree kinds A–D: trunk + tinted canopy per kind (2 draw calls each) */}
       {KIND_ORDER.map((kind) => {
-        const trees = denseTrees(TREES_BY_KIND[kind]);
-        if (!trees.length) return null;
+        const tList = denseTrees(TREES_BY_KIND[kind]);
+        if (!tList.length) return null;
         const cfg = TREE_KINDS[kind];
         return (
           <group key={kind}>
-            <Instances limit={trees.length} range={trees.length} material={M.trunk} castShadow>
+            <Instances limit={tList.length} range={tList.length} material={M.trunk} castShadow>
               <cylinderGeometry args={[cfg.trunk[0], cfg.trunk[1], cfg.trunk[2], 5]} />
-              {trees.map((t, i) => (
+              {tList.map((t, i) => (
                 <Instance key={i} position={[t.x, (cfg.trunk[2] / 2) * t.scale, t.z]} rotation={[0, t.rot, 0]} scale={[t.scale, t.scale, t.scale]} />
               ))}
             </Instances>
-            <Instances limit={trees.length} range={trees.length} material={M.canopyWhite} castShadow>
+            <Instances limit={tList.length} range={tList.length} material={M.canopyWhite} castShadow>
               {cfg.canopy === "ico" ? <icosahedronGeometry args={[cfg.canopyR, 1]} /> : <coneGeometry args={[cfg.canopyR, cfg.canopyH ?? 6, 7]} />}
-              {trees.map((t, i) => (
+              {tList.map((t, i) => (
                 <Instance
                   key={i}
                   position={[t.x, cfg.canopyY * t.scale, t.z]}
@@ -1571,8 +1701,8 @@ const LABEL_CLASS =
   "pointer-events-none whitespace-nowrap rounded-md border border-[#164E73] bg-[#0A1B31]/85 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] text-[#9fd7e8] backdrop-blur-sm";
 
 /** Small in-scene identifiers — all explicitly marked illustrative. */
-function MapLabels({ selectedTowerId }: { selectedTowerId: string | null }) {
-  const selected = TOWERS.find((t) => t.id === selectedTowerId) ?? null;
+function MapLabels({ selectedTowerId, towers = [] }: { selectedTowerId: string | null; towers?: TowerDef[] }) {
+  const selected = towers.find((t) => t.id === selectedTowerId) ?? null;
   return (
     <group>
       {selected && (
@@ -1583,7 +1713,7 @@ function MapLabels({ selectedTowerId }: { selectedTowerId: string | null }) {
           zIndexRange={[30, 0]}
           style={{ pointerEvents: "none" }}
         >
-          <span className={`${LABEL_CLASS} border-[#00D9FF]/60 text-[#7CE8FF]`}>Illustrative Building</span>
+          <span className={`${LABEL_CLASS} border-[#00D9FF]/60 text-[#7CE8FF]`}>{selected.name || "Building"}</span>
         </Html>
       )}
       <Html position={[AMENITY.center[0], 20, AMENITY.center[1]]} center distanceFactor={260} zIndexRange={[20, 0]} style={{ pointerEvents: "none" }}>
@@ -1709,15 +1839,18 @@ function MeasurementVisualization({
 
 function DiscrepancyMarkersOverlay({
   conflicts = [],
+  towers = [],
 }: {
   conflicts?: Array<{ id: string; conflictNumber: string; severity: string; description: string }>;
+  towers?: TowerDef[];
 }) {
   if (!conflicts || conflicts.length === 0) return null;
 
   return (
     <group>
       {conflicts.map((c, idx) => {
-        const targetTower = TOWERS[idx % TOWERS.length];
+        const targetTower = towers.length > 0 ? towers[idx % towers.length] : null;
+        if (!targetTower) return null;
         const [x, z] = targetTower.position;
         const y = targetTower.floors * FLOOR_HEIGHT + 16;
         return (
@@ -1731,6 +1864,19 @@ function DiscrepancyMarkersOverlay({
           </group>
         );
       })}
+    </group>
+  );
+}
+
+/**
+ * Phase 23 — AI-Generated GLB Model Renderer
+ * Renders an external 3D asset generated via Hugging Face Inference or AI 3D pipeline.
+ */
+function AiGeneratedGlbModel({ modelUrl }: { modelUrl: string }) {
+  const gltf = useGLTF(modelUrl);
+  return (
+    <group position={[0, 0, 0]}>
+      <primitive object={gltf.scene} scale={[1, 1, 1]} />
     </group>
   );
 }
@@ -1834,6 +1980,8 @@ export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Townshi
       layers,
       selectedTowerId,
       onSelectTower,
+      digitalTwin,
+      onUploadImageClick,
       floorMode = "all",
       selectedLevel = null,
       linkedFloors = EMPTY_FLOORS,
@@ -1851,6 +1999,8 @@ export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Townshi
       societyImageUrl,
       societyName,
       isAiReconstructed = false,
+      generatedModelUrl = null,
+      onGenerateTwinClick,
       className,
     },
     ref
@@ -1864,10 +2014,29 @@ export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Townshi
     const [showImageOverlay, setShowImageOverlay] = React.useState(true);
     const tier = useMobileTier();
 
-    const activeTowers = React.useMemo(() => {
+    const isLifeRepublic = React.useMemo(() => {
+      if (digitalTwin) return digitalTwin.societyId === "PARCEL-MH-PUN-074" || digitalTwin.societyId === "life-republic";
+      return false;
+    }, [digitalTwin]);
+
+    const activeTowers = React.useMemo<TowerDef[]>(() => {
+      if (digitalTwin && digitalTwin.buildings) {
+        return digitalTwin.buildings.map((b) => ({
+          id: b.id,
+          name: b.name,
+          type: (["A", "B", "C", "D"].includes(b.type) ? b.type : "A") as any,
+          typeLabel: b.typeLabel || "Building Block",
+          position: b.position,
+          rotation: b.rotation,
+          floors: b.floors,
+          footprint: b.footprint,
+          dataStatus: (b.dataStatus as any) || "verified",
+        }));
+      }
       if (towers && towers.length > 0) return towers;
-      return TOWERS;
-    }, [towers]);
+      return [];
+    }, [digitalTwin, towers]);
+
 
     // Dynamic Sun Calculation for Day mode
     const sunPos = React.useMemo(() => {
@@ -2102,49 +2271,69 @@ export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Townshi
 
           {layers.terrain && (!societyImageUrl || !showImageOverlay) && (
             <SceneErrorBoundary>
-              <Terrain />
-              <Berms />
+              <Terrain siteDimensions={digitalTwin?.siteDimensions} />
+              {isLifeRepublic && <Berms />}
             </SceneErrorBoundary>
           )}
           {layers.gardens && (
             <SceneErrorBoundary>
-              <GreenZones />
-              <GardenZones />
-              <BuildingGardens />
-              <CentralGarden />
-              <GardenPlanting />
-              <GrassVerges />
-              <PerimeterBelt />
-              <GardenFurniture />
+              <GreenZones parks={digitalTwin?.parks} isLifeRepublic={isLifeRepublic} />
+              {isLifeRepublic && (
+                <>
+                  <GardenZones />
+                  <BuildingGardens />
+                  <CentralGarden />
+                  <GardenPlanting />
+                  <GrassVerges />
+                  <PerimeterBelt />
+                  <GardenFurniture />
+                </>
+              )}
             </SceneErrorBoundary>
           )}
-          {layers.gardens && <WaterFeature />}
+          {layers.gardens && <WaterFeature waterBodies={digitalTwin?.waterBodies} />}
           {layers.roads && (
             <SceneErrorBoundary>
-              <Roads />
-              <PedestrianNetwork />
-              <RoadDetails />
+              <Roads roads={digitalTwin?.roads} />
+              {isLifeRepublic && (
+                <>
+                  <PedestrianNetwork />
+                  <RoadDetails />
+                </>
+              )}
             </SceneErrorBoundary>
           )}
           {layers.parking && (
             <SceneErrorBoundary>
-              <Parking />
-              <ParkingExtras />
+              <Parking parkingAreas={digitalTwin?.parkingAreas} />
+              {isLifeRepublic && <ParkingExtras />}
             </SceneErrorBoundary>
           )}
           {layers.amenities && (
             <SceneErrorBoundary>
-              <Amenity />
-              <CommunityCenter />
-              <SportsArena />
-              <Benches />
+              <Amenity amenities={digitalTwin?.amenities} isLifeRepublic={isLifeRepublic} />
+              {isLifeRepublic && (
+                <>
+                  <CommunityCenter />
+                  <SportsArena />
+                  <Benches />
+                </>
+              )}
             </SceneErrorBoundary>
           )}
           {layers.boundary && (
             <SceneErrorBoundary>
-              <SiteBoundary />
-              <EntranceSignage />
-              <EntranceApron />
+              <SiteBoundary
+                boundary={digitalTwin?.siteBoundary}
+                entrances={digitalTwin?.entrances}
+                isLifeRepublic={isLifeRepublic}
+              />
+              {isLifeRepublic && (
+                <>
+                  <EntranceSignage />
+                  <EntranceApron />
+                </>
+              )}
             </SceneErrorBoundary>
           )}
           {layers.buildings &&
@@ -2168,7 +2357,16 @@ export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Townshi
           )}
           {layers.trees && (
             <SceneErrorBoundary>
-              <Vegetation tier={tier} />
+              <Vegetation trees={digitalTwin?.trees} tier={tier} isLifeRepublic={isLifeRepublic} />
+            </SceneErrorBoundary>
+          )}
+
+          {/* Phase 23 AI Generated GLB Model Asset if available */}
+          {generatedModelUrl && (
+            <SceneErrorBoundary>
+              <React.Suspense fallback={null}>
+                <AiGeneratedGlbModel modelUrl={generatedModelUrl} />
+              </React.Suspense>
             </SceneErrorBoundary>
           )}
 
@@ -2179,7 +2377,7 @@ export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Townshi
 
           {/* Phase 7 Spatial Discrepancy Overlay */}
           {discrepancyOverlay && (
-            <DiscrepancyMarkersOverlay conflicts={conflicts} />
+            <DiscrepancyMarkersOverlay conflicts={conflicts} towers={activeTowers} />
           )}
 
           <CameraController preset={preset} flightNonce={flightNonce} apiRef={apiRef} />
@@ -2195,6 +2393,43 @@ export const Township3DViewer = React.forwardRef<Township3DViewerHandle, Townshi
             target={[0, 6, 0]}
           />
         </Canvas>
+
+        {/* Phase 23: Unconfigured Society / No 3D Data Empty State Overlay */}
+        {activeTowers.length === 0 && !generatedModelUrl && (
+          <div className="absolute inset-0 z-40 flex items-center justify-center bg-slate-950/85 p-6 backdrop-blur-md">
+            <div className="max-w-md w-full rounded-2xl border border-amber-500/30 bg-slate-900/95 p-6 shadow-2xl text-center space-y-4">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-500/30 bg-amber-500/10 text-amber-400">
+                <UploadCloud className="h-7 w-7 animate-bounce" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white tracking-wide">3D Digital Twin Not Available</h3>
+                <p className="mt-1.5 text-xs text-slate-400 leading-relaxed">
+                  Upload a society site image to generate the 3D Digital Twin.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                {onUploadImageClick && (
+                  <button
+                    type="button"
+                    onClick={onUploadImageClick}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-500/50 bg-cyan-500/15 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-cyan-300 shadow-md transition-all hover:bg-cyan-500/25"
+                  >
+                    <UploadCloud className="h-4 w-4" /> UPLOAD SITE IMAGE
+                  </button>
+                )}
+                {(onGenerateTwinClick || onUploadImageClick) && (
+                  <button
+                    type="button"
+                    onClick={onGenerateTwinClick || onUploadImageClick}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-lg shadow-cyan-500/25 transition-all hover:scale-[1.02]"
+                  >
+                    <Sparkles className="h-4 w-4" /> GENERATE 3D TWIN
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

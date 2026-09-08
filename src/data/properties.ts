@@ -25,15 +25,35 @@ import type {
 // ── Shared helpers ──────────────────────────────────────────────────────────
 
 const BUILDING_CODE_FOR: Record<string, string> = {
-  'B-102': '102',
-  'B-104': '104',
-  'B-306': '306',
+  'B-102': '102-A',
+  'B-102-W2': '102-B',
+  'B-102-W3': '102-C',
+  'B-104': '104-W1',
+  'B-104-W2': '104-W2',
+  'B-104-W3': '104-W3',
+  'B-104-W4': '104-W4',
+  'B-104-W5': '104-W5',
+  'B-306': '306-A',
+  'B-306-B': '306-B',
+  'B-401': '401',
+  'B-402': '402',
+  'B-403': '403',
+  'B-404': '404',
+  'B-501': '501',
+  'B-502': '502',
+  'B-503': '503',
+  'B-504': '504',
+  'B-505': '505',
+  'B-506': '506',
+  'B-601': '601',
+  'B-602': '602',
   'B-LR-A': 'LR-A',
   'B-LR-B': 'LR-B',
   'B-LR-C': 'LR-C',
   'B-LR-D': 'LR-D',
   'B-LR-E': 'LR-E',
 };
+
 
 function demoSpatialId(buildingId: string, unitNumber: string): string {
   return `3D-MH-PUN-${BUILDING_CODE_FOR[buildingId] ?? buildingId}-${unitNumber}`;
@@ -117,32 +137,32 @@ const NOW = new Date().toISOString();
 // 10 registered units across 5 floors.
 const B102_PID = 'PROP-MH-PUN-GVR-102';
 const B102_PARCEL = 'PARCEL-MH-PUN-001';
-const B102_LAT = 18.5318;
-const B102_LNG = 73.8539;
+const B102_LAT = 18.59125;
+const B102_LNG = 73.7390;
 
 const B104_PID = 'PROP-MH-PUN-SKA-104';
 const B104_PARCEL = 'PARCEL-MH-PUN-002';
-const B104_LAT = 18.5336;
-const B104_LNG = 73.8657;
+const B104_LAT = 18.59125;
+const B104_LNG = 73.7415;
 
 const B306_PID = 'prop-pun-003'; // links to existing PropertyItem
 const B306_PARCEL = 'PARCEL-MH-PUN-003';
-const B306_LAT = 18.5679;
-const B306_LNG = 73.7749;
+const B306_LAT = 18.59125;
+const B306_LNG = 73.7440;
 
 export const MOCK_PROPERTIES: PropertyUnit[] = [
   // ── B-102 Floor G ──
   makeUnit({
     id: 'PROP-102-G01', propertyId: B102_PID, buildingId: 'B-102', floorId: 'FLOOR-102-G',
     parcelId: B102_PARCEL, unitNumber: 'G-01', propertyType: 'RESIDENTIAL', area: 650,
-    lat: B102_LAT + 0.0008, lng: B102_LNG - 0.0012, elevation: 2.5,
+    lat: B102_LAT - 0.0003, lng: B102_LNG - 0.0004, elevation: 2.5,
     ownerReferenceName: 'Rajesh V. Sharma', verificationStatus: 'Verified',
     lastUpdated: NOW, dataSource: 'AI_EXTRACTION', confidence: 0.96, generatedAt: GENERATED_AT,
   }),
   makeUnit({
     id: 'PROP-102-G02', propertyId: B102_PID, buildingId: 'B-102', floorId: 'FLOOR-102-G',
     parcelId: B102_PARCEL, unitNumber: 'G-02', propertyType: 'COMMERCIAL', area: 420,
-    lat: B102_LAT + 0.0008, lng: B102_LNG + 0.0008, elevation: 2.5,
+    lat: B102_LAT - 0.0003, lng: B102_LNG + 0.0004, elevation: 2.5,
     ownerReferenceName: 'Apex Banking Corp', verificationStatus: 'Pending',
     lastUpdated: NOW, dataSource: 'SURVEY_RECORD', confidence: 0.91, generatedAt: GENERATED_AT,
   }),
@@ -150,21 +170,21 @@ export const MOCK_PROPERTIES: PropertyUnit[] = [
   makeUnit({
     id: 'PROP-102-0101', propertyId: B102_PID, buildingId: 'B-102', floorId: 'FLOOR-102-1',
     parcelId: B102_PARCEL, unitNumber: '0101', propertyType: 'RESIDENTIAL', area: 850,
-    lat: B102_LAT + 0.0012, lng: B102_LNG - 0.0008, elevation: 6.0,
+    lat: B102_LAT - 0.0001, lng: B102_LNG - 0.0004, elevation: 6.0,
     ownerReferenceName: 'Priya R. Kulkarni', verificationStatus: 'Verified',
     lastUpdated: NOW, dataSource: 'AI_EXTRACTION', confidence: 0.95, generatedAt: GENERATED_AT,
   }),
   makeUnit({
     id: 'PROP-102-0102', propertyId: B102_PID, buildingId: 'B-102', floorId: 'FLOOR-102-1',
     parcelId: B102_PARCEL, unitNumber: '0102', propertyType: 'RESIDENTIAL', area: 1050,
-    lat: B102_LAT + 0.0012, lng: B102_LNG + 0.0004, elevation: 6.0,
+    lat: B102_LAT - 0.0001, lng: B102_LNG + 0.0002, elevation: 6.0,
     ownerReferenceName: 'Arjun Mehta', verificationStatus: 'Verified',
     lastUpdated: NOW, dataSource: 'DRONE_SCAN', confidence: 0.97, generatedAt: GENERATED_AT,
   }),
   makeUnit({
     id: 'PROP-102-0103', propertyId: B102_PID, buildingId: 'B-102', floorId: 'FLOOR-102-1',
     parcelId: B102_PARCEL, unitNumber: '0103', propertyType: 'RESIDENTIAL', area: 850,
-    lat: B102_LAT + 0.0012, lng: B102_LNG + 0.0016, elevation: 6.0,
+    lat: B102_LAT - 0.0001, lng: B102_LNG + 0.0006, elevation: 6.0,
     ownerReferenceName: 'Neha Verma', verificationStatus: 'Under Review',
     lastUpdated: NOW, dataSource: 'AI_EXTRACTION', confidence: 0.88, generatedAt: GENERATED_AT,
   }),
@@ -172,14 +192,14 @@ export const MOCK_PROPERTIES: PropertyUnit[] = [
   makeUnit({
     id: 'PROP-102-0201', propertyId: B102_PID, buildingId: 'B-102', floorId: 'FLOOR-102-2',
     parcelId: B102_PARCEL, unitNumber: '0201', propertyType: 'RESIDENTIAL', area: 1050,
-    lat: B102_LAT - 0.0006, lng: B102_LNG - 0.0005, elevation: 9.5,
+    lat: B102_LAT + 0.0002, lng: B102_LNG - 0.0003, elevation: 9.5,
     ownerReferenceName: 'Venkat Rao Deshmukh', verificationStatus: 'Verified',
     lastUpdated: NOW, dataSource: 'DRONE_SCAN', confidence: 0.94, generatedAt: GENERATED_AT,
   }),
   makeUnit({
     id: 'PROP-102-0202', propertyId: B102_PID, buildingId: 'B-102', floorId: 'FLOOR-102-2',
     parcelId: B102_PARCEL, unitNumber: '0202', propertyType: 'RESIDENTIAL', area: 850,
-    lat: B102_LAT - 0.0006, lng: B102_LNG + 0.0009, elevation: 9.5,
+    lat: B102_LAT + 0.0002, lng: B102_LNG + 0.0004, elevation: 9.5,
     ownerReferenceName: 'Farah Ansari', verificationStatus: 'Under Review',
     lastUpdated: NOW, dataSource: 'AI_EXTRACTION', confidence: 0.85, generatedAt: GENERATED_AT,
   }),
@@ -187,14 +207,14 @@ export const MOCK_PROPERTIES: PropertyUnit[] = [
   makeUnit({
     id: 'PROP-102-0301', propertyId: B102_PID, buildingId: 'B-102', floorId: 'FLOOR-102-3',
     parcelId: B102_PARCEL, unitNumber: '0301', propertyType: 'RESIDENTIAL', area: 1050,
-    lat: B102_LAT + 0.0020, lng: B102_LNG - 0.0003, elevation: 13.0,
+    lat: B102_LAT + 0.0004, lng: B102_LNG - 0.0003, elevation: 13.0,
     ownerReferenceName: 'Karthik Subramaniam', verificationStatus: 'Verified',
     lastUpdated: NOW, dataSource: 'AI_EXTRACTION', confidence: 0.96, generatedAt: GENERATED_AT,
   }),
   makeUnit({
     id: 'PROP-102-0302', propertyId: B102_PID, buildingId: 'B-102', floorId: 'FLOOR-102-3',
     parcelId: B102_PARCEL, unitNumber: '0302', propertyType: 'RESIDENTIAL', area: 850,
-    lat: B102_LAT + 0.0020, lng: B102_LNG + 0.0012, elevation: 13.0,
+    lat: B102_LAT + 0.0004, lng: B102_LNG + 0.0004, elevation: 13.0,
     ownerReferenceName: 'Sunita V. Deshpande', verificationStatus: 'Under Review',
     lastUpdated: NOW, dataSource: 'SURVEY_RECORD', confidence: 0.87, generatedAt: GENERATED_AT,
   }),
@@ -202,7 +222,7 @@ export const MOCK_PROPERTIES: PropertyUnit[] = [
   makeUnit({
     id: 'PROP-102-0401', propertyId: B102_PID, buildingId: 'B-102', floorId: 'FLOOR-102-4',
     parcelId: B102_PARCEL, unitNumber: '0401', propertyType: 'RESIDENTIAL', area: 850,
-    lat: B102_LAT - 0.0014, lng: B102_LNG + 0.0010, elevation: 16.5,
+    lat: B102_LAT + 0.0005, lng: B102_LNG + 0.0002, elevation: 16.5,
     ownerReferenceName: 'Mahesh K. Joshi', verificationStatus: 'Reinspection Required',
     lastUpdated: NOW, dataSource: 'AI_EXTRACTION', confidence: 0.72, generatedAt: GENERATED_AT,
   }),
@@ -217,7 +237,7 @@ MOCK_PROPERTIES.push(
   makeUnit({
     id: 'PROP-104-G01', propertyId: B104_PID, buildingId: 'B-104', floorId: 'FLOOR-104-G',
     parcelId: B104_PARCEL, unitNumber: 'G-01', propertyType: 'COMMERCIAL', area: 520,
-    lat: B104_LAT + 0.0005, lng: B104_LNG - 0.0006, elevation: 2.0,
+    lat: B104_LAT - 0.0003, lng: B104_LNG - 0.0005, elevation: 2.0,
     ownerReferenceName: 'Shree Krishna Traders', verificationStatus: 'Verified',
     lastUpdated: NOW, dataSource: 'AI_EXTRACTION', confidence: 0.93, generatedAt: GENERATED_AT,
   }),
@@ -225,14 +245,14 @@ MOCK_PROPERTIES.push(
   makeUnit({
     id: 'PROP-104-0101', propertyId: B104_PID, buildingId: 'B-104', floorId: 'FLOOR-104-1',
     parcelId: B104_PARCEL, unitNumber: '0101', propertyType: 'RESIDENTIAL', area: 780,
-    lat: B104_LAT + 0.0007, lng: B104_LNG - 0.0004, elevation: 5.5,
+    lat: B104_LAT - 0.0002, lng: B104_LNG - 0.0004, elevation: 5.5,
     ownerReferenceName: 'Ramesh B. Patil', verificationStatus: 'Verified',
     lastUpdated: NOW, dataSource: 'DRONE_SCAN', confidence: 0.92, generatedAt: GENERATED_AT,
   }),
   makeUnit({
     id: 'PROP-104-0102', propertyId: B104_PID, buildingId: 'B-104', floorId: 'FLOOR-104-1',
     parcelId: B104_PARCEL, unitNumber: '0102', propertyType: 'RESIDENTIAL', area: 820,
-    lat: B104_LAT + 0.0007, lng: B104_LNG + 0.0004, elevation: 5.5,
+    lat: B104_LAT - 0.0002, lng: B104_LNG + 0.0004, elevation: 5.5,
     ownerReferenceName: 'Sneha R. K.', verificationStatus: 'Pending',
     lastUpdated: NOW, dataSource: 'AI_EXTRACTION', confidence: 0.88, generatedAt: GENERATED_AT,
   }),
@@ -240,7 +260,7 @@ MOCK_PROPERTIES.push(
   makeUnit({
     id: 'PROP-104-0201', propertyId: B104_PID, buildingId: 'B-104', floorId: 'FLOOR-104-2',
     parcelId: B104_PARCEL, unitNumber: '0201', propertyType: 'RESIDENTIAL', area: 780,
-    lat: B104_LAT - 0.0003, lng: B104_LNG + 0.0002, elevation: 8.5,
+    lat: B104_LAT + 0.0001, lng: B104_LNG + 0.0002, elevation: 8.5,
     ownerReferenceName: 'Amit Desai', verificationStatus: 'Pending',
     lastUpdated: NOW, dataSource: 'SURVEY_RECORD', confidence: 0.89, generatedAt: GENERATED_AT,
   }),
@@ -248,7 +268,7 @@ MOCK_PROPERTIES.push(
   makeUnit({
     id: 'PROP-104-0301', propertyId: B104_PID, buildingId: 'B-104', floorId: 'FLOOR-104-3',
     parcelId: B104_PARCEL, unitNumber: '0301', propertyType: 'COMMERCIAL', area: 650,
-    lat: B104_LAT + 0.0010, lng: B104_LNG, elevation: 11.5,
+    lat: B104_LAT + 0.0003, lng: B104_LNG, elevation: 11.5,
     ownerReferenceName: 'Global Tech Solutions Pvt Ltd', verificationStatus: 'Pending',
     lastUpdated: NOW, dataSource: 'AI_EXTRACTION', confidence: 0.86, generatedAt: GENERATED_AT,
   }),
@@ -256,7 +276,7 @@ MOCK_PROPERTIES.push(
   makeUnit({
     id: 'PROP-104-0401', propertyId: B104_PID, buildingId: 'B-104', floorId: 'FLOOR-104-4',
     parcelId: B104_PARCEL, unitNumber: '0401', propertyType: 'COMMERCIAL', area: 650,
-    lat: B104_LAT - 0.0008, lng: B104_LNG - 0.0010, elevation: 14.5,
+    lat: B104_LAT + 0.0004, lng: B104_LNG - 0.0004, elevation: 14.5,
     ownerReferenceName: 'Innovate Labs India', verificationStatus: 'Rejected',
     lastUpdated: NOW, dataSource: 'AI_EXTRACTION', confidence: 0.65, generatedAt: GENERATED_AT,
   }),
@@ -269,7 +289,7 @@ MOCK_PROPERTIES.push(
   makeUnit({
     id: 'PROP-306-G01', propertyId: B306_PID, buildingId: 'B-306', floorId: 'FLOOR-306-G',
     parcelId: B306_PARCEL, unitNumber: 'G-01', propertyType: 'COMMERCIAL', area: 480,
-    lat: B306_LAT + 0.0006, lng: B306_LNG - 0.0005, elevation: 2.5,
+    lat: B306_LAT - 0.0002, lng: B306_LNG - 0.0003, elevation: 2.5,
     ownerReferenceName: 'Cafe Bahar Owner', verificationStatus: 'Pending',
     lastUpdated: NOW, dataSource: 'SURVEY_RECORD', confidence: 0.88, generatedAt: GENERATED_AT,
   }),
@@ -277,7 +297,7 @@ MOCK_PROPERTIES.push(
   makeUnit({
     id: 'PROP-306-0101', propertyId: B306_PID, buildingId: 'B-306', floorId: 'FLOOR-306-1',
     parcelId: B306_PARCEL, unitNumber: '0101', propertyType: 'COMMERCIAL', area: 1200,
-    lat: B306_LAT + 0.0008, lng: B306_LNG - 0.0002, elevation: 6.0,
+    lat: B306_LAT, lng: B306_LNG - 0.0002, elevation: 6.0,
     ownerReferenceName: 'TCS Ltd', verificationStatus: 'Verified',
     lastUpdated: NOW, dataSource: 'AI_EXTRACTION', confidence: 0.95, generatedAt: GENERATED_AT,
   }),
@@ -285,7 +305,7 @@ MOCK_PROPERTIES.push(
   makeUnit({
     id: 'PROP-306-0201', propertyId: B306_PID, buildingId: 'B-306', floorId: 'FLOOR-306-2',
     parcelId: B306_PARCEL, unitNumber: '0201', propertyType: 'COMMERCIAL', area: 950,
-    lat: B306_LAT + 0.0012, lng: B306_LNG + 0.0005, elevation: 10.0,
+    lat: B306_LAT + 0.0002, lng: B306_LNG + 0.0003, elevation: 10.0,
     ownerReferenceName: 'WIPRO Ltd', verificationStatus: 'Reinspection Required',
     lastUpdated: NOW, dataSource: 'DRONE_SCAN', confidence: 0.78, generatedAt: GENERATED_AT,
   }),
@@ -293,17 +313,108 @@ MOCK_PROPERTIES.push(
   makeUnit({
     id: 'PROP-306-0301', propertyId: B306_PID, buildingId: 'B-306', floorId: 'FLOOR-306-3',
     parcelId: B306_PARCEL, unitNumber: '0301', propertyType: 'COMMERCIAL', area: 950,
-    lat: B306_LAT - 0.0004, lng: B306_LNG + 0.0008, elevation: 14.0,
+    lat: B306_LAT + 0.0004, lng: B306_LNG + 0.0004, elevation: 14.0,
     ownerReferenceName: 'TechStart Innovations', verificationStatus: 'Pending',
     lastUpdated: NOW, dataSource: 'AI_EXTRACTION', confidence: 0.85, generatedAt: GENERATED_AT,
+  }),
+);
+
+// ── Building B-401 to B-404: Wakad Heights (parcel PARCEL-MH-PUN-004) ──────
+const B401_PID = 'PROP-MH-PUN-WAK-401';
+const B401_PARCEL = 'PARCEL-MH-PUN-004';
+const B401_LAT = 18.59375;
+const B401_LNG = 73.7390;
+
+MOCK_PROPERTIES.push(
+  makeUnit({
+    id: 'PROP-401-0101', propertyId: B401_PID, buildingId: 'B-401', floorId: 'FLOOR-B-401-1',
+    parcelId: B401_PARCEL, unitNumber: '101', propertyType: 'RESIDENTIAL', area: 980,
+    lat: B401_LAT - 0.0003, lng: B401_LNG - 0.0004, elevation: 3.2,
+    ownerReferenceName: 'Aditya S. Bhosale', verificationStatus: 'Verified',
+    lastUpdated: NOW, dataSource: 'AI_EXTRACTION', confidence: 0.94, generatedAt: GENERATED_AT,
+  }),
+  makeUnit({
+    id: 'PROP-401-0201', propertyId: B401_PID, buildingId: 'B-401', floorId: 'FLOOR-B-401-2',
+    parcelId: B401_PARCEL, unitNumber: '201', propertyType: 'RESIDENTIAL', area: 1050,
+    lat: B401_LAT + 0.0003, lng: B401_LNG + 0.0003, elevation: 6.4,
+    ownerReferenceName: 'Gauri M. Shinde', verificationStatus: 'Verified',
+    lastUpdated: NOW, dataSource: 'DRONE_SCAN', confidence: 0.96, generatedAt: GENERATED_AT,
+  }),
+  makeUnit({
+    id: 'PROP-402-0101', propertyId: 'PROP-MH-PUN-WAK-402', buildingId: 'B-402', floorId: 'FLOOR-B-402-1',
+    parcelId: B401_PARCEL, unitNumber: '101', propertyType: 'RESIDENTIAL', area: 980,
+    lat: B401_LAT + 0.0004, lng: B401_LNG - 0.0004, elevation: 3.2,
+    ownerReferenceName: 'Suresh N. Gaikwad', verificationStatus: 'Pending',
+    lastUpdated: NOW, dataSource: 'AI_EXTRACTION', confidence: 0.89, generatedAt: GENERATED_AT,
+  }),
+);
+
+// ── Building B-501 to B-506: Hinjewadi Tech Enclave (parcel PARCEL-MH-PUN-005) ──
+const B501_PID = 'PROP-MH-PUN-HIN-501';
+const B501_PARCEL = 'PARCEL-MH-PUN-005';
+const B501_LAT = 18.59375;
+const B501_LNG = 73.7415;
+
+MOCK_PROPERTIES.push(
+  makeUnit({
+    id: 'PROP-501-0101', propertyId: B501_PID, buildingId: 'B-501', floorId: 'FLOOR-B-501-1',
+    parcelId: B501_PARCEL, unitNumber: '101', propertyType: 'RESIDENTIAL', area: 1100,
+    lat: B501_LAT - 0.0003, lng: B501_LNG - 0.0005, elevation: 3.1,
+    ownerReferenceName: 'Manoj K. Tiwari', verificationStatus: 'Verified',
+    lastUpdated: NOW, dataSource: 'AI_EXTRACTION', confidence: 0.95, generatedAt: GENERATED_AT,
+  }),
+  makeUnit({
+    id: 'PROP-501-0201', propertyId: B501_PID, buildingId: 'B-501', floorId: 'FLOOR-B-501-2',
+    parcelId: B501_PARCEL, unitNumber: '201', propertyType: 'RESIDENTIAL', area: 1100,
+    lat: B501_LAT + 0.0003, lng: B501_LNG + 0.0005, elevation: 6.2,
+    ownerReferenceName: 'Swati R. Kulkarni', verificationStatus: 'Verified',
+    lastUpdated: NOW, dataSource: 'DRONE_SCAN', confidence: 0.97, generatedAt: GENERATED_AT,
+  }),
+  makeUnit({
+    id: 'PROP-502-0101', propertyId: 'PROP-MH-PUN-HIN-502', buildingId: 'B-502', floorId: 'FLOOR-B-502-1',
+    parcelId: B501_PARCEL, unitNumber: '101', propertyType: 'RESIDENTIAL', area: 1150,
+    lat: B501_LAT + 0.0004, lng: B501_LNG - 0.0005, elevation: 3.1,
+    ownerReferenceName: 'Nitin P. Agarwal', verificationStatus: 'Pending',
+    lastUpdated: NOW, dataSource: 'SURVEY_RECORD', confidence: 0.92, generatedAt: GENERATED_AT,
+  }),
+);
+
+// ── Building B-601 to B-602: Amanora Elegance (parcel PARCEL-MH-PUN-006) ──
+const B601_PID = 'PROP-MH-PUN-AMA-601';
+const B601_PARCEL = 'PARCEL-MH-PUN-006';
+const B601_LAT = 18.59375;
+const B601_LNG = 73.7440;
+
+MOCK_PROPERTIES.push(
+  makeUnit({
+    id: 'PROP-601-0101', propertyId: B601_PID, buildingId: 'B-601', floorId: 'FLOOR-B-601-1',
+    parcelId: B601_PARCEL, unitNumber: '101', propertyType: 'RESIDENTIAL', area: 1450,
+    lat: B601_LAT - 0.0004, lng: B601_LNG - 0.0004, elevation: 3.1,
+    ownerReferenceName: 'Kavita M. Rao', verificationStatus: 'Verified',
+    lastUpdated: NOW, dataSource: 'AI_EXTRACTION', confidence: 0.98, generatedAt: GENERATED_AT,
+  }),
+  makeUnit({
+    id: 'PROP-601-0401', propertyId: B601_PID, buildingId: 'B-601', floorId: 'FLOOR-B-601-4',
+    parcelId: B601_PARCEL, unitNumber: '401', propertyType: 'RESIDENTIAL', area: 1650,
+    lat: B601_LAT + 0.0004, lng: B601_LNG + 0.0004, elevation: 12.4,
+    ownerReferenceName: 'Devendra K. Patil', verificationStatus: 'Verified',
+    lastUpdated: NOW, dataSource: 'DRONE_SCAN', confidence: 0.97, generatedAt: GENERATED_AT,
+  }),
+  makeUnit({
+    id: 'PROP-602-0101', propertyId: 'PROP-MH-PUN-AMA-602', buildingId: 'B-602', floorId: 'FLOOR-B-602-1',
+    parcelId: B601_PARCEL, unitNumber: '101', propertyType: 'RESIDENTIAL', area: 1450,
+    lat: B601_LAT + 0.0004, lng: B601_LNG + 0.0004, elevation: 3.1,
+    ownerReferenceName: 'Anil S. More', verificationStatus: 'Pending',
+    lastUpdated: NOW, dataSource: 'SURVEY_RECORD', confidence: 0.93, generatedAt: GENERATED_AT,
   }),
 );
 
 // ── Kolte Patil Life Republic Penthouses (parcel PARCEL-MH-PUN-074) ──────
 const LR_PID = 'PROP-LR-B-0402';
 const LR_PARCEL = 'PARCEL-MH-PUN-074';
-const LR_LAT = 18.6172;
-const LR_LNG = 73.7141;
+const LR_LAT = 18.59675;
+const LR_LNG = 73.7415;
+
 
 MOCK_PROPERTIES.push(
   // ── Tower B, Floor 4 (Featured Sample Property: Flat 402) ──

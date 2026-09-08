@@ -4,13 +4,13 @@ import { getFirestore } from 'firebase/firestore';
 import { getDatabase } from 'firebase/database';
 
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'AIzaSyBuzDqXHdtBP3MFC3nIVHQ7G9Bk5-F6hCs',
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'd-ulpin-de274.firebaseapp.com',
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'd-ulpin-de274',
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'd-ulpin-de274.firebasestorage.app',
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '230657200591',
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '1:230657200591:web:26388e03fedf7798a3c2ba',
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || 'G-D5VK5CD5GJ',
   databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || 'https://d-ulpin-de274-default-rtdb.firebaseio.com/',
 };
 

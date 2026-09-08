@@ -33,18 +33,25 @@ export interface GisMap2DProps {
 }
 
 const DEMO_ROADS: Array<LatLngPair[]> = [
-  // Main road through the Shivaji Nagar / Koregaon Park clusters
+  // Sector East-West Avenue 1 (South)
   [
-    [18.53, 73.8528],
-    [18.5326, 73.8555],
-    [18.5338, 73.8668],
+    [18.5925, 73.7370],
+    [18.5925, 73.7460],
   ],
-  // Connecting Baner & Wakad & Hinjewadi corridor
+  // Sector East-West Avenue 2 (North / Life Republic Promenade)
   [
-    [18.5655, 73.779],
-    [18.5683, 73.7745],
-    [18.5905, 73.7625],
-    [18.592, 73.7052],
+    [18.5950, 73.7370],
+    [18.5950, 73.7460],
+  ],
+  // Sector North-South Boulevard 1 (West Corridor)
+  [
+    [18.5895, 73.7402],
+    [18.5985, 73.7402],
+  ],
+  // Sector North-South Boulevard 2 (East Corridor)
+  [
+    [18.5895, 73.7427],
+    [18.5985, 73.7427],
   ],
 ];
 

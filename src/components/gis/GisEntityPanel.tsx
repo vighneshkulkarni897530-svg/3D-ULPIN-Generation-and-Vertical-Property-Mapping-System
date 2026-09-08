@@ -16,12 +16,14 @@ import {
   ExternalLink,
   Fingerprint,
   ShieldCheck,
+  Sparkles,
 } from "lucide-react";
 import { GisStatusBadge } from "@/components/common/GisStatusBadge";
 import { useGIS } from "@/context/GISContext";
 import { useProperty } from "@/context/PropertyContext";
 import { selectBuildingsByParcel, selectFloorsByBuilding, selectPropertiesByBuilding } from "@/lib/gisSelectors";
 import { formatArea, formatCoordinate, formatElevation, formatRelativeTime, geometryTypeLabel } from "@/lib/gisUtils";
+import { resolveSocietyByAnyId } from "@/lib/society/society3DUlpinRegistry";
 import type { SpatialConflict } from "@/types/conflict";
 import { cn } from "@/lib/utils";
 
@@ -188,7 +190,7 @@ function PropertyCard({
   // resolved floor number + unit number for full automatic selection
   // (tower → isolate → floor → flat → property details).
   const unitFloorNumber = floors.find((f) => f.id === property.floorId)?.floorNumber ?? null;
-  const twinHref = `/properties/${property.id}/digital-twin?building=${property.buildingId}${
+  const twinHref = `/properties/${property.id}/digital-twin?society=${property.parcelId}&parcel=${property.parcelId}&building=${property.buildingId}${
     unitFloorNumber !== null ? `&floor=${unitFloorNumber}` : ""
   }&flat=${property.unitNumber}`;
   const { conflicts } = useGIS();
@@ -332,18 +334,15 @@ function BuildingCard({
   const verified = units.filter((u) => u.verificationStatus === "Verified").length;
   const pending = units.filter((u) => u.verificationStatus === "Pending").length;
 
-  // Phase 21 — canonical Digital Twin deep link. The twin route's [id] must be
-  // a registry UNIT id so the viewer auto-resolves tower → floor → flat.
-  // Falls back to the parcel-scoped link only when the building has no units.
   const firstUnit = units[0] ?? null;
   const firstUnitFloor = firstUnit
     ? floors.find((f) => f.id === firstUnit.floorId)?.floorNumber ?? null
     : null;
   const twinHref = firstUnit
-    ? `/properties/${firstUnit.id}/digital-twin?building=${building.id}${
+    ? `/properties/${firstUnit.id}/digital-twin?society=${building.parcelId}&parcel=${building.parcelId}&building=${building.id}${
         firstUnitFloor !== null ? `&floor=${firstUnitFloor}` : ""
       }&flat=${firstUnit.unitNumber}`
-    : `/properties/${parcelNumber ?? building.parcelId}/digital-twin?building=${building.id}`;
+    : `/properties/${parcelNumber ?? building.parcelId}/digital-twin?society=${building.parcelId}&parcel=${building.parcelId}&building=${building.id}`;
 
   return (
     <CardShell
@@ -431,18 +430,48 @@ function ParcelCard({
   onSelectBuilding: (id: string) => void;
   onVisualizeIn3D: () => void;
 }) {
-  const { parcels } = useGIS();
+  const { parcels, properties } = useGIS();
   const parcel = parcels.find((p) => p.id === parcelId);
   if (!parcel) return null;
 
+  const socRecord = resolveSocietyByAnyId(parcel.id);
+  const firstParcelProperty = properties.find((p) => p.parcelId === parcel.id);
+  const targetTwinUrl = `/properties/${firstParcelProperty?.id ?? parcel.id}/digital-twin?society=${parcel.id}&parcel=${parcel.id}`;
+  const gatewayUrl = `/digital-twin?society=${parcel.id}&ulpin=${socRecord?.society3DUlpin || ""}`;
+
   return (
     <CardShell
-      eyebrow="Parcel Information"
+      eyebrow="Society & Parcel Record"
       icon={<MapPin className="h-4 w-4" />}
-      title={parcel.parcelNumber}
+      title={socRecord?.societyName || parcel.parcelNumber}
       subtitle={parcel.location}
     >
       <dl>
+        {socRecord && (
+          <>
+            <Row
+              label={
+                <span className="inline-flex items-center gap-1 text-cyan-400">
+                  <Fingerprint className="h-3 w-3" /> Society 3D ULPIN
+                </span>
+              }
+              value={
+                <span className="font-mono text-cyan-300 font-bold break-all">
+                  {socRecord.society3DUlpin}
+                </span>
+              }
+              mono
+            />
+            <Row
+              label="Standard Status"
+              value={
+                <span className="rounded bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 text-[9px] font-bold text-amber-300">
+                  DEMO / Illustrative Standard
+                </span>
+              }
+            />
+          </>
+        )}
         <Row label="Parcel Number" value={parcel.parcelNumber} mono />
         <Row label="Parcel ID" value={parcel.id} mono />
         <Row label="Area" value={formatArea(parcel.area)} mono />
@@ -457,7 +486,7 @@ function ParcelCard({
       {buildings.length > 0 && (
         <>
           <p className="mb-1.5 mt-3 flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-widest text-slate-500">
-            <Building2 className="h-3 w-3" /> Buildings on this parcel
+            <Building2 className="h-3 w-3" /> Buildings on this parcel ({buildings.length})
           </p>
           <ul className="space-y-1">
             {buildings.map((b) => (
@@ -489,22 +518,28 @@ function ParcelCard({
 
       <div className="mt-3.5 flex flex-col gap-1.5">
         <Link
+          href={gatewayUrl}
+          className="flex items-center justify-center gap-1.5 rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-[10.5px] font-bold text-cyan-300 transition-colors hover:bg-cyan-500/20 shadow-[0_0_10px_rgba(6,182,212,0.15)]"
+        >
+          <Fingerprint className="h-3.5 w-3.5 text-cyan-400" /> Society 3D ULPIN Gateway
+        </Link>
+        <Link
+          href={targetTwinUrl}
+          className="flex items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-2 text-[10.5px] font-bold text-slate-950 transition-all hover:from-cyan-400 hover:to-blue-500 shadow-md"
+        >
+          <Box className="h-3.5 w-3.5" /> Visualize in 3D Digital Twin
+        </Link>
+        <Link
           href="/buildings"
           className="flex items-center justify-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-[10.5px] font-bold text-slate-200 transition-colors hover:border-cyan-500/50 hover:text-white"
         >
-          <ExternalLink className="h-3.5 w-3.5" /> View Buildings
+          <ExternalLink className="h-3.5 w-3.5" /> View All Buildings
         </Link>
-        <button
-          type="button"
-          onClick={onVisualizeIn3D}
-          className="flex items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-2 text-[10.5px] font-bold text-slate-950 transition-all hover:from-cyan-400 hover:to-blue-500"
-        >
-          <Box className="h-3.5 w-3.5" /> Visualize in 3D
-        </button>
       </div>
     </CardShell>
   );
 }
+
 
 // ── Conflict ────────────────────────────────────────────────────────────────
 

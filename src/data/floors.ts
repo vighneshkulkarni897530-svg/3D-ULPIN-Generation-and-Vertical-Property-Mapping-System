@@ -151,6 +151,111 @@ export const MOCK_FLOORS: Floor[] = [
     totalUnits: 1,
   },
 
+  // ── Green View Residency Additional Wings (B-102-W2, B-102-W3: 5 floors each) ──
+  ...['B-102-W2', 'B-102-W3'].flatMap((bId) =>
+    Array.from({ length: 5 }, (_, flNum) => ({
+      id: `FLOOR-${bId}-${flNum === 0 ? 'G' : flNum}`,
+      buildingId: bId,
+      floorNumber: flNum,
+      name: flNum === 0 ? 'Ground Floor - Reception & Lobby' : `Floor ${flNum} - Residential`,
+      elevation: Number((flNum * 3.4).toFixed(1)),
+      area: 6200,
+      totalUnits: 2,
+    }))
+  ),
+
+  // ── Shree Krishna Arcade Additional Wings (B-104-W2 to B-104-W5: 5 floors each) ──
+  ...['B-104-W2', 'B-104-W3', 'B-104-W4', 'B-104-W5'].flatMap((bId) =>
+    Array.from({ length: 5 }, (_, flNum) => ({
+      id: `FLOOR-${bId}-${flNum === 0 ? 'G' : flNum}`,
+      buildingId: bId,
+      floorNumber: flNum,
+      name: flNum === 0 ? 'Ground Floor - Commercial Arcade' : `Floor ${flNum} - Commercial / Residential`,
+      elevation: Number((flNum * 3.2).toFixed(1)),
+      area: 5000,
+      totalUnits: 2,
+    }))
+  ),
+
+  // ── Tech Tower Beta Block (B-306-B: 5 floors) ──
+  ...['B-306-B'].flatMap((bId) =>
+    Array.from({ length: 5 }, (_, flNum) => ({
+      id: `FLOOR-${bId}-${flNum === 0 ? 'G' : flNum}`,
+      buildingId: bId,
+      floorNumber: flNum,
+      name: flNum === 0 ? 'Ground Floor - Server Facility & Reception' : `Floor ${flNum} - Corporate IT Suites`,
+      elevation: Number((flNum * 3.8).toFixed(1)),
+      area: 7500,
+      totalUnits: 2,
+    }))
+  ),
+
+  // ── Wakad Heights (PARCEL-MH-PUN-004): B-401 to B-404 (4 floors each: 0..3) ──
+  ...['B-401', 'B-402', 'B-403', 'B-404'].flatMap((bId) => [
+    {
+      id: `FLOOR-${bId}-G`,
+      buildingId: bId,
+      floorNumber: 0,
+      name: 'Ground Floor - Resident Lobby',
+      elevation: 0,
+      area: 5500,
+      totalUnits: 2,
+    },
+    {
+      id: `FLOOR-${bId}-1`,
+      buildingId: bId,
+      floorNumber: 1,
+      name: '1st Floor - Residential',
+      elevation: 3.2,
+      area: 5500,
+      totalUnits: 2,
+    },
+    {
+      id: `FLOOR-${bId}-2`,
+      buildingId: bId,
+      floorNumber: 2,
+      name: '2nd Floor - Residential',
+      elevation: 6.4,
+      area: 5500,
+      totalUnits: 2,
+    },
+    {
+      id: `FLOOR-${bId}-3`,
+      buildingId: bId,
+      floorNumber: 3,
+      name: '3rd Floor - Penthouse & Terrace',
+      elevation: 9.6,
+      area: 5500,
+      totalUnits: 2,
+    },
+  ]),
+
+  // ── Hinjewadi Tech Enclave (PARCEL-MH-PUN-005): B-501 to B-506 (6 floors each: 0..5) ──
+  ...['B-501', 'B-502', 'B-503', 'B-504', 'B-505', 'B-506'].flatMap((bId) =>
+    Array.from({ length: 6 }, (_, flNum) => ({
+      id: `FLOOR-${bId}-${flNum}`,
+      buildingId: bId,
+      floorNumber: flNum,
+      name: flNum === 0 ? 'Ground Floor - Reception & Parking' : `Floor ${flNum} - Residential`,
+      elevation: Number((flNum * 3.1).toFixed(1)),
+      area: 5300,
+      totalUnits: 2,
+    }))
+  ),
+
+  // ── Amanora Elegance (PARCEL-MH-PUN-006): B-601 & B-602 (16 floors each: 0..15) ──
+  ...['B-601', 'B-602'].flatMap((bId) =>
+    Array.from({ length: 16 }, (_, flNum) => ({
+      id: `FLOOR-${bId}-${flNum}`,
+      buildingId: bId,
+      floorNumber: flNum,
+      name: flNum === 0 ? 'Ground Floor - Grand Atrium' : flNum === 15 ? '15th Floor - Sky Penthouse' : `Floor ${flNum} - Residences`,
+      elevation: Number((flNum * 3.1).toFixed(1)),
+      area: 4250,
+      totalUnits: 4,
+    }))
+  ),
+
   // ── Kolte Patil Life Republic: Tower B (20 Floors: 0..20) ──
   {
     id: 'FLOOR-LR-B-G',
@@ -221,3 +326,4 @@ export const MOCK_FLOORS: Floor[] = [
 
 /** Convenience lookup by ID. */
 export const FLOOR_BY_ID = new Map(MOCK_FLOORS.map((f) => [f.id, f]));
+

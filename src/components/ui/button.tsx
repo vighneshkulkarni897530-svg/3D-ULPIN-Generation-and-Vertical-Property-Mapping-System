@@ -45,11 +45,14 @@ export interface ButtonProps
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, loading = false, children, disabled, ...props }, ref) => {
+    // Strip non-DOM attributes (including nested asChild) from forwarded props
+    const { asChild: _nestedAsChild, ...domProps } = props as Record<string, unknown>;
+
     if (asChild && React.isValidElement(children)) {
       const child = children as React.ReactElement<{ className?: string; children?: React.ReactNode }>;
       return React.cloneElement(child, {
         className: cn(buttonVariants({ variant, size, className }), child.props.className),
-        ...props,
+        ...domProps,
         children: (
           <>
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -65,7 +68,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || loading}
         aria-busy={loading || undefined}
-        {...props}
+        {...domProps}
       >
         {loading && <Loader2 className="h-4 w-4 animate-spin" />}
         {children}

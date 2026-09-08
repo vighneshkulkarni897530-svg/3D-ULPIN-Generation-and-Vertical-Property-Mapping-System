@@ -42,6 +42,8 @@ interface TownshipFloorExplorerProps {
   mode: TownshipFloorMode;
   onModeChange: (mode: TownshipFloorMode) => void;
   onSelectLevel: (level: number | null) => void;
+  societyId?: string;
+  buildingId?: string;
   className?: string;
 }
 
@@ -56,6 +58,8 @@ export function TownshipFloorExplorer({
   mode,
   onModeChange,
   onSelectLevel,
+  societyId,
+  buildingId,
   className,
 }: TownshipFloorExplorerProps) {
   const sorted = [...floors].sort((a, b) => b.floorNumber - a.floorNumber);
@@ -272,7 +276,7 @@ export function TownshipFloorExplorer({
                 Open Property →
               </a>
               <a
-                href={`/map?society=PARCEL-MH-PUN-074&building=B-LR-B`}
+                href={`/map?society=${societyId || "PARCEL-MH-PUN-074"}${buildingId ? `&building=${buildingId}` : ""}`}
                 className="rounded-lg border border-emerald-500/50 bg-emerald-500/10 px-2.5 py-1.5 text-center text-[8.5px] font-black uppercase tracking-wider text-emerald-300 transition-all hover:bg-emerald-500/20"
               >
                 2D GIS

@@ -57,6 +57,7 @@ import { getFloors } from '@/lib/society/floorService';
 import { getFlats } from '@/lib/society/flatService';
 import { getSocietyResidents } from '@/lib/society/residentService';
 import { generateSocietyUlpin } from '@/lib/society/ulpinGenerator';
+import { Society3DSiteImageSection } from '@/components/society/Society3DSiteImageSection';
 import type { Society, SocietyMembership, SocietyRole } from '@/types/society';
 import { Layers } from 'lucide-react';
 
@@ -307,7 +308,7 @@ function SocietyDashboardContent() {
               </Link>
             </Button>
             <Button variant="secondary" size="sm" asChild>
-              <Link href={`/properties/default-township/digital-twin?societyId=${societyId}`}>
+              <Link href={`/properties/${societyId}/digital-twin?societyId=${societyId}`}>
                 <Building2 className="h-3.5 w-3.5" aria-hidden="true" /> View 3D Society
               </Link>
             </Button>
@@ -316,8 +317,11 @@ function SocietyDashboardContent() {
       />
 
       <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-3">
-        {/* ── LEFT · SOCIETY PROFILE ── */}
+        {/* ── LEFT · SOCIETY PROFILE & 3D DIGITAL TWIN ── */}
         <div className="space-y-5 lg:col-span-2">
+          {/* Phase 22 — Society-Specific 3D Digital Twin & Site Plan Section */}
+          <Society3DSiteImageSection society={society} isAdmin={isAdmin} />
+
           <Card className="group relative overflow-hidden">
             <CardContent className="p-0">
               {society.imageUrl ? (

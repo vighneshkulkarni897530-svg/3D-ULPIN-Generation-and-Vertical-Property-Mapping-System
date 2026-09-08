@@ -70,8 +70,16 @@ function rankAndSlice<T>(scored: Array<Scored<T>>, limit: number): T[] {
  * so the search indexes a display alias instead of mutating data.
  */
 const PARCEL_SEARCH_ALIASES: Record<string, string> = {
-  'PARCEL-MH-PUN-074': 'Kolte Patil Life Republic Penthouses',
+  'PARCEL-MH-PUN-001': 'Green View Residency Shivaji Nagar S3D-MH-PUN-GVR-001 GVR',
+  'PARCEL-MH-PUN-002': 'Shree Krishna Arcade Koregaon Park S3D-MH-PUN-SKA-001 SKA',
+  'PARCEL-MH-PUN-003': 'Tech Tower Commercial Baner Pashan S3D-MH-PUN-TT-001 TT',
+  'PARCEL-MH-PUN-004': 'Wakad Heights Residency Pimple Saudagar S3D-MH-PUN-WAK-001 WAK',
+  'PARCEL-MH-PUN-005': 'Hinjewadi Tech Enclave Rajiv Gandhi Infotech Park S3D-MH-PUN-HIN-001 HIN',
+  'PARCEL-MH-PUN-006': 'Amanora Elegance Towers Hadapsar Cyber City S3D-MH-PUN-AMA-001 AMA',
+  'PARCEL-MH-PUN-074': 'Kolte Patil Life Republic Penthouses Marunji Hinjewadi S3D-MH-PUN-LR-001 LR',
+  'PARCEL-MH-PUN-UNC-999': 'Pristine Meadows Chakan S3D-MH-PUN-UNC-999 UNC',
 };
+
 
 /**
  * Phase 21 — multi-word query support (AND semantics). Every whitespace-
@@ -93,10 +101,10 @@ function scoreTokens(query: string, ...fields: Array<string | number | undefined
 }
 
 export function searchGisRegistry(
-  parcels: LandParcel[],
-  buildings: Building[],
-  floors: Floor[],
-  properties: PropertyUnit[],
+  parcels: LandParcel[] = [],
+  buildings: Building[] = [],
+  floors: Floor[] = [],
+  properties: PropertyUnit[] = [],
   rawQuery: string,
   limit = 4,
 ): GisSearchOutput {
