@@ -745,7 +745,7 @@ function BuildingDigitalTwinPageContent() {
 
                 {/* Phase 7 & 19 — 3D Inspection Toolbar with On-Demand Dropdowns */}
                 <InspectionToolbar
-                  className="absolute left-1/2 top-3 z-30 flex -translate-x-1/2 max-w-[calc(100%-24px)] overflow-x-auto scrollbar-none"
+                  className="absolute left-1/2 top-3 z-30 flex -translate-x-1/2 max-w-[calc(100%-24px)]"
                   onResetCamera={handleReset}
                   openDiscrepancyCount={conflicts.length}
                   towers={sceneTowers}

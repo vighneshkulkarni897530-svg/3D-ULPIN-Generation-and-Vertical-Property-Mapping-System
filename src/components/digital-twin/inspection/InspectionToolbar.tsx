@@ -131,6 +131,12 @@ export function InspectionToolbar({
     }
   };
 
+  const handleToggleExplode = () => {
+    const newMode = floorMode === "explode" ? "all" : "explode";
+    setFloorMode(newMode);
+    onFloorModeChange?.(newMode);
+  };
+
   const currentBuildingName = linkedBuilding?.name ?? selectedTower?.name ?? "Tower B";
   const currentBuildingCode = linkedBuilding?.buildingCode ?? `BLDG-LR-${selectedTower?.id?.replace("tower-", "").toUpperCase() ?? "B"}`;
   const totalFloorsCount = linkedFloors.length > 0 ? linkedFloors.length : (selectedTower?.floors ?? 20);
@@ -153,13 +159,10 @@ export function InspectionToolbar({
   );
 
   return (
-    <div ref={dropdownRef} className="relative">
+    <div ref={dropdownRef} className={cn("relative z-40", className)}>
       <nav
         aria-label="3D Property Inspection Controls"
-        className={cn(
-          "dt-hud dt-card-accent flex flex-wrap items-center gap-1 rounded-2xl p-1.5 shadow-[0_12px_32px_-10px_rgba(0,0,0,0.8)] backdrop-blur-md border border-cyan-500/30 bg-slate-950/90",
-          className
-        )}
+        className="dt-hud dt-card-accent flex flex-wrap items-center gap-1 rounded-2xl p-1.5 shadow-[0_12px_32px_-10px_rgba(0,0,0,0.8)] backdrop-blur-md border border-cyan-500/30 bg-slate-950/90"
       >
         {/* ── Mode Switchers with Interactive Dropdowns ── */}
         <div className="flex items-center gap-0.5 border-r border-slate-700/60 pr-1.5">
@@ -220,83 +223,65 @@ export function InspectionToolbar({
           </button>
         </div>
 
-        {/* ── Inspection Features ── */}
+        {/* ── Action Buttons ── */}
         <div className="flex items-center gap-0.5 border-r border-slate-700/60 pr-1.5">
+          {/* ISOLATE TOGGLE */}
           <button
             type="button"
             onClick={toggleBuildingIsolation}
-            disabled={!selectedTower}
-            title={
-              selectedTower
-                ? buildingIsolation
-                  ? "Exit Building Isolation"
-                  : "Isolate Selected Building"
-                : "Select a building to isolate"
-            }
+            title={buildingIsolation ? "Show all township buildings" : "Isolate and focus on selected tower"}
             aria-pressed={buildingIsolation}
             className={cn(
               "flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[10px] font-extrabold uppercase tracking-wider transition-all",
-              !selectedTower && "cursor-not-allowed opacity-40",
               buildingIsolation
-                ? "border border-emerald-400 bg-emerald-500/20 text-emerald-300 shadow-[0_0_10px_rgba(34,197,94,0.3)]"
-                : "text-slate-300 hover:bg-slate-900 hover:text-white"
-            )}
-          >
-            <Box className="h-3.5 w-3.5 text-emerald-400" />
-            <span className="hidden md:inline">{buildingIsolation ? "Isolated" : "Isolate"}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              const newMode = floorMode === "explode" ? "all" : "explode";
-              setFloorMode(newMode);
-              onFloorModeChange?.(newMode);
-            }}
-            disabled={!selectedTower}
-            title={
-              selectedTower
-                ? floorMode === "explode"
-                  ? "Collapse Floor Slices"
-                  : "Explode Building Floor Slices"
-                : "Select a building to explode floors"
-            }
-            aria-pressed={floorMode === "explode"}
-            className={cn(
-              "flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[10px] font-extrabold uppercase tracking-wider transition-all",
-              !selectedTower && "cursor-not-allowed opacity-40",
-              floorMode === "explode"
                 ? "border border-amber-400 bg-amber-500/20 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.3)]"
                 : "text-slate-300 hover:bg-slate-900 hover:text-white"
             )}
           >
-            <Maximize2 className="h-3.5 w-3.5 text-amber-400" />
-            <span className="hidden md:inline">{floorMode === "explode" ? "Exploded" : "Explode"}</span>
+            <Box className="h-3.5 w-3.5 text-amber-400" />
+            <span className="hidden md:inline">{buildingIsolation ? "Isolated" : "Isolate"}</span>
           </button>
 
+          {/* EXPLODE TOGGLE */}
           <button
             type="button"
-            onClick={toggleDiscrepancyOverlay}
-            title={discrepancyOverlay ? "Hide Spatial Discrepancies" : "Show Spatial Discrepancies"}
-            aria-pressed={discrepancyOverlay}
+            onClick={handleToggleExplode}
+            title={floorMode === "explode" ? "Collapse vertical floors" : "Explode tower into stacked floor slices"}
+            aria-pressed={floorMode === "explode"}
             className={cn(
               "flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[10px] font-extrabold uppercase tracking-wider transition-all",
-              discrepancyOverlay
-                ? "border border-rose-400 bg-rose-500/20 text-rose-300 shadow-[0_0_10px_rgba(244,63,94,0.3)]"
+              floorMode === "explode"
+                ? "border border-cyan-400 bg-cyan-500/25 text-cyan-200 shadow-[0_0_10px_rgba(0,217,255,0.4)]"
                 : "text-slate-300 hover:bg-slate-900 hover:text-white"
             )}
           >
-            <AlertTriangle className="h-3.5 w-3.5 text-rose-400" />
-            <span className="hidden md:inline">Flags</span>
-            {openDiscrepancyCount > 0 && (
-              <span className="rounded-full bg-red-500/30 px-1.5 py-0.2 font-mono text-[8.5px] text-red-300">
+            <Maximize2 className="h-3.5 w-3.5 text-cyan-400" />
+            <span className="hidden md:inline">{floorMode === "explode" ? "Exploded" : "Explode"}</span>
+          </button>
+
+          {openDiscrepancyCount > 0 && (
+            <button
+              type="button"
+              onClick={toggleDiscrepancyOverlay}
+              title={`${openDiscrepancyCount} Cadastral Discrepancies Recorded`}
+              aria-pressed={discrepancyOverlay}
+              className={cn(
+                "flex items-center gap-1.5 rounded-xl px-2 py-1.5 text-[10px] font-black uppercase tracking-wider transition-all",
+                discrepancyOverlay
+                  ? "border border-red-500 bg-red-500/25 text-red-200 shadow-[0_0_10px_rgba(239,68,68,0.4)]"
+                  : "border border-red-500/40 bg-red-950/40 text-red-400 hover:bg-red-900/50"
+              )}
+            >
+              <AlertTriangle className="h-3.5 w-3.5 text-red-400" />
+              <span className="hidden lg:inline">Flags</span>
+              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 font-mono text-[9px] font-black text-white">
                 {openDiscrepancyCount}
               </span>
-            )}
-          </button>
+            </button>
+          )}
         </div>
 
-        {/* ── Spatial Tools ── */}
+        {/* ── Analytical Tools ── */}
         <div className="flex items-center gap-0.5">
           <button
             type="button"
@@ -343,17 +328,17 @@ export function InspectionToolbar({
       </nav>
 
       {/* ══════════════════════════════════════════════════════════════════════
-          DROPDOWN PANELS (Rendered on-demand when active)
+          DROPDOWN PANELS (Rendered on-demand with full view scrollability)
          ══════════════════════════════════════════════════════════════════════ */}
       <AnimatePresence>
         {/* ── DROPDOWN 1: OVERVIEW ── */}
         {activeDropdown === "overview" && (
           <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.98 }}
+            initial={{ opacity: 0, y: 8, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.98 }}
-            transition={{ duration: 0.2 }}
-            className="absolute left-0 top-[calc(100%+8px)] z-50 w-[330px] sm:w-[360px] rounded-2xl border border-cyan-500/40 bg-slate-950/95 p-4 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.95)] backdrop-blur-2xl"
+            exit={{ opacity: 0, y: 6, scale: 0.98 }}
+            transition={{ duration: 0.18 }}
+            className="absolute left-0 sm:left-1/2 sm:-translate-x-1/2 top-[calc(100%+8px)] z-50 w-[92vw] sm:w-[380px] max-w-[400px] max-h-[min(500px,calc(100vh-140px))] overflow-y-auto rounded-2xl border border-cyan-500/40 bg-slate-950/95 p-4 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.95)] backdrop-blur-2xl scrollbar-thin"
           >
             <div className="flex items-start justify-between border-b border-cyan-500/30 pb-2.5">
               <div className="flex items-center gap-2">
@@ -425,11 +410,11 @@ export function InspectionToolbar({
         {/* ── DROPDOWN 2: BUILDING SELECTION & ACTIONS ── */}
         {activeDropdown === "building" && (
           <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.98 }}
+            initial={{ opacity: 0, y: 8, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.98 }}
-            transition={{ duration: 0.2 }}
-            className="absolute left-0 top-[calc(100%+8px)] z-50 w-[340px] sm:w-[380px] rounded-2xl border border-cyan-500/40 bg-slate-950/95 p-4 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.95)] backdrop-blur-2xl"
+            exit={{ opacity: 0, y: 6, scale: 0.98 }}
+            transition={{ duration: 0.18 }}
+            className="absolute left-0 sm:left-1/2 sm:-translate-x-1/2 top-[calc(100%+8px)] z-50 w-[92vw] sm:w-[420px] max-w-[440px] max-h-[min(520px,calc(100vh-140px))] overflow-y-auto rounded-2xl border border-cyan-500/40 bg-slate-950/95 p-4 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.95)] backdrop-blur-2xl scrollbar-thin"
           >
             <div className="flex items-start justify-between border-b border-cyan-500/30 pb-2.5">
               <div className="flex items-center gap-2">
@@ -459,7 +444,7 @@ export function InspectionToolbar({
               <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
                 Select Building Tower
               </label>
-              <div className="grid grid-cols-2 gap-1.5">
+              <div className="grid grid-cols-2 gap-1.5 max-h-[160px] overflow-y-auto pr-1">
                 {towers.map((t) => {
                   const isSel = selectedTower?.id === t.id;
                   return (
@@ -532,9 +517,7 @@ export function InspectionToolbar({
               <button
                 type="button"
                 onClick={() => {
-                  const newMode = floorMode === "explode" ? "all" : "explode";
-                  setFloorMode(newMode);
-                  onFloorModeChange?.(newMode);
+                  handleToggleExplode();
                   setActiveDropdown(null);
                 }}
                 className={cn(
@@ -572,11 +555,11 @@ export function InspectionToolbar({
         {/* ── DROPDOWN 3: FLOOR SELECTION & EXPLORATION ── */}
         {activeDropdown === "floors" && (
           <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.98 }}
+            initial={{ opacity: 0, y: 8, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.98 }}
-            transition={{ duration: 0.2 }}
-            className="absolute left-0 top-[calc(100%+8px)] z-50 w-[350px] sm:w-[400px] rounded-2xl border border-cyan-500/40 bg-slate-950/95 p-4 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.95)] backdrop-blur-2xl"
+            exit={{ opacity: 0, y: 6, scale: 0.98 }}
+            transition={{ duration: 0.18 }}
+            className="absolute left-0 sm:left-1/2 sm:-translate-x-1/2 top-[calc(100%+8px)] z-50 w-[92vw] sm:w-[440px] max-w-[460px] max-h-[min(520px,calc(100vh-140px))] overflow-y-auto rounded-2xl border border-cyan-500/40 bg-slate-950/95 p-4 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.95)] backdrop-blur-2xl scrollbar-thin"
           >
             <div className="flex items-start justify-between border-b border-cyan-500/30 pb-2.5">
               <div className="flex items-center gap-2">
@@ -631,7 +614,7 @@ export function InspectionToolbar({
               </div>
             </div>
 
-            {/* Floor Level Selection List / Grid */}
+            {/* Floor Level Selection Grid */}
             <div className="mt-3">
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
@@ -646,7 +629,8 @@ export function InspectionToolbar({
                 </button>
               </div>
 
-              <div className="max-h-[190px] overflow-y-auto space-y-1 pr-1">
+              {/* Compact 3-to-4 Column Grid of Floor Levels for Quick Jumps */}
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 max-h-[170px] overflow-y-auto p-1.5 rounded-xl border border-slate-800 bg-slate-900/50 pr-1">
                 {sortedFloors.map((f) => {
                   const isSel = selectedLevel === f.floorNumber;
                   const elev = (f.floorNumber * 3.1).toFixed(1);
@@ -658,27 +642,18 @@ export function InspectionToolbar({
                         onSelectLevel?.(f.floorNumber);
                       }}
                       className={cn(
-                        "flex w-full items-center justify-between rounded-xl border px-3 py-1.5 text-left transition-all",
+                        "flex flex-col items-center justify-center rounded-lg border py-1.5 px-1 text-center transition-all",
                         isSel
-                          ? "border-cyan-400 bg-cyan-500/25 text-cyan-200 shadow-[0_0_10px_rgba(0,217,255,0.3)]"
-                          : "border-slate-800/80 bg-slate-900/50 text-slate-300 hover:border-slate-700 hover:bg-slate-900"
+                          ? "border-cyan-400 bg-cyan-500/30 text-cyan-100 shadow-[0_0_10px_rgba(0,217,255,0.35)]"
+                          : "border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:bg-slate-800"
                       )}
                     >
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={cn(
-                            "flex h-5 w-5 items-center justify-center rounded-md font-mono text-[9px] font-extrabold",
-                            isSel ? "bg-cyan-400 text-slate-950" : "bg-slate-800 text-slate-300"
-                          )}
-                        >
-                          {f.floorNumber}
-                        </span>
-                        <span className="text-[10px] font-bold">{f.name}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-[8.5px] text-slate-400">{elev} m</span>
-                        {isSel && <Check className="h-3.5 w-3.5 text-cyan-400" />}
-                      </div>
+                      <span className="font-mono text-[10px] font-black">
+                        {f.floorNumber === 0 ? "G" : `F${f.floorNumber < 10 ? `0${f.floorNumber}` : f.floorNumber}`}
+                      </span>
+                      <span className="font-mono text-[7.5px] text-slate-400">
+                        {elev}m
+                      </span>
                     </button>
                   );
                 })}
@@ -691,7 +666,7 @@ export function InspectionToolbar({
                 <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
                   Property Units on Floor {selectedLevel}
                 </label>
-                <div className="grid grid-cols-2 gap-1.5">
+                <div className="grid grid-cols-2 gap-1.5 max-h-[100px] overflow-y-auto pr-1">
                   {unitsOnSelectedFloor.length > 0 ? (
                     unitsOnSelectedFloor.map((u) => {
                       const isUnitSel = selectedUnitId === u.id;
