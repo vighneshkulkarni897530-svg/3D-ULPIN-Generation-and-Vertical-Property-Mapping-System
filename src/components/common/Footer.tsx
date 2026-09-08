@@ -166,7 +166,7 @@ export const Footer: React.FC = () => {
 
         {/* Bottom Credits */}
         <div className="mt-10 pt-6 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-          <p>© {new Date().getFullYear()} Smart Property Verification Platform. Built with Midnight Tech Design System.</p>
+          <p suppressHydrationWarning>© {new Date().getFullYear()} Smart Property Verification Platform. Built with Midnight Tech Design System.</p>
           <div className="flex items-center gap-4">
             <span className="hover:text-slate-300 cursor-pointer">Privacy Policy</span>
             <span>•</span>

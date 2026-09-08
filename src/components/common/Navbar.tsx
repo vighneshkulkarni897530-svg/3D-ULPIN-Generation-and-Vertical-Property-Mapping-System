@@ -28,12 +28,17 @@ export const Navbar: React.FC<NavbarProps> = ({
   const { notifications, unreadNotificationsCount, markAllNotificationsAsRead, markNotificationAsRead } =
     useProperty();
 
+  const [mounted, setMounted] = React.useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
 
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const isShell = variant === 'shell';
   const isAuthPage = pathname?.startsWith('/auth');
-  const isActuallyLoggedIn = isAuthenticated && !isAuthPage && !!role;
+  const isActuallyLoggedIn = mounted && isAuthenticated && !isAuthPage && !!role;
 
   const getDashboardLink = () => {
     if (role === 'OFFICER') return '/dashboard/officer';
@@ -59,22 +64,30 @@ export const Navbar: React.FC<NavbarProps> = ({
     <header className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 text-slate-100 shadow-lg">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between gap-2 h-20">
-          <Link href="/" className="flex items-center gap-3 group shrink-0">
+          <Link href="/" className="flex items-center gap-3 group shrink-0" suppressHydrationWarning>
             <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl overflow-hidden bg-gradient-to-br from-cyan-500 via-blue-600 to-indigo-900 p-0.5 shadow-tech-cyan group-hover:scale-105 transition-transform duration-200 flex items-center justify-center">
               <div className="w-full h-full bg-slate-950 rounded-[10px] overflow-hidden flex items-center justify-center">
-                <img src="/logo.jpeg" alt="CyberSpark 3D SMART ULPIN" className="w-full h-full object-cover" />
+                <img
+                  src="/logo.jpeg"
+                  alt="CyberSpark 3D SMART ULPIN"
+                  className="w-full h-full object-cover"
+                  suppressHydrationWarning
+                />
               </div>
             </div>
-            <div className="hidden sm:block">
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-cyan-400">
+            <div className="hidden sm:block" suppressHydrationWarning>
+              <div className="flex items-center gap-2" suppressHydrationWarning>
+                <span
+                  className="font-extrabold text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-cyan-400"
+                  suppressHydrationWarning
+                >
                   3D SMART ULPIN
                 </span>
                 <span className="text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
                   ULPIN 3.0
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 font-medium tracking-wide">
+              <p className="text-[11px] text-slate-400 font-medium tracking-wide" suppressHydrationWarning>
                 Smart Cadastre & Property Verification
               </p>
             </div>
