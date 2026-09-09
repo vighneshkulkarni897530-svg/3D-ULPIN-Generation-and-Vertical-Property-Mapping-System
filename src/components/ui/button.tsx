@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Slot, Slottable } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -45,34 +46,19 @@ export interface ButtonProps
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, loading = false, children, disabled, ...props }, ref) => {
-    // Strip non-DOM attributes (including nested asChild) from forwarded props
-    const { asChild: _nestedAsChild, ...domProps } = props as Record<string, unknown>;
-
-    if (asChild && React.isValidElement(children)) {
-      const child = children as React.ReactElement<{ className?: string; children?: React.ReactNode }>;
-      return React.cloneElement(child, {
-        className: cn(buttonVariants({ variant, size, className }), child.props.className),
-        ...domProps,
-        children: (
-          <>
-            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-            {child.props.children}
-          </>
-        ),
-      } as Record<string, unknown>);
-    }
+    const Comp = asChild ? Slot : "button";
 
     return (
-      <button
+      <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         disabled={disabled || loading}
         aria-busy={loading || undefined}
-        {...domProps}
+        {...props}
       >
-        {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-        {children}
-      </button>
+        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+        <Slottable>{children}</Slottable>
+      </Comp>
     );
   }
 );

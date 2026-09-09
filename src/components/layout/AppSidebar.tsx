@@ -190,7 +190,7 @@ function SidebarBody({
       </nav>
 
       {/* User / officer section */}
-      {isAuthenticated && currentUser && currentUser.name !== 'Guest' && (
+      {mounted && isAuthenticated && currentUser && currentUser.name !== 'Guest' && (
         <div className="border-t border-slate-800 p-3">
           <div className={cn("flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/70 p-2.5", collapsed && "justify-center")}>
             <SafeImage

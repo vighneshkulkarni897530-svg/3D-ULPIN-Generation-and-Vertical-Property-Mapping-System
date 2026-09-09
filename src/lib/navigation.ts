@@ -29,12 +29,9 @@ import {
   Landmark,
   Scale,
   FileSearch,
-  ScanLine,
   type LucideIcon,
 } from 'lucide-react';
 import { PERMISSIONS, type Permission } from '@/types/auth';
-
-export { ScanLine };
 
 export interface NavItem {
   label: string;
